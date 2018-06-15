@@ -663,6 +663,11 @@ void LinkManager::shutdown(void)
     disconnectAll();
 }
 
+QList<SharedLinkInterfacePointer> LinkManager::getSharedLinks()
+{
+    return _sharedLinks;
+}
+
 QStringList LinkManager::linkTypeStrings(void) const
 {
     //-- Must follow same order as enum LinkType in LinkConfiguration.h
