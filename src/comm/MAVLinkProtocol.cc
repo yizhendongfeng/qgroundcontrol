@@ -189,7 +189,6 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
     static int nonmavlinkCount = 0;
     static bool checkedUserNonMavlink = false;
     static bool warnedUserNonMavlink = false;
-
     for (int position = 0; position < b.size(); position++) {
         unsigned int decodeState = mavlink_parse_char(mavlinkChannel, (uint8_t)(b[position]), &message, &status);
 
@@ -272,6 +271,43 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
                 mavlink_heartbeat_t heartbeat;
                 mavlink_msg_heartbeat_decode(&message, &heartbeat);
                 emit vehicleHeartbeatInfo(link, message.sysid, message.compid, heartbeat.mavlink_version, heartbeat.autopilot, heartbeat.type);
+            }
+            //broadcast formation data  ***zjm
+//            const mavlink_msg_entry_t *e = mavlink_get_msg_entry(237);    //zjm
+//            qDebug()<< "msgid:"  << e->msgid << "crc_extra" << e->crc_extra;
+            if(message.msgid == MAVLINK_MSG_ID_FORMATION)
+            {
+                qDebug() << "***************************** broadcast formation data";
+                uint8_t formationBuffer[MAVLINK_MAX_PACKET_LEN];
+
+                if(message.sysid == 4)    //resend leading uav msg to formation
+                {
+                    mavlink_formation_t formation;
+                    mavlink_gcs_to_formation_t gcs_to_formation;
+                    mavlink_message_t send_gcs_to_formation_msg;
+                    mavlink_msg_formation_decode(&message, &formation);
+                    gcs_to_formation.time_usec = QDateTime::currentMSecsSinceEpoch() * 1000;
+                    gcs_to_formation.lon = formation.lon;
+                    gcs_to_formation.lat = formation.lat;
+                    gcs_to_formation.alt = formation.alt;
+                    mavlink_msg_gcs_to_formation_encode(0, 0, &send_gcs_to_formation_msg, &gcs_to_formation);
+                    int len = mavlink_msg_to_send_buffer(formationBuffer, &send_gcs_to_formation_msg);
+                    QList<SharedLinkInterfacePointer> sharedLinks = _linkMgr->getSharedLinks();
+                    for(int i = 0; i < sharedLinks.count(); i++)
+                    {
+                        if(sharedLinks.at(i).data() != link)
+                        {
+                            sharedLinks.at(i)->writeBytesSafe((const char*)formationBuffer, len);
+                            qDebug() << "**************** broadcast leading data *************" << "lon:" << gcs_to_formation.lon << "seq:" << send_gcs_to_formation_msg.seq;
+                        }
+                    }
+                }
+                else    //resend and broadcast formation data
+                {
+                    int len = mavlink_msg_to_send_buffer(formationBuffer, &message);
+                    link->writeBytesSafe((const char*)formationBuffer, len);
+                    qDebug() << "**************** broadcast formation data *************" << "id:" << message.sysid << "seq:" << message.seq;
+                }
             }
 
             // Detect if we are talking to an old radio not supporting v2
