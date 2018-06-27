@@ -9,7 +9,7 @@
 
 #ifndef MAVLINKPROTOCOL_H_
 #define MAVLINKPROTOCOL_H_
-
+#define LEADERUAV
 #include <QObject>
 #include <QMutex>
 #include <QString>
@@ -24,6 +24,16 @@
 #include "QGC.h"
 #include "QGCTemporaryFile.h"
 #include "QGCToolbox.h"
+#ifdef LEADERUAV
+#define ASHTECH_RECV_BUFFER_SIZE 512
+enum ashtech_decode_state_t {
+    NME_DECODE_UNINIT,
+    NME_DECODE_GOT_SYNC1,
+    NME_DECODE_GOT_ASTERIKS,
+    NME_DECODE_GOT_FIRST_CS_BYTE,
+    NME_DECODE_GOT_SECOND_CS_BYTE
+};
+#endif
 
 class LinkManager;
 class MultiVehicleManager;
@@ -103,7 +113,12 @@ public:
 public slots:
     /** @brief Receive bytes from a communication interface */
     void receiveBytes(LinkInterface* link, QByteArray b);
-    
+#ifdef LEADERUAV
+    /********** parse leader uav data *********/
+    int parseChar(uint8_t b);
+    /********** get leader uav data *********/
+    int handleMessage(int len);
+#endif
     /** @brief Set the system id of this application */
     void setSystemId(int id);
 
@@ -189,6 +204,14 @@ private:
 
     LinkManager*            _linkMgr;
     MultiVehicleManager*    _multiVehicleManager;
+#ifdef LEADERUAV
+    char leaderDateTime[20];
+    ashtech_decode_state_t _decode_state;
+    // leader uav receive buffer
+    uint16_t _rx_buffer_bytes;
+    uint8_t _rx_buffer[ASHTECH_RECV_BUFFER_SIZE];
+    mavlink_gcs_to_formation_t gcs_to_formation;
+#endif
 };
 
 #endif // MAVLINKPROTOCOL_H_
