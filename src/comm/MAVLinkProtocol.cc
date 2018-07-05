@@ -203,7 +203,15 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
                     qDebug() << "**************** broadcast leading data *************" << "lon:" << gcs_to_formation.lon << "seq:" << send_gcs_to_formation_msg.seq;
                 }
             }
-            qDebug() << "parse success, length:" << l;
+//            emit vehicleHeartbeatInfo(link, 10, 0, 3, MAV_AUTOPILOT_PX4, MAV_TYPE_QUADROTOR);
+//            mavlink_message_t simulate_global_position;
+//            mavlink_global_position_int_t globalPositionInt;
+//            globalPositionInt.lon = gcs_to_formation.lon;
+//            globalPositionInt.lat = gcs_to_formation.lat;
+//            globalPositionInt.alt = gcs_to_formation.alt * 1e3;
+//            mavlink_msg_global_position_int_encode(10 ,0, &simulate_global_position, &globalPositionInt);
+//            emit messageReceived(link, simulate_global_position);
+//            qDebug() << "parse success, length:" << l;
         }
     }
 #endif
