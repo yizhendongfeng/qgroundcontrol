@@ -69,6 +69,10 @@ MAVLinkProtocol::MAVLinkProtocol(QGCApplication* app, QGCToolbox* toolbox)
     memset(&totalErrorCounter, 0, sizeof(totalErrorCounter));
     memset(&currReceiveCounter, 0, sizeof(currReceiveCounter));
     memset(&currLossCounter, 0, sizeof(currLossCounter));
+#ifdef LEADERUAV
+    memset(&gcs_to_formation, 0, sizeof(gcs_to_formation));
+    _decode_state = NME_DECODE_UNINIT;
+#endif
 }
 
 MAVLinkProtocol::~MAVLinkProtocol()
@@ -179,6 +183,38 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
     if (!_linkMgr->containsLink(link)) {
         return;
     }
+#ifdef LEADERUAV
+    int l = 0;
+    for(int i = 0; i < b.size(); i++)
+    {
+        if ((l = parseChar((uint8_t)(b[i]))) > 0)
+        {
+            handleMessage(l);
+            uint8_t gcsToFormationBuffer[MAVLINK_MAX_PACKET_LEN];
+            mavlink_message_t send_gcs_to_formation_msg;
+            mavlink_msg_gcs_to_formation_encode(0, 0, &send_gcs_to_formation_msg, &gcs_to_formation);
+            int len = mavlink_msg_to_send_buffer(gcsToFormationBuffer, &send_gcs_to_formation_msg);
+            QList<SharedLinkInterfacePointer> sharedLinks = _linkMgr->getSharedLinks();
+            for(int i = 0; i < sharedLinks.count(); i++)
+            {
+                if(sharedLinks.at(i).data() != link)
+                {
+                    sharedLinks.at(i)->writeBytesSafe((const char*)gcsToFormationBuffer, len);
+                    qDebug() << "**************** broadcast leading data *************" << "lon:" << gcs_to_formation.lon << "seq:" << send_gcs_to_formation_msg.seq;
+                }
+            }
+//            emit vehicleHeartbeatInfo(link, 10, 0, 3, MAV_AUTOPILOT_PX4, MAV_TYPE_QUADROTOR);
+//            mavlink_message_t simulate_global_position;
+//            mavlink_global_position_int_t globalPositionInt;
+//            globalPositionInt.lon = gcs_to_formation.lon;
+//            globalPositionInt.lat = gcs_to_formation.lat;
+//            globalPositionInt.alt = gcs_to_formation.alt * 1e3;
+//            mavlink_msg_global_position_int_encode(10 ,0, &simulate_global_position, &globalPositionInt);
+//            emit messageReceived(link, simulate_global_position);
+//            qDebug() << "parse success, length:" << l;
+        }
+    }
+#endif
 
 //    receiveMutex.lock();
     mavlink_message_t message;
@@ -277,10 +313,9 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
 //            qDebug()<< "msgid:"  << e->msgid << "crc_extra" << e->crc_extra;
             if(message.msgid == MAVLINK_MSG_ID_FORMATION)
             {
-                qDebug() << "***************************** broadcast formation data";
                 uint8_t formationBuffer[MAVLINK_MAX_PACKET_LEN];
-
-                if(message.sysid == 4)    //resend leading uav msg to formation
+#ifndef LEADERUAV
+                if(message.sysid == 5)    //resend leading uav msg to formation
                 {
                     mavlink_formation_t formation;
                     mavlink_gcs_to_formation_t gcs_to_formation;
@@ -303,6 +338,7 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
                     }
                 }
                 else    //resend and broadcast formation data
+#endif
                 {
                     int len = mavlink_msg_to_send_buffer(formationBuffer, &message);
                     link->writeBytesSafe((const char*)formationBuffer, len);
@@ -381,6 +417,134 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
     }
 }
 
+#ifdef LEADERUAV
+int MAVLinkProtocol::parseChar(uint8_t b)
+{
+    int iRet = 0;
+
+    switch (_decode_state) {
+    /* First, look for sync1 */
+    case NME_DECODE_UNINIT:
+        if (b == '$') {
+            _decode_state = NME_DECODE_GOT_SYNC1;
+            _rx_buffer_bytes = 0;
+            _rx_buffer[_rx_buffer_bytes++] = b;
+        }
+
+        break;
+
+    case NME_DECODE_GOT_SYNC1:
+        if (b == '$') {
+            _decode_state = NME_DECODE_GOT_SYNC1;
+            _rx_buffer_bytes = 0;
+
+        } else if (b == '*') {
+            _decode_state = NME_DECODE_GOT_ASTERIKS;
+        }
+
+        if (_rx_buffer_bytes >= (sizeof(_rx_buffer) - 5)) {
+            _decode_state = NME_DECODE_UNINIT;
+            _rx_buffer_bytes = 0;
+
+        } else {
+            _rx_buffer[_rx_buffer_bytes++] = b;
+        }
+
+        break;
+
+    case NME_DECODE_GOT_ASTERIKS:
+        _rx_buffer[_rx_buffer_bytes++] = b;
+        _decode_state = NME_DECODE_GOT_FIRST_CS_BYTE;
+        break;
+
+    case NME_DECODE_GOT_FIRST_CS_BYTE:
+        _rx_buffer[_rx_buffer_bytes++] = b;
+        _decode_state = NME_DECODE_GOT_SECOND_CS_BYTE;
+        break;
+    case NME_DECODE_GOT_SECOND_CS_BYTE:
+        _rx_buffer[_rx_buffer_bytes++] = b;
+        uint8_t checksum = 0;
+        uint8_t *buffer = _rx_buffer;
+        uint8_t *bufend = _rx_buffer + _rx_buffer_bytes - 4;
+
+        for (; buffer < bufend; buffer++) { checksum += *buffer; }
+        checksum += 175;
+//        unsigned char sum[4] = {0};
+//        memcpy(sum, buffer + 59, 3);
+        QString checksumStr((const char*)(++buffer));
+        QString checksumLeft3 = checksumStr.left(3);
+        int checkSumInt = checksumLeft3.toInt();
+//        QByteArray originCheckSum((const char*)(buffer));
+//        QByteArray caculateChecksum = QByteArray::number(checksum);
+//        if(caculateChecksum == originCheckSum)
+//            iRet = _rx_buffer_bytes;
+        if(checkSumInt == checksum)
+            iRet = _rx_buffer_bytes;
+        _decode_state = NME_DECODE_UNINIT;
+        _rx_buffer_bytes = 0;
+        break;
+    }
+
+    return iRet;
+}
+
+int MAVLinkProtocol::handleMessage(int len)
+{
+    char *endp;
+
+    if (len < 7) { return 0; }
+
+    int uiCalcComma = 0;
+
+    for (int i = 0 ; i < len; i++) {
+        if (_rx_buffer[i] == ',') { uiCalcComma++; }
+    }
+
+    char *bufptr = (char *)(_rx_buffer + 23);
+
+    if (/*(memcmp(_rx_buffer, "$40", 3) == 0) &&*/ (uiCalcComma == 7)) {
+
+        /*
+         * leader uav message format
+         * $40,2018-06-04,18:08:41,115.705391,39.536568,112.68,0.46,N*035
+         * Header:$40
+         * Date:2018-06-04
+         * Time:18:08:41
+         * Lontitude:115.705391
+         * Lattitude:39.536568
+         * Altitude:112.68
+         * Reserved:0.46
+         * GPS state:N(no rtk)
+         * Checksum:*035
+         */
+        char gpsState = '?';
+        double lat, lon;
+        float alt, reserved;
+
+        memcpy(leaderDateTime, _rx_buffer + 4, 19);
+        leaderDateTime[19] = '\0';
+//        memcpy(leaderTime, _rx_buffer + 16, 8);
+        QString dateTimeS((char*)leaderDateTime);
+        dateTimeS.remove(",");
+        dateTimeS.remove("-");
+        dateTimeS.remove(":");
+
+        QDateTime dateTime = QDateTime::fromString(dateTimeS, "yyyyMMddhhmmss");
+        quint64 timeStamp = dateTime.toSecsSinceEpoch() * 1e6;
+        if (bufptr && *(++bufptr) != ',') { lon = strtod(bufptr, &endp); bufptr = endp; }
+        if (bufptr && *(++bufptr) != ',') { lat = strtod(bufptr, &endp); bufptr = endp; }
+        if (bufptr && *(++bufptr) != ',') { alt = strtod(bufptr, &endp); bufptr = endp; }
+        if (bufptr && *(++bufptr) != ',') { reserved = strtod(bufptr, &endp); bufptr = endp; }
+        if (bufptr && *(++bufptr) != ',') { gpsState = *(bufptr++); }
+        gcs_to_formation.time_usec = timeStamp;
+        gcs_to_formation.lon = (int32_t)(lon * 1e7);
+        gcs_to_formation.lat = (int32_t)(lat * 1e7);
+        gcs_to_formation.alt = alt;
+        return 1;
+    }
+    return 0;
+}
+#endif
 /**
  * @return The name of this protocol
  **/
