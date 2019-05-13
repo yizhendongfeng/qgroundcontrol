@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -190,6 +190,7 @@ void LinkManager::_addLink(LinkInterface* link)
         }
 
         _sharedLinks.append(SharedLinkInterfacePointer(link));
+        qDebug() << "_sharedLinks.count():" << _sharedLinks.count();
         emit newLink(link);
     }
 
@@ -662,7 +663,10 @@ void LinkManager::shutdown(void)
     setConnectionsSuspended(tr("Shutdown"));
     disconnectAll();
 }
-
+QList<SharedLinkInterfacePointer> LinkManager::getSharedLinks()
+{
+    return _sharedLinks;
+}
 QStringList LinkManager::linkTypeStrings(void) const
 {
     //-- Must follow same order as enum LinkType in LinkConfiguration.h
