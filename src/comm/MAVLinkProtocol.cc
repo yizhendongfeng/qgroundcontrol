@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -273,6 +273,22 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
                 mavlink_msg_heartbeat_decode(&message, &heartbeat);
                 emit vehicleHeartbeatInfo(link, message.sysid, message.compid, heartbeat.mavlink_version, heartbeat.autopilot, heartbeat.type);
             }
+
+            ///收到位置信息后广播至其他飞机  zjm
+            if(message.msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT)
+            {
+                uint8_t formationBuffer[MAVLINK_MAX_PACKET_LEN];
+                QList<SharedLinkInterfacePointer> sharedLinks = _linkMgr->getSharedLinks();
+                int len = mavlink_msg_to_send_buffer(formationBuffer, &message);
+                for(int i = 0; i < sharedLinks.count(); i++)
+                {
+                    if(sharedLinks.at(i).data() != link /*&&  sharedLinks.at(i).data()->isConnected()*/)//->active())
+                    {
+                        sharedLinks.at(i)->writeBytesSafe((const char*)formationBuffer, len);
+                        qDebug() << "*** broadcast formation data***" << "id:" << message.sysid << "seq:" << message.seq << i << sharedLinks.count();
+                    }
+                }
+            }///
 
             // Detect if we are talking to an old radio not supporting v2
             mavlink_status_t* mavlinkStatus = mavlink_get_channel_status(mavlinkChannel);
