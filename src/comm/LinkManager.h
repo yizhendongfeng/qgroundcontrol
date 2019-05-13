@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -128,7 +128,7 @@ public:
 
     // Called to signal app shutdown. Disconnects all links while turning off auto-connect.
     Q_INVOKABLE void shutdown(void);
-
+    QList<SharedLinkInterfacePointer> getSharedLinks();
 #ifdef QT_DEBUG
     // Only used by unit test tp restart after a shutdown
     void restart(void) { setConnectionsAllowed(); }
