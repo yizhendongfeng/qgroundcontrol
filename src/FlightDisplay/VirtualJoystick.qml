@@ -17,31 +17,56 @@ import QGroundControl.Palette       1.0
 import QGroundControl.ScreenTools   1.0
 import QGroundControl.Vehicle       1.0
 
+
+
+
 Item {
     //property bool useLightColors - Must be passed in from loaded
     property Fact _virtualJoystick: QGroundControl.settingsManager.appSettings.virtualJoystick
     property bool _gimbalMode:      _activeVehicle && _virtualJoystick && _virtualJoystick.value === 2
+    property int _seq: 0
 
     Timer {
-        interval:   40  // 25Hz, same as real joystick rate
-        running:    _virtualJoystick && _virtualJoystick.value === 1 && _activeVehicle
+        id: mytimer
+        interval:   500  // 25Hz, same as real joystick rate
+        running:    _virtualJoystick  && _activeVehicle
         repeat:     true
         onTriggered: {
             if (_activeVehicle && !_gimbalMode) {
                 _activeVehicle.virtualTabletJoystickValue(rightStick.xAxis, rightStick.yAxis, leftStick.xAxis, leftStick.yAxis)
             }
+
+            if (_activeVehicle && _gimbalMode) {
+                _activeVehicle.gimbalControlValue(rightStick.yAxis, rightStick.xAxis)
+                _activeVehicle.cameraZoomValue(leftStick.yAxis)
+            }
         }
     }
+    Timer {
+           id: timer
+       }
 
-    function setGimbal() {
+       function delay(delayTime, cb) {
+           timer.interval = delayTime;
+           timer.repeat = false;
+           timer.triggered.connect(cb);
+           timer.start();
+       }
+
+    function setGimbal(s) {
+
         //-- Set Pitch and Yaw ( -1.00 -> 1.00)
-        _activeVehicle.gimbalControlValue(rightStick.yAxis, rightStick.xAxis)
+        if(s >= _seq){
+            _activeVehicle.gimbalControlValue(rightStick.yAxis, rightStick.xAxis)
+
+
+        }
     }
 
     JoystickThumbPad {
         id:                     leftStick
-        anchors.leftMargin:     xPositionDelta
-        anchors.bottomMargin:   -yPositionDelta
+        anchors.leftMargin:     0
+        anchors.bottomMargin:   0
         anchors.left:           parent.left
         anchors.bottom:         parent.bottom
         width:                  parent.height
@@ -59,8 +84,8 @@ Item {
 
     JoystickThumbPad {
         id:                     rightStick
-        anchors.rightMargin:    -xPositionDelta
-        anchors.bottomMargin:   -yPositionDelta
+        anchors.rightMargin:    0
+        anchors.bottomMargin:   0
         anchors.right:          parent.right
         anchors.bottom:         parent.bottom
         width:                  parent.height
@@ -69,12 +94,21 @@ Item {
         lightColors:            useLightColors
         onYAxisChanged: {
             if(_gimbalMode) {
-                setGimbal()
+                _seq = _seq + 1
+                var myseq = _seq
+                delay(100, function() {
+                    setGimbal(myseq)
+                });
+
             }
         }
         onXAxisChanged: {
             if(_gimbalMode) {
-                setGimbal()
+                    _seq = _seq + 1
+                    var myseq = _seq
+                    delay(100, function() {
+                        setGimbal(myseq)
+                    });
             }
         }
     }
