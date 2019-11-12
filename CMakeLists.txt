@@ -17,7 +17,7 @@ endif()
 
 if(NOT QT_VERSION)
 	# try Qt 5.11.0 if none specified
-	set(QT_VERSION "5.11.1")
+	set(QT_VERSION "5.12.5")
 endif()
 
 if(DEFINED ENV{QT_MKSPEC})
@@ -856,9 +856,21 @@ elseif(WIN32)
 	# Support both 32 and 64 bit builds
 	if (${CMAKE_SIZEOF_VOID_P} MATCHES 8)
 		set(SDL2_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/lib/sdl2/msvc/lib/x64/SDL2.lib;${CMAKE_SOURCE_DIR}/libs/lib/sdl2/msvc/lib/x64/SDL2main.lib")
+
+		add_custom_command(TARGET QGroundControl POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/libs/lib/sdl2/msvc/lib/x64/SDL2.dll" $<TARGET_FILE_DIR:QGroundControl>
+			)
+
 	else ()
 		set(SDL2_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/lib/sdl2/msvc/lib/x86/SDL2.lib;${CMAKE_SOURCE_DIR}/libs/lib/sdl2/msvc/lib/x86/SDL2main.lib")
+
+		add_custom_command(TARGET QGroundControl POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/libs/lib/sdl2/msvc/lib/x86/SDL2.dll" $<TARGET_FILE_DIR:QGroundControl>
+			)
+
 	endif ()
+
+
 
 	string(STRIP "${SDL2_LIBRARIES}" SDL2_LIBRARIES)
 	
