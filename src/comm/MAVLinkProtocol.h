@@ -23,6 +23,7 @@
 #include "QGC.h"
 #include "QGCTemporaryFile.h"
 #include "QGCToolbox.h"
+#include "Utils/Protocol.h"
 
 class LinkManager;
 class MultiVehicleManager;
@@ -81,7 +82,8 @@ public:
 public slots:
     /** @brief Receive bytes from a communication interface */
     void receiveBytes(LinkInterface* link, QByteArray b);
-    
+    /** @brief Receive USV bytes from a communication interface */
+    void receiveUSVBytes(LinkInterface* link, QByteArray b);
     /** @brief Set the system id of this application */
     void setSystemId(int id);
 
@@ -168,5 +170,6 @@ private:
 
     LinkManager*            _linkMgr;
     MultiVehicleManager*    _multiVehicleManager;
+    BinaryBuffer usvBuffer = {};
 };
 

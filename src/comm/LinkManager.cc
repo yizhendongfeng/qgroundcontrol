@@ -184,7 +184,6 @@ void LinkManager::_addLink(LinkInterface* link)
     if (!link) {
         return;
     }
-
     if (!containsLink(link)) {
         int mavlinkChannel = _reserveMavlinkChannel();
         if (mavlinkChannel != 0) {
@@ -199,7 +198,10 @@ void LinkManager::_addLink(LinkInterface* link)
     }
 
     connect(link, &LinkInterface::communicationError,   _app,               &QGCApplication::criticalMessageBoxOnMainThread);
-    connect(link, &LinkInterface::bytesReceived,        _mavlinkProtocol,   &MAVLinkProtocol::receiveBytes);
+    if(link->getLinkConfiguration()->name().contains("USV"))
+        connect(link, &LinkInterface::bytesReceived,        _mavlinkProtocol,   &MAVLinkProtocol::receiveUSVBytes);
+    else
+        connect(link, &LinkInterface::bytesReceived,        _mavlinkProtocol,   &MAVLinkProtocol::receiveBytes);
 
     _mavlinkProtocol->resetMetadataForLink(link);
     _mavlinkProtocol->setVersion(_mavlinkProtocol->getCurrentVersion());
@@ -527,7 +529,9 @@ void LinkManager::_updateAutoConnectLinks(void)
         qCDebug(LinkManagerVerboseLog) << "serialNumber:      " << portInfo.serialNumber();
         qCDebug(LinkManagerVerboseLog) << "vendorIdentifier:  " << portInfo.vendorIdentifier();
         qCDebug(LinkManagerVerboseLog) << "productIdentifier: " << portInfo.productIdentifier();
-
+        qDebug() << "portName:" << portInfo.portName()<< "systemLocation:" << portInfo.systemLocation()<< "description:" << portInfo.description()
+                    << "manufacturer:" << portInfo.manufacturer() << "serialNumber:" << portInfo.serialNumber()<< "vendorIdentifier:" << portInfo.vendorIdentifier()
+                        << "productIdentifier: " << portInfo.productIdentifier();
         // Save port name
         currentPorts << portInfo.systemLocation();
 
@@ -685,7 +689,10 @@ void LinkManager::shutdown(void)
     setConnectionsSuspended(tr("Shutdown"));
     disconnectAll();
 }
-
+QList<SharedLinkInterfacePointer> LinkManager::getSharedLinks()
+{
+    return _sharedLinks;
+}
 QStringList LinkManager::linkTypeStrings(void) const
 {
     //-- Must follow same order as enum LinkType in LinkConfiguration.h

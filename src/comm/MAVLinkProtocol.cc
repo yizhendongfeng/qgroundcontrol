@@ -175,13 +175,97 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
     if (!_linkMgr->containsLink(link)) {
         return;
     }
-
     uint8_t mavlinkChannel = link->mavlinkChannel();
 
     static int  nonmavlinkCount = 0;
     static bool checkedUserNonMavlink = false;
     static bool warnedUserNonMavlink  = false;
 
+#if 0
+    /******************************     增加无人船通信解析程序    --张纪敏 *********************************/
+    //思路：把接收到的数据通过分别通过无人船通信解析与无人机通信解析，无人船通信解析成功后打包成无人机mavlink消息发送出去
+    //需要的mavlink消息包括：心跳包、位置包、姿态包
+//    if(b.size() > (BinaryBufferLength - usvBuffer.length))
+//        usvBuffer.length = 0;
+    size_t len = b.size() > (BinaryBufferLength - usvBuffer.length) ? (BinaryBufferLength - usvBuffer.length) : b.size();
+    memcpy(usvBuffer.data + usvBuffer.length, b.data(), len);
+    usvBuffer.length += len;
+    qDebug() << "b.size:" << b.size() << "BinaryBufferLength:" << BinaryBufferLength  << "usvBuffer.length:" << usvBuffer.length << (BinaryBufferLength - usvBuffer.length) << link->getLinkConfiguration()->name();
+    BinaryPacket binaryPacket = Protocol::BinaryBufferDecode(&usvBuffer);
+    static int usvMsgCount = 1;
+    if(binaryPacket.id == 19)//
+    {
+        mavlink_message_t usvMavlinkMsg;
+        usvMavlinkMsg.sysid = 11;
+        usvMavlinkMsg.compid = 1;
+//        mavlink_status_t usvStatus;
+        //一秒钟发送一次心跳包
+        if((usvMsgCount++)%5 == 0)
+        {
+            mavlink_heartbeat_t usvHeartbeat;
+            usvHeartbeat.autopilot = MAV_AUTOPILOT_PX4;
+            usvHeartbeat.type = MAV_TYPE_GROUND_ROVER;
+            usvHeartbeat.base_mode |= MAV_MODE_FLAG_DECODE_POSITION_MANUAL;
+            usvHeartbeat.base_mode |= MAV_MODE_FLAG_DECODE_POSITION_SAFETY;
+            usvHeartbeat.mavlink_version = 2;
+            usvMsgCount = 1;
+            emit vehicleHeartbeatInfo(link, usvMavlinkMsg.sysid, usvMavlinkMsg.compid, usvHeartbeat.autopilot, usvHeartbeat.type);
+        }
+        //发送位置、姿态
+        mavlink_global_position_int_t usvGlobalPosInt = {};
+        double latitude, longtitude, altitude, timeStamp;
+        float vx, vy, roll, pitch, yaw;
+        memcpy(&timeStamp, binaryPacket.data, 8);
+        memcpy(&latitude, binaryPacket.data + 9, 8);
+        memcpy(&longtitude, binaryPacket.data + 17, 8);
+        memcpy(&altitude, binaryPacket.data + 25, 8);
+        memcpy(&vx, binaryPacket.data + 45, 4);
+        memcpy(&vy, binaryPacket.data + 49, 4);
+        usvGlobalPosInt.time_boot_ms = static_cast<uint32_t>(timeStamp * 1e3);
+        usvGlobalPosInt.lat = static_cast<int>(latitude * 180 / M_PI * 1e7) + usvMsgCount * 1000000;
+        usvGlobalPosInt.lon = static_cast<int>(longtitude * 180 / M_PI * 1e7);
+        usvGlobalPosInt.alt = static_cast<int>(altitude * 1000);
+        usvGlobalPosInt.relative_alt = usvGlobalPosInt.alt;
+        usvGlobalPosInt.vx = static_cast<short>(vx * 100);
+        usvGlobalPosInt.vy = static_cast<short>(vy * 100);
+
+        usvMavlinkMsg.msgid = MAVLINK_MSG_ID_GLOBAL_POSITION_INT;
+        mavlink_msg_global_position_int_encode(usvMavlinkMsg.sysid, usvMavlinkMsg.compid, &usvMavlinkMsg,
+                                               static_cast<mavlink_global_position_int_t*>(&usvGlobalPosInt));
+        emit messageReceived(link, usvMavlinkMsg);
+
+        mavlink_gps_raw_int_t gps_raw_int = {};
+        usvMavlinkMsg.msgid = MAVLINK_MSG_ID_GPS_RAW_INT;
+        gps_raw_int.fix_type = GPS_FIX_TYPE_3D_FIX;
+        gps_raw_int.lat = usvGlobalPosInt.lat;
+        gps_raw_int.lon = usvGlobalPosInt.lon;
+        gps_raw_int.satellites_visible = 13;
+        gps_raw_int.eph = 30;
+        gps_raw_int.epv = 50;
+        gps_raw_int.hdg_acc = 120;
+        gps_raw_int.cog = 18000;
+        mavlink_msg_gps_raw_int_encode(usvMavlinkMsg.sysid, usvMavlinkMsg.compid, &usvMavlinkMsg,
+                                       static_cast<mavlink_gps_raw_int_t*>(&gps_raw_int));
+        emit messageReceived(link, usvMavlinkMsg);
+
+        mavlink_attitude_t usvAttitude = {};
+        memcpy(&roll, binaryPacket.data + 33, 4);
+        memcpy(&pitch, binaryPacket.data + 37, 4);
+        memcpy(&yaw, binaryPacket.data + 41, 4);
+        usvAttitude.time_boot_ms = static_cast<uint32_t>(timeStamp * 1e3);
+        usvAttitude.roll = roll;
+        usvAttitude.pitch = pitch;
+        usvAttitude.yaw = yaw;
+        usvMavlinkMsg.msgid = MAVLINK_MSG_ID_ATTITUDE;
+        mavlink_msg_attitude_encode(usvMavlinkMsg.sysid, usvMavlinkMsg.compid, &usvMavlinkMsg,
+                                    static_cast<const mavlink_attitude_t*>(&usvAttitude));
+        emit messageReceived(link, usvMavlinkMsg);
+        qDebug() << "usv msgid:" << binaryPacket.id << "latitude:" << latitude;
+        delete[] binaryPacket.data;
+//        return;
+    }
+    /**********************************   代码修改结束   --张纪敏  ****************************************/
+#endif
     for (int position = 0; position < b.size(); position++) {
         if (mavlink_parse_char(mavlinkChannel, static_cast<uint8_t>(b[position]), &_message, &_status)) {
             // Got a valid message
@@ -286,7 +370,21 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
                 mavlink_msg_high_latency2_decode(&_message, &highLatency2);
                 emit vehicleHeartbeatInfo(link, _message.sysid, _message.compid, highLatency2.autopilot, highLatency2.type);
             }
-
+            ///收到位置信息后广播至其他飞机  zjm
+            if(_message.msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT)
+            {
+                uint8_t formationBuffer[MAVLINK_MAX_PACKET_LEN];
+                QList<SharedLinkInterfacePointer> sharedLinks = _linkMgr->getSharedLinks();
+                int len = mavlink_msg_to_send_buffer(formationBuffer, &_message);
+                for(int i = 0; i < sharedLinks.count(); i++)
+                {
+//                    if(sharedLinks.at(i).data() != link /*&&  sharedLinks.at(i).data()->isConnected()*/)//->active())
+                    {
+                        sharedLinks.at(i)->writeBytesSafe((const char*)formationBuffer, len);
+                        qDebug() << "*** broadcast formation data***" << "id:" << _message.sysid << "seq:" << _message.seq << i << sharedLinks.count();
+                    }
+                }
+            }///
             // Detect if we are talking to an old radio not supporting v2
             mavlink_status_t* mavlinkStatus = mavlink_get_channel_status(mavlinkChannel);
             if (_message.msgid == MAVLINK_MSG_ID_RADIO_STATUS && _radio_version_mismatch_count != -1) {
@@ -318,7 +416,9 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
             // Reset message parsing
             memset(&_status,  0, sizeof(_status));
             memset(&_message, 0, sizeof(_message));
-        } else if (!link->decodedFirstMavlinkPacket()) {
+//            return;
+        }
+        else if (!link->decodedFirstMavlinkPacket()) {
             // No formed message yet
             nonmavlinkCount++;
             if (nonmavlinkCount > 1000 && !warnedUserNonMavlink) {
@@ -338,6 +438,100 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
             }
         }
     }
+
+}
+
+void MAVLinkProtocol::receiveUSVBytes(LinkInterface *link, QByteArray b)
+{
+#if 1
+    /******************************     增加无人船通信解析程序    --张纪敏 *********************************/
+    //思路：把接收到的数据通过分别通过无人船通信解析与无人机通信解析，无人船通信解析成功后打包成无人机mavlink消息发送出去
+    //需要的mavlink消息包括：心跳包、位置包、姿态包
+//    if(b.size() > (BinaryBufferLength - usvBuffer.length))
+//        usvBuffer.length = 0;
+    size_t len = b.size() > (BinaryBufferLength - usvBuffer.length) ? (BinaryBufferLength - usvBuffer.length) : b.size();
+    memcpy(usvBuffer.data + usvBuffer.length, b.data(), len);
+    usvBuffer.length += len;
+//    qDebug() << "b.size:" << b.size() << "BinaryBufferLength:" << BinaryBufferLength  << "usvBuffer.length:" << usvBuffer.length
+//             << (BinaryBufferLength - usvBuffer.length) << link->getLinkConfiguration()->name()
+//             << link->getLinkConfiguration()->name().contains("USV");
+    BinaryPacket binaryPacket = Protocol::BinaryBufferDecode(&usvBuffer);
+    static int usvMsgCount = 1;
+    if(binaryPacket.id == 19)//
+    {
+        mavlink_message_t usvMavlinkMsg;
+        usvMavlinkMsg.sysid = 11;
+        usvMavlinkMsg.compid = 1;
+//        mavlink_status_t usvStatus;
+        mavlink_heartbeat_t usvHeartbeat;
+        usvHeartbeat.autopilot = MAV_AUTOPILOT_PX4;
+        usvHeartbeat.type = MAV_TYPE_GROUND_ROVER;
+        usvHeartbeat.base_mode |= MAV_MODE_FLAG_DECODE_POSITION_MANUAL;
+        usvHeartbeat.base_mode |= MAV_MODE_FLAG_DECODE_POSITION_SAFETY;
+        usvHeartbeat.mavlink_version = 2;
+        //一秒钟发送一次心跳包
+        if((usvMsgCount++)%5 == 0)
+        {
+
+            usvMsgCount = 1;
+            emit vehicleHeartbeatInfo(link, usvMavlinkMsg.sysid, usvMavlinkMsg.compid, usvHeartbeat.autopilot, usvHeartbeat.type);
+        }
+        //发送位置、姿态
+        mavlink_global_position_int_t usvGlobalPosInt = {};
+        double latitude, longtitude, altitude, timeStamp;
+        float vx, vy, roll, pitch, yaw;
+        memcpy(&timeStamp, binaryPacket.data, 8);
+        memcpy(&latitude, binaryPacket.data + 9, 8);
+        memcpy(&longtitude, binaryPacket.data + 17, 8);
+        memcpy(&altitude, binaryPacket.data + 25, 8);
+        memcpy(&vx, binaryPacket.data + 45, 4);
+        memcpy(&vy, binaryPacket.data + 49, 4);
+        usvGlobalPosInt.time_boot_ms = static_cast<uint32_t>(timeStamp * 1e3);
+        usvGlobalPosInt.lat = static_cast<int>(latitude * 180 / M_PI * 1e7);// + usvMsgCount * 1000000
+        usvGlobalPosInt.lon = static_cast<int>(longtitude * 180 / M_PI * 1e7);
+        usvGlobalPosInt.alt = static_cast<int>(altitude * 1000);
+        usvGlobalPosInt.relative_alt = usvGlobalPosInt.alt;
+        usvGlobalPosInt.vx = static_cast<short>(vx * 100);
+        usvGlobalPosInt.vy = static_cast<short>(vy * 100);
+
+        usvMavlinkMsg.msgid = MAVLINK_MSG_ID_GLOBAL_POSITION_INT;
+        mavlink_msg_global_position_int_encode(usvMavlinkMsg.sysid, usvMavlinkMsg.compid, &usvMavlinkMsg,
+                                               static_cast<mavlink_global_position_int_t*>(&usvGlobalPosInt));
+        emit messageReceived(link, usvMavlinkMsg);
+
+        mavlink_gps_raw_int_t gps_raw_int = {};
+        usvMavlinkMsg.msgid = MAVLINK_MSG_ID_GPS_RAW_INT;
+        gps_raw_int.fix_type = GPS_FIX_TYPE_3D_FIX;
+        gps_raw_int.lat = usvGlobalPosInt.lat;
+        gps_raw_int.lon = usvGlobalPosInt.lon;
+        gps_raw_int.satellites_visible = 13;
+        gps_raw_int.eph = 30;
+        gps_raw_int.epv = 50;
+        gps_raw_int.hdg_acc = 120;
+        gps_raw_int.cog = 18000;
+        mavlink_msg_gps_raw_int_encode(usvMavlinkMsg.sysid, usvMavlinkMsg.compid, &usvMavlinkMsg,
+                                       static_cast<mavlink_gps_raw_int_t*>(&gps_raw_int));
+        emit messageReceived(link, usvMavlinkMsg);
+
+        mavlink_attitude_t usvAttitude = {};
+        memcpy(&roll, binaryPacket.data + 33, 4);
+        memcpy(&pitch, binaryPacket.data + 37, 4);
+        memcpy(&yaw, binaryPacket.data + 41, 4);
+        usvAttitude.time_boot_ms = static_cast<uint32_t>(timeStamp * 1e3);
+        usvAttitude.roll = roll;
+        usvAttitude.pitch = pitch;
+        usvAttitude.yaw = yaw;
+        usvMavlinkMsg.msgid = MAVLINK_MSG_ID_ATTITUDE;
+        mavlink_msg_attitude_encode(usvMavlinkMsg.sysid, usvMavlinkMsg.compid, &usvMavlinkMsg,
+                                    static_cast<const mavlink_attitude_t*>(&usvAttitude));
+        emit messageReceived(link, usvMavlinkMsg);
+        qDebug() << "usv msgid:" << binaryPacket.id << "latitude:" << latitude;
+        if(binaryPacket.data != nullptr)
+            delete[] binaryPacket.data;
+//        return;
+    }
+    /**********************************   代码修改结束   --张纪敏  ****************************************/
+#endif
 }
 
 /**

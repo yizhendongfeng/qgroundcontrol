@@ -406,14 +406,18 @@ HEADERS += \
     src/api/QGCSettings.h \
     src/api/QmlComponentInfo.h \
     src/comm/MavlinkMessagesTimer.h \
-    src/GPS/Drivers/src/base_station.h
+    src/GPS/Drivers/src/base_station.h \
+    src/comm/Utils/Protocol.h \
+#    src/comm/Utils/USVProtocol.h
 
 SOURCES += \
     src/api/QGCCorePlugin.cc \
     src/api/QGCOptions.cc \
     src/api/QGCSettings.cc \
     src/api/QmlComponentInfo.cc \
-    src/comm/MavlinkMessagesTimer.cc
+    src/comm/MavlinkMessagesTimer.cc \
+    src/comm/Utils/Protocol.cpp \
+#    src/comm/Utils/USVProtocol.cpp
 
 #
 # Unit Test specific configuration goes here (requires full debug build with all plugins)
