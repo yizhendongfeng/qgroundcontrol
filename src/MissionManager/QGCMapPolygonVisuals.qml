@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -467,6 +467,7 @@ Item {
                 mapPolygon.centerDrag = true
                 mapPolygon.center = coordinate
                 mapPolygon.centerDrag = false
+                console.log("coordinate", coordinate)
             }
         }
     }
@@ -492,6 +493,7 @@ Item {
             onItemCoordinateChanged:    mapPolygon.center = itemCoordinate
             onDragStart:                mapPolygon.centerDrag = true
             onDragStop:                 mapPolygon.centerDrag = false
+            onClicked: menu.popupCenter()
         }
     }
 
@@ -506,7 +508,7 @@ Item {
                 dragHandle = centerDragHandle.createObject(mapControl)
                 dragHandle.coordinate = Qt.binding(function() { return mapPolygon.center })
                 mapControl.addMapItem(dragHandle)
-                dragArea = centerDragAreaComponent.createObject(mapControl, { "itemIndicator": dragHandle, "itemCoordinate": mapPolygon.center })
+                dragArea = centerDragAreaComponent.createObject(mapControl, { "itemIndicator": dragHandle, "itemCoordinate": mapPolygon.center })                
             }
 
             Component.onDestruction: {
