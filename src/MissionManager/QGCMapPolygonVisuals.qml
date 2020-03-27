@@ -467,7 +467,6 @@ Item {
                 mapPolygon.centerDrag = true
                 mapPolygon.center = coordinate
                 mapPolygon.centerDrag = false
-                console.log("coordinate", coordinate)
             }
         }
     }
@@ -494,6 +493,53 @@ Item {
             onDragStart:                mapPolygon.centerDrag = true
             onDragStop:                 mapPolygon.centerDrag = false
             onClicked: menu.popupCenter()
+
+
+            function setRadiusFromDialog() {
+                var radius = QGroundControl.appSettingsDistanceUnitsToMeters(radiusField.text)
+                _createCircularPolygon(mapPolygon.center, radius)
+                _editCircleRadius = false
+            }
+
+            Rectangle {
+                anchors.margins:    _margin
+                anchors.left:       parent.right
+                width:              radiusColumn.width + (_margin *2)
+                height:             radiusColumn.height + (_margin *2)
+                color:              qgcPal.window
+                border.color:       qgcPal.text
+                visible:            _editCircleRadius
+
+                Column {
+                    id:                 radiusColumn
+                    anchors.margins:    _margin
+                    anchors.left:       parent.left
+                    anchors.top:        parent.top
+                    spacing:            _margin
+
+                    QGCLabel { text: qsTr("Radius:") }
+
+                    QGCTextField {
+                        id:                 radiusField
+                        showUnits:          true
+                        unitsLabel:         QGroundControl.appSettingsDistanceUnitsString
+                        text:               QGroundControl.metersToAppSettingsDistanceUnits(_circleRadius).toFixed(2)
+                        onEditingFinished:  setRadiusFromDialog()
+                        inputMethodHints:   Qt.ImhFormattedNumbersOnly
+                    }
+                }
+
+                QGCLabel {
+                    anchors.right:  radiusColumn.right
+                    anchors.top:    radiusColumn.top
+                    text:           "X"
+
+                    QGCMouseArea {
+                        fillItem:   parent
+                        onClicked:  setRadiusFromDialog()
+                    }
+                }
+            }
         }
     }
 
