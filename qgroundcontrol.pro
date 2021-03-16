@@ -436,8 +436,10 @@ HEADERS += \
     src/api/QGCOptions.h \
     src/api/QGCSettings.h \
     src/api/QmlComponentInfo.h \
+    src/comm/IIPSProtocol.h \
+    src/comm/IIPSComm.h \
     src/comm/MavlinkMessagesTimer.h \
-    src/GPS/Drivers/src/base_station.h \
+    src/GPS/Drivers/src/base_station.h
 
 contains (DEFINES, QGC_ENABLE_PAIRING) {
     HEADERS += \
@@ -449,7 +451,9 @@ SOURCES += \
     src/api/QGCOptions.cc \
     src/api/QGCSettings.cc \
     src/api/QmlComponentInfo.cc \
-    src/comm/MavlinkMessagesTimer.cc \
+    src/comm/IIPSProtocol.cpp \
+    src/comm/IIPSComm.cpp \
+    src/comm/MavlinkMessagesTimer.cc
 
 contains (DEFINES, QGC_ENABLE_PAIRING) {
     SOURCES += \
