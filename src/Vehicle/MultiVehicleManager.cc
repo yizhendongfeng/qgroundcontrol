@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -50,6 +50,7 @@ MultiVehicleManager::MultiVehicleManager(QGCApplication* app, QGCToolbox* toolbo
     if (_gcsHeartbeatEnabled) {
         _gcsHeartbeatTimer.start();
     }
+    iipsComm = new IIPSComm(this);
 }
 
 void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
@@ -130,6 +131,10 @@ void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicle
     connect(vehicle, &Vehicle::allLinksInactive, this, &MultiVehicleManager::_deleteVehiclePhase1);
     connect(vehicle, &Vehicle::requestProtocolVersion, this, &MultiVehicleManager::_requestProtocolVersion);
     connect(vehicle->parameterManager(), &ParameterManager::parametersReadyChanged, this, &MultiVehicleManager::_vehicleParametersReadyChanged);
+    //将新对象添加到与综合地面站通信中，来获取其类型、默认速度，写入航线json文件
+//    iipsComm->AppendVehicle(vehicle);
+    iipsComm->setVehicle(vehicle);
+    connect(vehicle, &Vehicle::SigSendQGCStatusData, iipsComm, &IIPSComm::SlotSendData);
 
     _vehicles.append(vehicle);
 
@@ -193,6 +198,7 @@ void MultiVehicleManager::_deleteVehiclePhase1(Vehicle* vehicle)
     for (int i=0; i<_vehicles.count(); i++) {
         if (_vehicles[i] == vehicle) {
             _vehicles.removeAt(i);
+//            iipsComm->RemoveVehicle(vehicle);
             found = true;
             break;
         }
@@ -314,6 +320,11 @@ void MultiVehicleManager::_coordinateChanged(QGeoCoordinate coordinate)
 {
     _lastKnownLocation = coordinate;
     emit lastKnownLocationChanged();
+}
+
+IIPSComm* MultiVehicleManager::getIipsComm() const
+{
+    return iipsComm;
 }
 
 void MultiVehicleManager::_vehicleParametersReadyChanged(bool parametersReady)

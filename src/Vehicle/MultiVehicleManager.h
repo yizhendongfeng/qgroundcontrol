@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -19,6 +19,7 @@
 #include "QmlObjectListModel.h"
 #include "QGCToolbox.h"
 #include "QGCLoggingCategory.h"
+#include "../comm/IIPSComm.h"
 
 class FirmwarePluginManager;
 class FollowMe;
@@ -84,6 +85,8 @@ public:
 
     QGeoCoordinate lastKnownLocation    () { return _lastKnownLocation; }
 
+    IIPSComm* getIipsComm() const;
+
 signals:
     void vehicleAdded                   (Vehicle* vehicle);
     void vehicleRemoved                 (Vehicle* vehicle);
@@ -130,6 +133,8 @@ private:
     bool                _gcsHeartbeatEnabled;           ///< Enabled/disable heartbeat emission
     static const int    _gcsHeartbeatRateMSecs = 1000;  ///< Heartbeat rate
     static const char*  _gcsHeartbeatEnabledKey;
+
+    IIPSComm* iipsComm;  //与综合处理系统通信
 };
 
 #endif
