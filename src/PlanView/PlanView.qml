@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -265,6 +265,16 @@ Item {
             if (_visualItems && _visualItems.count !== 1) {
                 mapFitFunctions.fitMapViewportToMissionItems()
             }
+            _missionController.setCurrentPlanViewSeqNum(0, true)
+        }
+    }
+
+    Connections {
+        target: iipsComm
+        onSigSendPlanFile: {
+//            console.log("connections iipscomm fileName:" + fileName)
+            _planMasterController.loadFromFile(fileName)
+            _planMasterController.fitViewportToItems()
             _missionController.setCurrentPlanViewSeqNum(0, true)
         }
     }
