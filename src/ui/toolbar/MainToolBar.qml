@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -183,6 +183,13 @@ Item {
                         checked = true
                         mainWindow.showAnalyzeView()
                     }
+                }
+
+                QGCToolBarButton {
+                    id:                 iipsButton
+                    Layout.fillHeight:  true
+                    icon.source:        "/qmlimages/HITL.svg"
+                    visible:            iipsComm.iipsConnected
                 }
 
                 Item {
