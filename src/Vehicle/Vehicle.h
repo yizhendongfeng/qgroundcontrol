@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -21,6 +21,7 @@
 #include "UASMessageHandler.h"
 #include "SettingsFact.h"
 #include "QGCMapCircle.h"
+#include "../comm/IIPSComm.h"
 
 class UAS;
 class UASInterface;
@@ -1233,6 +1234,7 @@ signals:
     void gimbalDataChanged              ();
     void isROIEnabledChanged            ();
 
+    void SigSendQGCStatusData(const QGCStatusData& data);
 private slots:
     void _mavlinkMessageReceived        (LinkInterface* link, mavlink_message_t message);
     void _linkInactiveOrDeleted         (LinkInterface* link);
@@ -1610,5 +1612,5 @@ private:
     static const char* _settingsGroup;
     static const char* _joystickModeSettingsKey;
     static const char* _joystickEnabledSettingsKey;
-
+    QGCStatusData qgcStatusData = {};
 };

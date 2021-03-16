@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -716,6 +716,11 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
         break;
     case MAVLINK_MSG_ID_RAW_IMU:
         emit mavlinkRawImu(message);
+        mavlink_raw_imu_t rawImu;
+        mavlink_msg_raw_imu_decode(&message, &rawImu);
+//        qgcStatusData.accelerometerX = rawImu.xacc;
+//        qgcStatusData.accelerometerY = rawImu.yacc;
+//        qgcStatusData.accelerometerZ = rawImu.zacc;
         break;
     case MAVLINK_MSG_ID_SCALED_IMU:
         emit mavlinkScaledImu1(message);
@@ -1099,17 +1104,25 @@ void Vehicle::_handleAttitudeWorker(double rollRadians, double pitchRadians, dou
     _rollFact.setRawValue(roll);
     _pitchFact.setRawValue(pitch);
     _headingFact.setRawValue(yaw);
+
 }
 
 void Vehicle::_handleAttitude(mavlink_message_t& message)
 {
-    if (_receivingAttitudeQuaternion) {
-        return;
-    }
+//    if (_receivingAttitudeQuaternion) {
+//        return;
+//    }
 
     mavlink_attitude_t attitude;
     mavlink_msg_attitude_decode(&message, &attitude);
-
+    qgcStatusData.id = message.sysid;
+    qgcStatusData.roll = QGC::limitAngleToPMPIf(attitude.roll);
+    qgcStatusData.pitch = QGC::limitAngleToPMPIf(attitude.pitch);
+    qgcStatusData.yaw = QGC::limitAngleToPMPIf(attitude.yaw);
+    qgcStatusData.gyroscopeX = attitude.rollspeed;
+    qgcStatusData.gyroscopeY = attitude.pitchspeed;
+    qgcStatusData.gyroscopeZ = attitude.yawspeed;
+    emit SigSendQGCStatusData(qgcStatusData);
     _handleAttitudeWorker(attitude.roll, attitude.pitch, attitude.yaw);
 }
 
@@ -1139,6 +1152,14 @@ void Vehicle::_handleAttitudeQuaternion(mavlink_message_t& message)
     rollRate()->setRawValue(qRadiansToDegrees(rates[0]));
     pitchRate()->setRawValue(qRadiansToDegrees(rates[1]));
     yawRate()->setRawValue(qRadiansToDegrees(rates[2]));
+//    qgcStatusData.id = message.sysid;
+//    qgcStatusData.roll = QGC::limitAngleToPMPIf(roll);
+//    qgcStatusData.pitch = QGC::limitAngleToPMPIf(pitch);
+//    qgcStatusData.yaw = QGC::limitAngleToPMPIf(yaw);
+//    qgcStatusData.gyroscopeX = rates[0];
+//    qgcStatusData.gyroscopeY = rates[1];
+//    qgcStatusData.gyroscopeZ = rates[2];
+//    emit SigSendQGCStatusData(qgcStatusData);
 }
 
 void Vehicle::_handleGpsRawInt(mavlink_message_t& message)
@@ -1167,6 +1188,9 @@ void Vehicle::_handleGpsRawInt(mavlink_message_t& message)
     _gpsFactGroup.vdop()->setRawValue(gpsRawInt.epv == UINT16_MAX ? std::numeric_limits<double>::quiet_NaN() : gpsRawInt.epv / 100.0);
     _gpsFactGroup.courseOverGround()->setRawValue(gpsRawInt.cog == UINT16_MAX ? std::numeric_limits<double>::quiet_NaN() : gpsRawInt.cog / 100.0);
     _gpsFactGroup.lock()->setRawValue(gpsRawInt.fix_type);
+
+//    qgcStatusData.satellitesUsed = gpsRawInt.satellites_visible;
+//    qgcStatusData.fixType = gpsRawInt.fix_type;
 }
 
 void Vehicle::_handleGlobalPositionInt(mavlink_message_t& message)
@@ -1189,6 +1213,14 @@ void Vehicle::_handleGlobalPositionInt(mavlink_message_t& message)
         _coordinate = newPosition;
         emit coordinateChanged(_coordinate);
     }
+
+    qgcStatusData.latitude = qDegreesToRadians(globalPositionInt.lat / (double)1E7);
+    qgcStatusData.longitude = qDegreesToRadians(globalPositionInt.lon / (double)1E7);
+    qgcStatusData.altitude = globalPositionInt.alt  / 1000.0;
+    qgcStatusData.velocityNorth = globalPositionInt.vx / 100.0f;
+    qgcStatusData.velocityEast = globalPositionInt.vy / 100.0f;
+    qgcStatusData.velocityDown = globalPositionInt.vz / 100.0f;
+//    emit SigSendQGCStatusData(qgcStatusData);
 }
 
 void Vehicle::_handleHighLatency2(mavlink_message_t& message)
@@ -1598,6 +1630,8 @@ void Vehicle::_handleSysStatus(mavlink_message_t& message)
                          sysStatus.voltage_battery == UINT16_MAX ? qQNaN() : static_cast<double>(sysStatus.voltage_battery) / 1000.0,
                          sysStatus.current_battery == -1 ? qQNaN() : static_cast<double>(sysStatus.current_battery) / 100.0,
                          sysStatus.battery_remaining == -1 ? qQNaN() : sysStatus.battery_remaining);
+
+    qgcStatusData.status = sysStatus.onboard_control_sensors_health;
 }
 
 void Vehicle::_handleBatteryStatus(mavlink_message_t& message)
@@ -1639,6 +1673,7 @@ void Vehicle::_handleBatteryStatus(mavlink_message_t& message)
                              bat_status.current_battery == -1 ? qQNaN() : (double)bat_status.current_battery / 100.0,
                              bat_status.battery_remaining == -1 ? qQNaN() : bat_status.battery_remaining);
     }
+//    qgcStatusData.battery = static_cast<float_t>(voltage);
 }
 
 void Vehicle::_setHomePosition(QGeoCoordinate& homeCoord)
@@ -1953,7 +1988,6 @@ bool Vehicle::sendMessageOnLink(LinkInterface* link, mavlink_message_t message)
     if (!link || !_links.contains(link) || !link->isConnected()) {
         return false;
     }
-
     emit _sendMessageOnLinkOnThread(link, message);
 
     return true;
@@ -1978,7 +2012,6 @@ void Vehicle::_sendMessageOnLink(LinkInterface* link, mavlink_message_t message)
     // Write message into buffer, prepending start sign
     uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
     int len = mavlink_msg_to_send_buffer(buffer, &message);
-
     link->writeBytesSafe((const char*)buffer, len);
     _messagesSent++;
     emit messagesSentChanged();
