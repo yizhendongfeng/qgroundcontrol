@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -160,7 +160,7 @@ void Joystick::_setDefaultCalibration(void) {
     _accumulator    = false;
     _deadband       = false;
     _axisFrequency  = 25.0f;
-    _buttonFrequency= 5.0f;
+    _buttonFrequency= 10.0f;
     _throttleMode   = ThrottleModeDownZero;
     _calibrated     = true;
     _circleCorrection = false;
@@ -217,13 +217,13 @@ void Joystick::_loadSettings()
     bool convertOk;
 
     qCDebug(JoystickLog) << "_loadSettings " << _name;
-
+    settings.setValue(_buttonFrequencySettingsKey,  10);
     _calibrated     = settings.value(_calibratedSettingsKey, false).toBool();
     _exponential    = settings.value(_exponentialSettingsKey, 0).toFloat();
     _accumulator    = settings.value(_accumulatorSettingsKey, false).toBool();
     _deadband       = settings.value(_deadbandSettingsKey, false).toBool();
     _axisFrequency  = settings.value(_axisFrequencySettingsKey, 25.0f).toFloat();
-    _buttonFrequency= settings.value(_buttonFrequencySettingsKey, 5.0f).toFloat();
+    _buttonFrequency= settings.value(_buttonFrequencySettingsKey, 10.0f).toFloat();
     _circleCorrection = settings.value(_circleCorrectionSettingsKey, false).toBool();
     _gimbalEnabled  = settings.value(_gimbalSettingsKey, false).toBool();
 
