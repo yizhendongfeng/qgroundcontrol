@@ -48,6 +48,13 @@ IIPSComm::IIPSComm(QObject *parent) : QObject(parent)
         qgcPort = 8001;
         settings.setValue("qgcPort", qgcPort);
     }
+    if(settings.contains("sendInterval"))
+        sendInterval = static_cast<uint16_t>(settings.value("sendInterval", 100).toUInt());
+    else
+    {
+        sendInterval = 100;
+        settings.setValue("sendInterval", sendInterval);
+    }
     settings.endGroup();
 
     if(!udpSocket.bind(qgcPort, QAbstractSocket::ShareAddress))
@@ -57,9 +64,6 @@ IIPSComm::IIPSComm(QObject *parent) : QObject(parent)
     sendPacket.dataLength = statusPacketId;
     sendPacket.id = statusPacketLength;
 
-    QTimer* timerTest = new QTimer(this);
-    connect(timerTest, &QTimer::timeout, this, &IIPSComm::SlotTestTimeout);
-//    timerTest->start(1000);
     memset(&receiveBuffer, 0, sizeof(receiveBuffer));
     timerIipsConnect.setSingleShot(true);
     connect(&timerIipsConnect, &QTimer::timeout, this, [&](){
@@ -67,6 +71,9 @@ IIPSComm::IIPSComm(QObject *parent) : QObject(parent)
         emit iipsConnectedChanged();
         qDebug() << "hide";
     });
+
+    timerSend.setInterval(sendInterval);
+    connect(&timerSend, &QTimer::timeout, this, &IIPSComm::SlotSendToIIPS);
 }
 
 IIPSComm::~IIPSComm()
@@ -222,12 +229,21 @@ int IIPSComm::SaveWaypointsToJsonFile(PacketId type)
 
 void IIPSComm::SlotSendData(const QGCStatusData& data)
 {
-    sysId = data.id;
+    statusData = data;
+    if (!timerSend.isActive())
+        timerSend.start();
+}
+
+void IIPSComm::SlotSendToIIPS()
+{
+    sysId = statusData.id;
     BinaryPacket statusPacket = {new uint8_t[statusPacketLength], statusPacketId, statusPacketLength};
-    memcpy(statusPacket.data, &data, static_cast<size_t>(statusPacket.dataLength));
+    memcpy(statusPacket.data, &statusData, static_cast<size_t>(statusPacket.dataLength));
     BinaryBuffer binaryBuffer = IIPSProtocol::BinaryPacketEncode(statusPacket);
     delete []statusPacket.data;
+    if (udpSocket.isValid())
     /*qDebug() << "writeDatagram:" << */udpSocket.writeDatagram((char*)(binaryBuffer.data), binaryBuffer.length, iipsAddress, iipsPort);
+
 }
 
 void IIPSComm::SlotReceiveData()
@@ -276,31 +292,6 @@ void IIPSComm::SlotReceiveData()
     }
 }
 
-void IIPSComm::SlotTestTimeout()
-{
-    data.id = 1;
-    data.timestamp = 2;
-    data.status = 3;
-    data.latitude = 4;
-    data.longitude = 5;
-    data.altitude = 6;
-    data.roll = 7;
-    data.pitch = 8;
-    data.yaw = 9;
-    data.velocityNorth = 10;
-    data.velocityEast = 11;
-    data.velocityDown = 12;
-    data.gyroscopeX = 13;
-    data.gyroscopeY = 14;
-    data.gyroscopeZ = 15;
-//    data.accelerometerX = 16;
-//    data.accelerometerY = 17;
-//    data.accelerometerZ = 18;
-//    data.satellitesUsed = 19;
-//    data.fixType = 20;
-//    data.battery = 21;
-    SlotSendData(data);
-}
 
 bool IIPSComm::getIipsConnected() const
 {

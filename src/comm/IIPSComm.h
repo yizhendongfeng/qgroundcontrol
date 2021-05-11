@@ -11,6 +11,7 @@
 #include <QObject>
 #include <QUdpSocket>
 
+
 #include "IIPSProtocol.h"
 
 #pragma pack(1)
@@ -106,8 +107,8 @@ public:
 
 public slots:
     void SlotSendData(const QGCStatusData &data);
+    void SlotSendToIIPS();
     void SlotReceiveData();
-    void SlotTestTimeout();
 private:
     const uint8_t heartbeatPacketId = 0;              //IIPS心跳数据包编号
 //    const uint8_t commandPacketId = 128;              //IIPS命令数据包编号
@@ -131,13 +132,12 @@ private:
     QList<Waypoint> listWaypoints;
     Vehicle* vehicle = nullptr;
     QList<Vehicle*> vehicles;
-    QGCStatusData data;
 
     /******************** 通信相关 ********************/
     BinaryPacket sendPacket;
     BinaryPacket receivePacket;
     BinaryBuffer receiveBuffer;
-    QGCStatusData statusData;
+    QGCStatusData statusData = {};
     IIPSProtocol iipsProtocol;
     QUdpSocket udpSocket;
     QString iipsIp = "127.0.0.1";   //综合信息处理系统默认ip地址
@@ -146,7 +146,10 @@ private:
     uint16_t qgcPort = 8001;        //QGroundControl默认端口
     bool iipsConnected = false;     //综合信息处理系统是否已连接
     const int iipsTimeOut = 3;      //超过此事件认为综合信息处理系统已断开，图标消失
+
+    int sendInterval = 100;        //发送给综合信息处理系统时间间隔
     QTimer timerIipsConnect;
+    QTimer timerSend;               //发送至综合信息处理系统定时器
 signals:
     void sigSendPlanFile(const QString fileName);
     void iipsConnectedChanged();
