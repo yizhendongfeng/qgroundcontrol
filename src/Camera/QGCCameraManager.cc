@@ -1,4 +1,4 @@
-/*!
+﻿/*!
  * @file
  *   @brief Camera Controller
  *   @author Gus Grubba <gus@auterion.com>
@@ -466,6 +466,13 @@ QGCCameraManager::_stepZoom(int direction)
         if(pCamera) {
             pCamera->stepZoom(direction);
         }
+        _vehicle->sendMavCommand(
+            1,                                      // Target component
+            MAV_CMD_SET_CAMERA_ZOOM,                // Command id
+            false,                                  // ShowError
+            ZOOM_TYPE_STEP,                         // Zoom type
+            direction);                             // Direction (-1 wide, 1 tele)
+        qDebug() <<  "stepzoom: " << direction;
     }
 }
 
