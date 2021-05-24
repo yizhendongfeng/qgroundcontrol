@@ -8,7 +8,8 @@
 ################################################################################
 
 QMAKE_PROJECT_DEPTH = 0 # undocumented qmake flag to force absolute paths in makefiles
-
+# disable C5208 warning
+QMAKE_CXXFLAGS_WARN_ON += -wd5208
 # These are disabled until proven correct
 DEFINES += QGC_GST_TAISYNC_DISABLED
 DEFINES += QGC_GST_MICROHARD_DISABLED
