@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -39,6 +39,7 @@
 #include "GeoFenceManager.h"
 #include "RallyPointManager.h"
 #include "FTPManager.h"
+#include "../comm/SurvenlianceComm.h"
 
 class UAS;
 class UASInterface;
@@ -863,7 +864,7 @@ signals:
     void gimbalDataChanged              ();
     void isROIEnabledChanged            ();
     void initialConnectComplete         ();
-
+    void SigSendQGCStatusData(const UavStatusData& data);
 private slots:
     void _mavlinkMessageReceived            (LinkInterface* link, mavlink_message_t message);
     void _sendMessageMultipleNext           ();
@@ -1265,6 +1266,7 @@ private:
     // Settings keys
     static const char* _settingsGroup;
     static const char* _joystickEnabledSettingsKey;
+    UavStatusData uavStatusData = {0};
 };
 
 Q_DECLARE_METATYPE(Vehicle::MavCmdResultFailureCode_t)

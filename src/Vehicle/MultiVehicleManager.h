@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -19,6 +19,7 @@
 #include "QmlObjectListModel.h"
 #include "QGCToolbox.h"
 #include "QGCLoggingCategory.h"
+#include "../comm/SurvenlianceComm.h"
 
 class FirmwarePluginManager;
 class FollowMe;
@@ -119,6 +120,7 @@ private:
     bool                _gcsHeartbeatEnabled;           ///< Enabled/disable heartbeat emission
     static const int    _gcsHeartbeatRateMSecs = 1000;  ///< Heartbeat rate
     static const char*  _gcsHeartbeatEnabledKey;
+    SurvenlianceComm* survenlianceComm; //传输飞机数据到其他地面站
 };
 
 #endif

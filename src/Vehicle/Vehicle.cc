@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -978,6 +978,16 @@ void Vehicle::_handleAttitude(mavlink_message_t& message)
     mavlink_msg_attitude_decode(&message, &attitude);
 
     _handleAttitudeWorker(attitude.roll, attitude.pitch, attitude.yaw);
+
+    double yawTemp = QGC::limitAngleToPMPIf(attitude.yaw);
+    yawTemp = qRadiansToDegrees(yawTemp);
+    if (yawTemp < 0.0)
+        yawTemp += 360.0;
+    // truncate to integer so widget never displays 360
+    yawTemp = trunc(yawTemp);
+
+    uavStatusData.yaw = yawTemp;
+    emit SigSendQGCStatusData(uavStatusData);
 }
 
 void Vehicle::_handleAttitudeQuaternion(mavlink_message_t& message)
@@ -1006,6 +1016,15 @@ void Vehicle::_handleAttitudeQuaternion(mavlink_message_t& message)
     rollRate()->setRawValue(qRadiansToDegrees(rates[0]));
     pitchRate()->setRawValue(qRadiansToDegrees(rates[1]));
     yawRate()->setRawValue(qRadiansToDegrees(rates[2]));
+
+    double yawTemp = QGC::limitAngleToPMPIf(yaw);
+    yawTemp = qRadiansToDegrees(yawTemp);
+    if (yawTemp < 0.0)
+        yawTemp += 360.0;
+    // truncate to integer so widget never displays 360
+    yawTemp = trunc(yawTemp);
+    uavStatusData.yaw = yawTemp;
+    emit SigSendQGCStatusData(uavStatusData);
 }
 
 void Vehicle::_handleGpsRawInt(mavlink_message_t& message)
@@ -1014,10 +1033,9 @@ void Vehicle::_handleGpsRawInt(mavlink_message_t& message)
     mavlink_msg_gps_raw_int_decode(&message, &gpsRawInt);
 
     _gpsRawIntMessageAvailable = true;
-
     if (gpsRawInt.fix_type >= GPS_FIX_TYPE_3D_FIX) {
         if (!_globalPositionIntMessageAvailable) {
-            QGeoCoordinate newPosition(gpsRawInt.lat  / (double)1E7, gpsRawInt.lon / (double)1E7, gpsRawInt.alt  / 1000.0);
+            QGeoCoordinate newPosition = QGeoCoordinate(gpsRawInt.lat  / (double)1E7, gpsRawInt.lon / (double)1E7, gpsRawInt.alt  / 1000.0);
             if (newPosition != _coordinate) {
                 _coordinate = newPosition;
                 emit coordinateChanged(_coordinate);
@@ -1050,6 +1068,12 @@ void Vehicle::_handleGlobalPositionInt(mavlink_message_t& message)
     if (newPosition != _coordinate) {
         _coordinate = newPosition;
         emit coordinateChanged(_coordinate);
+        uavStatusData.longitude = newPosition.longitude() / 360.0 * qPow(2, 32);
+        uavStatusData.latitude = newPosition.latitude() / 180.0 * qPow(2, 32);
+        uavStatusData.altitude = newPosition.altitude();
+        float vx = globalPositionInt.vx / 100.0f;
+        float vy = globalPositionInt.vy / 100.0f;
+        uavStatusData.vehicleVelocity = sqrt(vx * vx + vy * vy);
     }
 }
 
