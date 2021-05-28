@@ -10,6 +10,7 @@
 QMAKE_PROJECT_DEPTH = 0 # undocumented qmake flag to force absolute paths in makefiles
 # disable C5208 warning
 QMAKE_CXXFLAGS_WARN_ON += -wd5208
+CONFIG += warn_off
 # These are disabled until proven correct
 DEFINES += QGC_GST_TAISYNC_DISABLED
 DEFINES += QGC_GST_MICROHARD_DISABLED
@@ -432,6 +433,7 @@ HEADERS += \
     src/api/QGCSettings.h \
     src/api/QmlComponentInfo.h \
     src/GPS/Drivers/src/base_station.h \
+    src/comm/SurvenlianceComm.h
 
 contains (DEFINES, QGC_ENABLE_PAIRING) {
     HEADERS += \
@@ -444,6 +446,7 @@ SOURCES += \
     src/api/QGCOptions.cc \
     src/api/QGCSettings.cc \
     src/api/QmlComponentInfo.cc \
+    src/comm/SurvenlianceComm.cpp
 
 contains (DEFINES, QGC_ENABLE_PAIRING) {
     SOURCES += \
