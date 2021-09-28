@@ -195,5 +195,15 @@
         <file alias="Yield.svg">src/ui/toolbar/Images/Yield.svg</file>
         <file alias="ZoomMinus.svg">src/FlightMap/Images/ZoomMinus.svg</file>
         <file alias="ZoomPlus.svg">src/FlightMap/Images/ZoomPlus.svg</file>
+        <file alias="NewFile.svg">src/FlightMap/Images/NewFile.svg</file>
+        <file alias="OpenFile.svg">src/FlightMap/Images/OpenFile.svg</file>
+        <file alias="DeleteFile.svg">src/FlightMap/Images/DeleteFile.svg</file>
+        <file alias="SaveFile.svg">src/FlightMap/Images/SaveFile.svg</file>
+        <file alias="Edit.svg">src/FlightMap/Images/Edit.svg</file>
+        <file alias="Done.svg">src/FlightMap/Images/Done.svg</file>
+    </qresource>
+    <qresource prefix="/">
+        <file>src/FlightMap/Images/OpenFile.svg</file>
+        <file>src/FlightMap/Images/NewFile.svg</file>
     </qresource>
 </RCC>
