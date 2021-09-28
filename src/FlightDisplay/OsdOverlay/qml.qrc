@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>OsdOverlay.qml</file>
+        <file>PitchWidget.qml</file>
+        <file>YawWidget.qml</file>
+        <file>RollWidget.qml</file>
+        <file>AltitudeWidget.qml</file>
+        <file>VelocityWidget.qml</file>
+        <file>SatelliteWidget.qml</file>
+    </qresource>
+</RCC>
