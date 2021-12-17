@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -18,19 +18,18 @@ import QGroundControl.Controls      1.0
 Rectangle {
     id:         _root
     color:      qgcPal.toolbarBackground
-    width:      _idealWidth < repeater.contentWidth ? repeater.contentWidth : _idealWidth
-    height:     Math.min(maxHeight, toolStripColumn.height + (flickable.anchors.margins * 2))
+    width:      Math.min(maxWidth, toolStripRow.width + (flickable.anchors.margins * 2))
+    height:     _idealHeight < repeater.contentHeight ? repeater.contentHeight : _idealHeight
     radius:     ScreenTools.defaultFontPixelWidth / 2
-
     property alias  model:              repeater.model
     property real   maxHeight           ///< Maximum height for control, determines whether text is hidden to make control shorter
+    property real   maxWidth            ///< Maximum width for control, determines whether text is hidden to make control shorter
     property alias  title:              titleLabel.text
-
+    property alias  titleFontSize:      titleLabel.font.pixelSize
     property var _dropPanel: dropPanel
-
     function simulateClick(buttonIndex) {
         buttonIndex = buttonIndex + 1 // skip over title label
-        var button = toolStripColumn.children[buttonIndex]
+        var button = toolStripRow.children[buttonIndex]
         if (button.checkable) {
             button.checked = !button.checked
         }
@@ -38,7 +37,8 @@ Rectangle {
     }
 
     // Ensure we don't get narrower than content
-    property real _idealWidth: (ScreenTools.isMobile ? ScreenTools.minTouchPixels : ScreenTools.defaultFontPixelWidth * 8) + toolStripColumn.anchors.margins * 2
+    property real _idealWidth: (ScreenTools.isMobile ? ScreenTools.minTouchPixels : ScreenTools.defaultFontPixelWidth * 8) + toolStripRow.anchors.margins * 2
+    property real _idealHeight: (ScreenTools.isMobile ? ScreenTools.minTouchPixels : ScreenTools.defaultFontPixelHeight * 4) + toolStripRow.anchors.margins * 2
 
     signal dropped(int index)
 
@@ -48,26 +48,30 @@ Rectangle {
 
     QGCFlickable {
         id:                 flickable
-        anchors.margins:    ScreenTools.defaultFontPixelWidth * 0.4
+        anchors.margins:    0//ScreenTools.defaultFontPixelWidth * 0.4
         anchors.top:        parent.top
         anchors.left:       parent.left
         anchors.right:      parent.right
         height:             parent.height
-        contentHeight:      toolStripColumn.height
-        flickableDirection: Flickable.VerticalFlick
+        width:              parent.width
+        anchors.bottom:     parent.bottom
+//        contentHeight:      toolStripRow.height
+        contentWidth:       toolStripRow.width
+        flickableDirection: Flickable.HorizontalFlick   //VerticalFlick
         clip:               true
 
-        Column {
-            id:             toolStripColumn
-            anchors.left:   parent.left
-            anchors.right:  parent.right
+        Row {
+            id:             toolStripRow
+            anchors.top:    parent.top
+            anchors.bottom: parent.bottom
             spacing:        ScreenTools.defaultFontPixelWidth * 0.25
 
             QGCLabel {
                 id:                     titleLabel
-                anchors.left:           parent.left
-                anchors.right:          parent.right
+                anchors.top:           parent.top
+                anchors.bottom:          parent.bottom
                 horizontalAlignment:    Text.AlignHCenter
+                verticalAlignment:      Text.AlignVCenter
                 font.pointSize:         ScreenTools.smallFontPointSize
                 visible:                title != ""
             }
@@ -77,15 +81,14 @@ Rectangle {
 
                 ToolStripHoverButton {
                     id:                 buttonTemplate
-                    anchors.left:       toolStripColumn.left
-                    anchors.right:      toolStripColumn.right
-                    height:             width
+                    anchors.top:        toolStripRow.top
+                    anchors.bottom:     toolStripRow.bottom
+                    width:              height
                     radius:             ScreenTools.defaultFontPixelWidth / 2
                     fontPointSize:      ScreenTools.smallFontPointSize
                     toolStripAction:    modelData
                     dropPanel:          _dropPanel
                     onDropped:          _root.dropped(index)
-
                     onCheckedChanged: {
                         // We deal with exclusive check state manually since usinug autoExclusive caused all sorts of crazt problems
                         if (checked) {
@@ -107,5 +110,15 @@ Rectangle {
     DropPanel {
         id:         dropPanel
         toolStrip:  _root
+    }
+    Behavior on anchors.leftMargin {
+        NumberAnimation { duration: 300 }
+    }
+
+    function showWidget(slipIn) {
+        if (slipIn)
+            anchors.leftMargin = 1
+        else
+            anchors.leftMargin = -width
     }
 }
