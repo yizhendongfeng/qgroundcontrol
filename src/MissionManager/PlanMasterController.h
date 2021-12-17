@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -80,6 +80,8 @@ public:
     Q_INVOKABLE void saveToKml(const QString& filename);
     Q_INVOKABLE void removeAll(void);                       ///< Removes all from controller only, synce required to remove from vehicle
     Q_INVOKABLE void removeAllFromVehicle(void);            ///< Removes all from vehicle and controller
+    Q_INVOKABLE bool removeSelectedFiles(QString fileName);
+    Q_INVOKABLE bool renameCurrentFile(QString fileName);
 
     MissionController*      missionController(void)     { return &_missionController; }
     GeoFenceController*     geoFenceController(void)    { return &_geoFenceController; }

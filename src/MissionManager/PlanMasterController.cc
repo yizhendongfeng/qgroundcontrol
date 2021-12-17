@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -359,9 +359,15 @@ void PlanMasterController::loadFromFile(const QString& filename)
     if (filename.isEmpty()) {
         return;
     }
-
+    AppSettings* appSettings = qgcApp()->toolbox()->settingsManager()->appSettings();
     QFileInfo fileInfo(filename);
-    QFile file(filename);
+    QString localFileNameString(filename);
+    if (fileInfo.path() != AppSettings::missionDirectory) {
+        QFile file(filename);
+        if (file.copy(appSettings->missionSavePath() + "/" + fileInfo.fileName()))
+            localFileNameString = appSettings->missionSavePath() + "/" + fileInfo.fileName();
+    }
+    QFile file(localFileNameString);
 
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         errorString = file.errorString() + QStringLiteral(" ") + filename;
@@ -423,7 +429,9 @@ void PlanMasterController::loadFromFile(const QString& filename)
     }
 
     if(success){
-        _currentPlanFile = QString::asprintf("%s/%s.%s", fileInfo.path().toLocal8Bit().data(), fileInfo.completeBaseName().toLocal8Bit().data(), AppSettings::planFileExtension);
+        _currentPlanFile = fileInfo.path() + "/" + fileInfo.completeBaseName() + "." + AppSettings::planFileExtension;
+//        _currentPlanFile = QString::asprintf("%s/%s.%s", fileInfo.path().toLocal8Bit().data(), fileInfo.completeBaseName().toLocal8Bit().data(), AppSettings::planFileExtension);
+        qDebug() << "loadFromFile" << _currentPlanFile;
     } else {
         _currentPlanFile.clear();
     }
@@ -550,6 +558,32 @@ void PlanMasterController::removeAllFromVehicle(void)
     }
 }
 
+bool PlanMasterController::removeSelectedFiles(QString fileName)
+{
+    return QFile::remove(fileName);
+}
+
+bool PlanMasterController::renameCurrentFile(QString fileName)
+{
+    if (QFileInfo(fileName).fileName().isEmpty())
+        return false;
+    QString planFilename = QFileInfo(_currentPlanFile).dir().absolutePath() + "/" + fileName;
+    if (!QFileInfo(fileName).fileName().contains(".")) {
+        planFilename += QString(".%1").arg(fileExtension());
+    }
+//    QFileInfo(planFilename).exists() ?
+    QFile file(_currentPlanFile);
+    bool success = file.rename(planFilename);
+    if (!success)
+        qgcApp()->showAppMessage(file.errorString());
+#include <QtDebug>
+    qDebug() << "renameCurrentFile" << _currentPlanFile << planFilename << fileName << success << file.error() << file.errorString();
+    _currentPlanFile = planFilename;
+//    emit currentPlanFileChanged();
+
+    return success;
+}
+
 bool PlanMasterController::containsItems(void) const
 {
     return _missionController.containsItems() || _geoFenceController.containsItems() || _rallyPointController.containsItems();
@@ -576,6 +610,7 @@ QString PlanMasterController::kmlFileExtension(void) const
 {
     return AppSettings::kmlFileExtension;
 }
+
 
 QStringList PlanMasterController::loadNameFilters(void) const
 {

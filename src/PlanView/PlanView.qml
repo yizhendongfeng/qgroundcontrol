@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -53,6 +53,9 @@ Item {
     property var    _appSettings:                       QGroundControl.settingsManager.appSettings
     property var    _planViewSettings:                  QGroundControl.settingsManager.planViewSettings
     property bool   _promptForPlanUsageShowing:         false
+    property string _currentPlanFileDir: _appSettings.missionSavePath
+    property string _currentPlanFileName: ""
+    property var    _currentCreatePlanObject: null
 
     readonly property var       _layers:                [_layerMission, _layerGeoFence, _layerRallyPoints]
 
@@ -353,6 +356,18 @@ Item {
         }
     }
 
+    function enterPlanEditMode(enter) {
+        if (enter) {
+            toolStrip.showWidget(true)
+            leftPanel.showWidget(false)
+            rightPanel.showWidget(true)
+        } else {
+            toolStrip.showWidget(false)
+            leftPanel.showWidget(true)
+            rightPanel.showWidget(false)
+        }
+    }
+
     property int _moveDialogMissionItemIndex
 
     QGCFileDialog {
@@ -606,16 +621,94 @@ Item {
             }
         }
 
+        LeftPanel { // 整合任务管理
+            id: leftPanel
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: _rightPanelWidth
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+                Rectangle {
+                    id: fileToolBar
+                    Layout.fillWidth: true
+                    Layout.topMargin: 1
+                    Layout.leftMargin: 1//ScreenTools.defaultFontPixelWidth / 2
+                    height: 50
+                    color:      qgcPal.toolbarBackground
+
+                    QGCLabel {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: ScreenTools.defaultFontPixelWidth + 5
+                        text: qsTr("Plan")
+                    }
+                    Row {
+                        id:                     viewButtonRow
+                        anchors.right: parent.right
+                        anchors.rightMargin: ScreenTools.defaultFontPixelWidth
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing:                ScreenTools.defaultFontPixelWidth
+                        QGCIconButton {
+                            id:                     newFileButton
+
+                            iconSource:            "/qmlimages/NewFile.svg"
+                            onClicked: {
+                                if (!mainWindow.preventViewSwitch()) {
+                                    showPopupDialogFromComponent(createPlanDialogComponent)
+                                }
+                            }
+                        }
+
+                        QGCIconButton {
+                            id:                 openFileButton
+                            iconSource:         "/qmlimages/OpenFile.svg"
+                            onClicked: {
+                                _planMasterController.loadFromSelectedFile()
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: bottomBorder
+                        height: 1
+                        color: qgcPal.colorGrey
+                        anchors.bottom: parent.bottom
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                    }
+                }
+                PlanListView {
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+                }
+
+            }
+            Behavior on anchors.leftMargin {
+                NumberAnimation { duration: 300 }
+            }
+
+            function showWidget(slipIn) {
+                if (slipIn)
+                    anchors.leftMargin = 0
+                else
+                    anchors.leftMargin = -width
+            }
+        }
+
+
         //-----------------------------------------------------------
-        // Left tool strip
-        ToolStrip {
+        ToolStripColumn {
             id:                 toolStrip
-            anchors.margins:    _toolsMargin
+            anchors.top: parent.top
+            anchors.topMargin:    1//_toolsMargin
             anchors.left:       parent.left
-            anchors.top:        parent.top
-            z:                  QGroundControl.zOrderWidgets
+            anchors.leftMargin: -width
+            z:                  QGroundControl.zOrderWidgets - 1
             maxHeight:          parent.height - toolStrip.y
-            title:              qsTr("Plan")
+//            maxWidth:           parent.width - rightPanel.width
+//            title:              qsTr("Plan")
 
             readonly property int flyButtonIndex:       0
             readonly property int fileButtonIndex:      1
@@ -632,11 +725,11 @@ Item {
             ToolStripActionList {
                 id: toolStripActionList
                 model: [
-                    ToolStripAction {
-                        text:           qsTr("Fly")
-                        iconSource:     "/qmlimages/PaperPlane.svg"
-                        onTriggered:    mainWindow.showFlyView()
-                    },
+//                    ToolStripAction {
+//                        text:           qsTr("Fly")
+//                        iconSource:     "/qmlimages/PaperPlane.svg"
+//                        onTriggered:    mainWindow.showFlyView()
+//                    },
                     ToolStripAction {
                         text:                   qsTr("File")
                         enabled:                !_planMasterController.syncInProgress
@@ -709,6 +802,17 @@ Item {
                         enabled:            true
                         visible:            true
                         dropPanelComponent: centerMapDropPanel
+                    },
+                    ToolStripAction {
+                        text:               qsTr("Done")
+                        iconSource:         "/qmlimages/Done.svg"
+                        enabled:            true
+                        visible:            true
+                        dropPanelComponent: null
+                        onTriggered: {
+                            enterPlanEditMode(false)
+                            _planMasterController.saveToFile(_currentPlanFileDir + "/" + _currentPlanFileName)
+                        }
                     }
                 ]
             }
@@ -733,7 +837,17 @@ Item {
             opacity:            layerTabBar.visible ? 0.2 : 0
             anchors.bottom:     parent.bottom
             anchors.right:      parent.right
-            anchors.rightMargin: _toolsMargin
+            anchors.rightMargin: -width//_toolsMargin
+            Behavior on anchors.rightMargin {
+                NumberAnimation { duration: 300 }
+            }
+            function showWidget(slipIn) {
+                if (slipIn)
+                    anchors.rightMargin = 1//_toolsMargin
+                else
+                    anchors.rightMargin = -width
+            }
+//            Component.onCompleted: console.log("_rightPanelWidth:", _root.width / 3, ScreenTools.defaultFontPixelWidth * 30)
         }
         //-------------------------------------------------------
         // Right Panel Controls
@@ -804,6 +918,9 @@ Item {
                             QGroundControl.airspaceManager.airspaceVisible = false
                         }
                     }
+                }
+                QGCLabel {
+                    text:               _currentPlanFileName
                 }
                 //-------------------------------------------------------
                 // Mission Controls (Expanded)
@@ -925,7 +1042,7 @@ Item {
             id:                     mapScale
             anchors.margins:        _toolsMargin
             anchors.bottom:         terrainStatus.visible ? terrainStatus.top : parent.bottom
-            anchors.left:           toolStrip.y + toolStrip.height + _toolsMargin > mapScale.y ? toolStrip.right: parent.left
+            anchors.left:           toolStrip.y + toolStrip.height + _toolsMargin > mapScale.y && leftPanel.x + leftPanel.width < mapScale.y ? toolStrip.right: leftPanel.right
             mapControl:             editorMap
             buttonsOnLeft:          true
             terrainButtonVisible:   _editingLayer === _layerMission
@@ -1019,6 +1136,99 @@ Item {
     }
 
     Component {
+        id: createPlanDropPanel
+        Rectangle {
+            color: qgcPal.window
+            ColumnLayout {
+                id: createPlanColumnHolder
+                anchors.fill: parent
+                spacing: _margin
+                Rectangle {
+                    Layout.fillWidth: true
+                    color: qgcPal.windowShadeLight
+                    QGCLabel {
+                        id:                 createPlanLabel
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        Layout.fillWidth:   true
+                        wrapMode:           Text.WordWrap
+                        text:               qsTr("Create new plan")
+                        visible:            _planMasterController.dirty
+                    }
+                    QGCIconButton {
+                        id: iconButtonClose
+                        anchors.right: parent.right
+                        iconSource: "/res/XDelete.svg"
+                        onClicked: {
+                            enterPlanEditMode(false)
+                            console.log("close create plan widget")
+                        }
+                    }
+                }
+                RowLayout {
+                    spacing:         _margin
+                    visible:            createSection.visible
+
+                    Repeater {
+                        model: _planMasterController.planCreators
+
+                        Rectangle {
+                            id:     button
+                            width:  ScreenTools.defaultFontPixelHeight * 7
+                            height: planCreatorNameLabel.y + planCreatorNameLabel.height
+                            color:  button.pressed || button.highlighted ? qgcPal.buttonHighlight : qgcPal.button
+
+                            property bool highlighted: mouseArea.containsMouse
+                            property bool pressed:     mouseArea.pressed
+
+                            Image {
+                                id:                 planCreatorImage
+                                anchors.left:       parent.left
+                                anchors.right:      parent.right
+                                source:             object.imageResource
+                                sourceSize.width:   width
+                                fillMode:           Image.PreserveAspectFit
+                                mipmap:             true
+                            }
+
+                            QGCLabel {
+                                id:                     planCreatorNameLabel
+                                anchors.top:            planCreatorImage.bottom
+                                anchors.left:           parent.left
+                                anchors.right:          parent.right
+                                horizontalAlignment:    Text.AlignHCenter
+                                text:                   object.name
+                                color:                  button.pressed || button.highlighted ? qgcPal.buttonHighlightText : qgcPal.buttonText
+                            }
+
+                            QGCMouseArea {
+                                id:                 mouseArea
+                                anchors.fill:       parent
+                                hoverEnabled:       true
+                                preventStealing:    true
+                                onClicked:          {
+                                    if (_planMasterController.containsItems) {
+                                        createPlanRemoveAllPromptDialogMapCenter = _mapCenter()
+                                        createPlanRemoveAllPromptDialogPlanCreator = object
+                                        mainWindow.showComponentDialog(createPlanRemoveAllPromptDialog, qsTr("Create Plan"), mainWindow.showDialogDefaultWidth, StandardButton.Yes | StandardButton.No)
+                                    } else {
+                                        object.createPlan(_mapCenter())
+                                    }
+                                    dropPanel.hide()
+                                }
+
+                                function _mapCenter() {
+                                    var centerPoint = Qt.point(editorMap.centerViewport.left + (editorMap.centerViewport.width / 2), editorMap.centerViewport.top + (editorMap.centerViewport.height / 2))
+                                    return editorMap.toCoordinate(centerPoint, false /* clipToViewPort */)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
         id: syncDropPanel
 
         ColumnLayout {
@@ -1096,7 +1306,6 @@ Item {
                                 } else {
                                     object.createPlan(_mapCenter())
                                 }
-                                dropPanel.hide()
                             }
 
                             function _mapCenter() {
@@ -1235,6 +1444,126 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+
+
+    Component {
+        id: createPlanDialogComponent
+
+        QGCPopupDialog {
+            id:         createPlanDialog
+            title:      qsTr("Create Plan")
+            buttons:    StandardButton.Close
+
+            property real _toolButtonHeight:    ScreenTools.defaultFontPixelHeight * 3
+            property real _margins:             ScreenTools.defaultFontPixelWidth
+
+
+            RowLayout {
+                spacing:         _margin
+                Repeater {
+                    model: _planMasterController.planCreators
+                    Rectangle {
+                        id:     button
+                        width:  ScreenTools.defaultFontPixelHeight * 7
+                        height: planCreatorNameLabel.y + planCreatorNameLabel.height
+                        color:  button.pressed || button.highlighted ? qgcPal.buttonHighlight : qgcPal.button
+
+                        property bool highlighted: mouseArea.containsMouse
+                        property bool pressed:     mouseArea.pressed
+
+                        Image {
+                            id:                 planCreatorImage
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            source:             object.imageResource
+                            sourceSize.width:   width
+                            fillMode:           Image.PreserveAspectFit
+                            mipmap:             true
+                        }
+
+                        QGCLabel {
+                            id:                     planCreatorNameLabel
+                            anchors.top:            planCreatorImage.bottom
+                            anchors.left:           parent.left
+                            anchors.right:          parent.right
+                            horizontalAlignment:    Text.AlignHCenter
+                            text:                   object.name
+                            color:                  button.pressed || button.highlighted ? qgcPal.buttonHighlightText : qgcPal.buttonText
+                        }
+
+                        QGCMouseArea {
+                            id:                 mouseArea
+                            anchors.fill:       parent
+                            hoverEnabled:       true
+                            preventStealing:    true
+                            onClicked:          {
+                                _currentCreatePlanObject = object
+                                createPlanDialog.hideDialog()
+                                if (!mainWindow.preventViewSwitch()) {
+                                    showPopupDialogFromComponent(setPlanFileNameComponent)
+                                }
+                            }
+
+                        }
+                        Component.onCompleted: console.log(object.name, "highlighted:", button.highlighted)
+                    }
+                }
+            }
+            }
+
+    }
+
+    Component {
+        id: setPlanFileNameComponent
+
+        QGCPopupDialog {
+            id:        setPlanNameDialog
+            title:      qsTr("Set plan name")
+            buttons:    StandardButton.Close
+            width: 270
+            RowLayout {
+                spacing: ScreenTools.defaultFontPixelWidth
+                anchors.right: parent.right
+                anchors.left: parent.left
+                QGCLabel {
+                    text: qsTr("Plan Name:")
+                }
+                QGCTextField {
+                    id: planNameTextInput
+                    Layout.fillWidth:  true
+                    Layout.fillHeight: true
+                    placeholderText: qsTr("Please input your plan name")
+
+                }
+                QGCButton {
+                    text: qsTr("Done")
+                    onClicked: {
+                        if (planNameTextInput.displayText === "")
+                            return
+                        _currentPlanFileName = planNameTextInput.displayText
+                        console.log(_currentPlanFileDir, _currentPlanFileName)
+                        if (_planMasterController.containsItems) {
+                            createPlanRemoveAllPromptDialogMapCenter = _mapCenter()
+                            createPlanRemoveAllPromptDialogPlanCreator = _currentCreatePlanObject
+                            mainWindow.showComponentDialog(createPlanRemoveAllPromptDialog, qsTr("Create Plan"), mainWindow.showDialogDefaultWidth, StandardButton.Yes | StandardButton.No)
+                        } else {
+                            _currentCreatePlanObject.createPlan(_mapCenter())
+
+                        }
+
+                        setPlanNameDialog.hideDialog()
+                        enterPlanEditMode(true)
+                    }
+                    function _mapCenter() {
+                        var centerPoint = Qt.point(editorMap.centerViewport.left + (editorMap.centerViewport.width / 2), editorMap.centerViewport.top + (editorMap.centerViewport.height / 2))
+                        return editorMap.toCoordinate(centerPoint, false /* clipToViewPort */)
+                    }
+                }
+            }
+
         }
     }
 }
