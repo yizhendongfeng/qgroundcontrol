@@ -1,0 +1,9 @@
+﻿Module QGroundControl.OsdOverlay
+
+OsdOverlay          1.0 OsdOverlay.qml
+AltitudeWidget      1.0 AltitudeWidget.qml
+PitchWidget         1.0 PitchWidget.qml
+RollWidget          1.0 RollWidget.qml
+SatelliteWidget     1.0 SatelliteWidget.qml
+VelocityWidget      1.0 VelocityWidget.qml
+YawWidget           1.0 YawWidget.qml
