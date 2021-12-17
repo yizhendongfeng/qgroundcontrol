@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -13,9 +13,9 @@ import QGroundControl               1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.FlightDisplay 1.0
 
-ToolStrip {
+ToolStripColumn {
     id:     _root
-    title:  qsTr("Fly")
+//    title:  qsTr("Fly")
 
     signal displayPreFlightChecklist
 

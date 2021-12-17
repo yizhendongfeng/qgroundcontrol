@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -21,6 +21,8 @@ Item {
     readonly property string windowClosingState:    "windowClosing"
 
     property var  pipOverlay            // QGCPipOverlay control
+    property Item pipItem
+    property Item fullItem
     property bool isDark:       true    // true: Use dark overlay visuals
 
     signal windowAboutToOpen    // Catch this signal to do something special prior to the item transition to windowed mode
@@ -31,35 +33,62 @@ Item {
     states: [
         State {
             name: pipState
-
-            AnchorChanges {
-                target:         _clientControl
-                anchors.top:    pipOverlay.top
-                anchors.bottom: pipOverlay.bottom
-                anchors.left:   pipOverlay.left
-                anchors.right:  pipOverlay.right
+            StateChangeScript {
+                script:  {
+                    _clientControl.parent = pipItem
+                    console.log("pipState pipState:", pipItem.width)
+                }
             }
+
+//            ParentChange {
+//                target: _clientControl
+//                parent: pipOverlay._currentItem
+//            }
+//            AnchorChanges {
+//                target:         _clientControl
+//                anchors.top:    pipItem.top
+//                anchors.bottom: pipItem.bottom
+//                anchors.left:   pipItem.left
+//                anchors.right:  pipItem.right
+//                anchors.top:    pipOverlay.top
+//                anchors.bottom: pipOverlay.bottom
+//                anchors.left:   pipOverlay.left
+//                anchors.right:  pipOverlay.right
+//            }
 
             PropertyChanges {
                 target: _clientControl
-                z:      pipOverlay.pipZOrder
+                z:      pipOverlay.pipZOrder + 2
             }
         },
         State {
             name: fullState
-
-            AnchorChanges {
-                target:         _clientControl
-                anchors.top:    pipOverlay.parent.top
-                anchors.bottom: pipOverlay.parent.bottom
-                anchors.left:   pipOverlay.parent.left
-                anchors.right:  pipOverlay.parent.right
+            StateChangeScript {
+                script: {
+                    console.log("pipState fullState:",  pipOverlay.parent.width)
+                    _clientControl.parent = pipOverlay.parent
+                }
             }
+//            ParentChange {
+//                target: _clientControl
+//                parent: pipOverlay.parent
+//            }
+//            AnchorChanges {
+//                target:         _clientControl
+//                anchors.top:    fullItem.top
+//                anchors.bottom: fullItem.bottom
+//                anchors.left:   fullItem.left
+//                anchors.right:  fullItem.right
+//                anchors.top:    pipOverlay.parent.top
+//                anchors.bottom: pipOverlay.parent.bottom
+//                anchors.left:   pipOverlay.parent.left
+//                anchors.right:  pipOverlay.parent.right
+//            }
 
-            PropertyChanges {
-                target: _clientControl
-                z:      pipOverlay.fullZOrder
-            }
+//            PropertyChanges {
+//                target: _clientControl
+//                z:      pipOverlay.fullZOrder
+//            }
         },
         State {
             name: windowState

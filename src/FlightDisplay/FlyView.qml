@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -28,6 +28,7 @@ import QGroundControl.FlightMap     1.0
 import QGroundControl.Palette       1.0
 import QGroundControl.ScreenTools   1.0
 import QGroundControl.Vehicle       1.0
+import QGroundControl.OsdOverlay 1.0
 
 Item {
     id: _root
@@ -137,6 +138,7 @@ Item {
 
     FlyViewMap {
         id:                     mapControl
+        anchors.fill:           parent
         planMasterController:   _planController
         rightPanelWidth:        ScreenTools.defaultFontPixelHeight * 9
         pipMode:                !_mainWindowIsMap
@@ -144,13 +146,43 @@ Item {
         mapName:                "FlightDisplayView"
     }
 
-    FlyViewVideo {
-        id: videoControl
-    }
+//    FlyViewVideo {
+//        id: videoControl
+//        visible: false
+//        OsdOverlay {
+//            id: osdOverlay
+//            activeVehicle: globals.activeVehicle
+//            anchors.fill: parent
+//        }
+
+//        FlyViewToolStrip {
+//            id:                     toolStrip
+//            anchors.leftMargin:     1//_toolsMargin + parentToolInsets.leftEdgeCenterInset
+//            anchors.topMargin:      1//_toolsMargin + parentToolInsets.topEdgeLeftInset
+//            anchors.left:           parent.left
+//            anchors.verticalCenter: parent.verticalCenter
+//            //            z:                      videoControl.z + 1
+//            maxHeight:              parent.height / 3   //parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+//            //        maxWidth:               parent.width - x - instrumentPanel.width - _toolsMargin//parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+//            visible:                !QGroundControl.videoManager.fullScreen
+//            radius:                 ScreenTools.defaultFontPixelWidth / 2
+//            onDisplayPreFlightChecklist: mainWindow.showPopupDialogFromComponent(preFlightChecklistPopup)
+//            property real leftInset: x + width
+//        }
+
+
+//        PhotoVideoControl {
+//            id:                     photoVideoControl
+//            anchors.margins:        _toolsMargin * 2
+//            anchors.right:          parent.right
+//            anchors.verticalCenter: parent.verticalCenter
+//        }
+//    }
 
     QGCPipOverlay {
         id:                     _pipOverlay
         anchors.left:           parent.left
+        anchors.top:            parent.top
         anchors.bottom:         parent.bottom
         anchors.margins:        _toolsMargin
         item1IsFullSettingsKey: "MainFlyWindowIsMap"
@@ -158,7 +190,7 @@ Item {
         item2:                  QGroundControl.videoManager.hasVideo ? videoControl : null
         fullZOrder:             _fullItemZorder
         pipZOrder:              _pipItemZorder
-        show:                   !QGroundControl.videoManager.fullScreen &&
-                                    (videoControl.pipState.state === videoControl.pipState.pipState || mapControl.pipState.state === mapControl.pipState.pipState)
+        show:                   true//!QGroundControl.videoManager.fullScreen &&
+//                                (videoControl.pipState.state === videoControl.pipState.pipState || mapControl.pipState.state === mapControl.pipState.pipState)
     }
 }

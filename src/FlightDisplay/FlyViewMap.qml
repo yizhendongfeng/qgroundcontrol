@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -35,6 +35,8 @@ FlightMap {
     QGCPipState {
         id:         _pipState
         pipOverlay: _pipOverlay
+        pipItem:    _pipOverlay._currentItem
+        fullItem:   _pipOverlay.parent
         isDark:     _isFullWindowItemDark
     }
 
@@ -507,7 +509,7 @@ FlightMap {
     // Handle guided mode clicks
     MouseArea {
         anchors.fill: parent
-
+        propagateComposedEvents: true
         QGCMenu {
             id: clickMenu
             property var coord

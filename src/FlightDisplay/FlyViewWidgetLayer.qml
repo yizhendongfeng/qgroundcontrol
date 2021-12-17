@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -22,7 +22,6 @@ import QGroundControl.Controls      1.0
 import QGroundControl.Airspace      1.0
 import QGroundControl.Airmap        1.0
 import QGroundControl.Controllers   1.0
-import QGroundControl.Controls      1.0
 import QGroundControl.FactSystem    1.0
 import QGroundControl.FlightDisplay 1.0
 import QGroundControl.FlightMap     1.0
@@ -113,7 +112,7 @@ Item {
         anchors.right:              parent.right
         width:                      _rightPanelWidth
         spacing:                    _toolsMargin
-        visible:                    QGroundControl.corePlugin.options.flyView.showInstrumentPanel && multiVehiclePanelSelector.showSingleVehiclePanel
+        visible:                    false//QGroundControl.corePlugin.options.flyView.showInstrumentPanel && multiVehiclePanelSelector.showSingleVehiclePanel
         availableHeight:            parent.height - y - _toolsMargin
 
         property real rightInset: visible ? parent.width - x : 0
@@ -124,6 +123,7 @@ Item {
         anchors.margins:        _toolsMargin
         anchors.right:          parent.right
         width:                  _rightPanelWidth
+        visible:                false
         state:                  _verticalCenter ? "verticalCenter" : "topAnchor"
         states: [
             State {
@@ -191,14 +191,15 @@ Item {
 
     FlyViewToolStrip {
         id:                     toolStrip
-        anchors.leftMargin:     _toolsMargin + parentToolInsets.leftEdgeCenterInset
-        anchors.topMargin:      _toolsMargin + parentToolInsets.topEdgeLeftInset
+        anchors.leftMargin:     1//_toolsMargin + parentToolInsets.leftEdgeCenterInset
+        anchors.topMargin:      1//_toolsMargin + parentToolInsets.topEdgeLeftInset
         anchors.left:           parent.left
         anchors.top:            parent.top
         z:                      QGroundControl.zOrderWidgets
         maxHeight:              parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+//        maxWidth:               parent.width - x - instrumentPanel.width - _toolsMargin//parentToolInsets.bottomEdgeLeftInset - _toolsMargin
         visible:                !QGroundControl.videoManager.fullScreen
-
+        radius:                 ScreenTools.defaultFontPixelWidth / 2
         onDisplayPreFlightChecklist: mainWindow.showPopupDialogFromComponent(preFlightChecklistPopup)
 
         property real leftInset: x + width

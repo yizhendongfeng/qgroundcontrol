@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -33,15 +33,16 @@ Button {
     property alias  imageSource:        innerImage.source
     property alias  contentWidth:       innerText.contentWidth
 
-    property real imageScale:       0.6
+    property real imageScale:       showText ? 0.6 : 1
     property real contentMargins:   innerText.height * 0.1
 
     property color _currentContentColor:  (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.buttonText
 
+    property bool showText: true
+
     signal dropped(int index)
 
     onCheckedChanged: toolStripAction.checked = checked
-
     onClicked: {
         dropPanel.hide()
         if (!toolStripAction.dropPanelComponent) {
@@ -52,6 +53,7 @@ Button {
             checked = true
             control.dropped(index)
         }
+        checked = true
     }
 
     QGCPalette { id: qgcPal; colorGroupEnabled: control.enabled }
@@ -84,6 +86,7 @@ Button {
                 text:                       control.text
                 color:                      _currentContentColor
                 anchors.horizontalCenter:   parent.horizontalCenter
+                visible:                    showText
             }
         }
     }

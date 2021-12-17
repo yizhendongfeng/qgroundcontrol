@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -14,13 +14,17 @@ import QGroundControl               1.0
 import QGroundControl.ScreenTools   1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.Palette       1.0
+import QGroundControl.FlightDisplay 1.0
+import QGroundControl.FlightMap     1.0
+import QGroundControl.OsdOverlay    1.0
 
-Item {
+Rectangle {
     id:         _root
-    width:      _pipSize
+    width:      _pipSize < 200 ? 200 : _pipSize
     height:     _pipSize * (9/16)
     z:          pipZOrder + 1
     visible:    item2 && item2.pipState !== item2.pipState.window && show
+    color:      Qt.rgba(0,0,0,0.2)
 
     property var    item1:                  null    // Required
     property var    item2:                  null    // Optional, may come and go
@@ -28,7 +32,8 @@ Item {
     property real   fullZOrder:             0       // zOrder for items in full mode
     property real   pipZOrder:              1       // zOrder for items in pip mode
     property bool   show:                   true
-
+    property Component componentFlyVideo
+    property alias   _currentItem:           gridViewVideo.currentItem
     readonly property string _pipExpandedSettingsKey: "IsPIPVisible"
 
     property var    _fullItem
@@ -72,6 +77,7 @@ Item {
             _pipOrWindowItem = null
         }
         _setPipIsExpanded(QGroundControl.loadBoolGlobalSetting(_pipExpandedSettingsKey, true))
+        console.log("_initForItems", item2.pipState.state, item2.z)
     }
 
     function _swapPip() {
@@ -90,6 +96,7 @@ Item {
             item1IsFull = true
         }
         QGroundControl.saveBoolGlobalSetting(item1IsFullSettingsKey, item1IsFull)
+//        console.log("_swapPip", item2.pipState.state, item2.z, buttonTest.z)
     }
 
     function _setPipIsExpanded(isExpanded) {
@@ -117,7 +124,9 @@ Item {
         anchors.fill:   parent
         enabled:        _isExpanded
         hoverEnabled:   true
-        onClicked:      _swapPip()
+//        onDoubleClicked:      {_swapPip();console.log("pipMouseArea z:", z)}
+        propagateComposedEvents: true
+        onWheel: wheel.accepted = true
     }
 
     // MouseArea to drag in order to resize the PiP area
@@ -147,6 +156,7 @@ Item {
 
         // Drag
         onPositionChanged: {
+            console.log("onPositionChanged, height:", height, width)
             if (pipResize.pressed) {
                 var parentWidth = _root.parent.width
                 var newWidth = pipResize.initialWidth + mouse.x - pipResize.initialX
@@ -168,6 +178,7 @@ Item {
         height:         ScreenTools.defaultFontPixelHeight * 2.5
         width:          ScreenTools.defaultFontPixelHeight * 2.5
         sourceSize.height:  height
+        z:              _root.z + 3
     }
 
     // Check min/max constraints on pip size when when parent is resized
@@ -200,7 +211,7 @@ Item {
         height:         ScreenTools.defaultFontPixelHeight * 2.5
         width:          ScreenTools.defaultFontPixelHeight * 2.5
         sourceSize.height:  height
-
+        z:              pipZOrder + 3
         MouseArea {
             anchors.fill:   parent
             onClicked:      _pipOrWindowItem.pipState.state = _pipOrWindowItem.pipState.windowState
@@ -218,6 +229,7 @@ Item {
         height:         ScreenTools.defaultFontPixelHeight * 2.5
         width:          ScreenTools.defaultFontPixelHeight * 2.5
         sourceSize.height:  height
+        z:              pipZOrder + 3
         MouseArea {
             anchors.fill:   parent
             onClicked:      _root._setPipIsExpanded(false)
@@ -246,6 +258,112 @@ Item {
         MouseArea {
             anchors.fill:   parent
             onClicked:      _root._setPipIsExpanded(true)
+        }
+    }
+
+    GridView {
+        id:                 gridViewVideo
+        flow:               Flow.TopToBottom
+        anchors.fill:       parent
+        anchors.margins:    5
+        model:              1
+        delegate:           componentFlyViewVideo
+        highlight:          delegateHighlight
+        focus:              true
+        highlightFollowsCurrentItem: true
+//        interactive:        false
+        cellWidth:          parent.width
+        cellHeight:         cellWidth * 0.7
+//        cacheBuffer:    800
+        clip:               false
+        Component.onCompleted: console.log("cacheBuffer:",cacheBuffer, Column, "gridViewVideo.x:", gridViewVideo.x, "_root.x:", _root.x)
+        Component {
+            id: delegateHighlight
+            Rectangle {
+                z: 2
+                color: "transparent"
+                border.color: "yellow"
+                border.width: 2
+            }
+        }
+
+        Component {
+            id: componentFlyViewVideo
+            Item {
+                id: delegateItem
+                width: gridViewVideo.width
+                height: width * 0.7
+                property Item itemMap: mapControl
+
+                FlyViewVideo {
+                    id: videoControl1
+                    visible: true
+                    anchors.fill: parent
+                    OsdOverlay {
+                        id: osdOverlay
+                        activeVehicle: globals.activeVehicle
+                        anchors.fill: parent
+                    }
+
+                    FlyViewToolStrip {
+                        id:                     toolStrip1
+                        anchors.top:            parent.top
+                        anchors.right:           parent.right
+                        anchors.topMargin:      _toolsMargin * 2    //_toolsMargin + parentToolInsets.topEdgeLeftInset
+                        anchors.rightMargin:    _toolsMargin * 2    //_toolsMargin + parentToolInsets.leftEdgeCenterInset
+                        //            z:                      videoControl.z + 1
+                        maxHeight:              parent.height / 2   //parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+                        //        maxWidth:               parent.width - x - instrumentPanel.width - _toolsMargin//parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+                        visible:                !QGroundControl.videoManager.fullScreen
+                        radius:                 ScreenTools.defaultFontPixelWidth / 2
+                        showActionText:         false
+                        onDisplayPreFlightChecklist: mainWindow.showPopupDialogFromComponent(preFlightChecklistPopup)
+                        property real leftInset: x + width
+
+                    }
+
+
+                    PhotoVideoControl {
+                        id:                     photoVideoControl1
+                        anchors.margins:        _toolsMargin * 2
+                        anchors.right:          parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Component.onCompleted: console.log("videoControl.visible:", videoControl1.visible)
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onDoubleClicked: {
+                        console.log("double clicked  111")
+                        gridViewVideo.currentIndex = index
+                        console.log("double clicked  222")
+                        if (videoControl1.pipState.state === videoControl1.pipState.pipState) {
+                            videoControl1.pipState.state = videoControl1.pipState.fullState
+                            item1.pipState.state = mapControl.pipState.pipState
+                            toolStrip1.showActionText = true
+                            videoControl1.parent = _root.parent
+                            item1.parent = delegateItem
+                        } else {//if (videoControl1.state === videoControl1.pipState.fullState) {
+                            videoControl1.pipState.state = videoControl1.pipState.pipState
+                            item1.pipState.state = mapControl.pipState.fullState
+                            toolStrip1.showActionText = false
+                            videoControl1.parent = delegateItem
+                            item1.parent = _root.parent
+                        }
+
+                        console.log("double clicked componentFlyViewVideo index:", index, "videoControl1.state:", videoControl1.pipState.state, gridViewVideo.currentIndex, "toolStrip1.showActionText:", toolStrip1.showActionText)
+                    }
+                }
+                onFocusChanged: {
+                    videoControl1.pipState.state = mapControl.pipState.pipState
+                    videoControl1.parent = delegateItem
+                    console.log("onFocusChanged", videoControl1.pipState.state)
+                }
+            }
+        }
+        onCurrentItemChanged: {
+
+            console.log("onCurrentItemChanged,", gridViewVideo.currentIndex)
         }
     }
 }

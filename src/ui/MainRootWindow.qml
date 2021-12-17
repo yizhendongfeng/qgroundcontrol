@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -457,14 +457,26 @@ ApplicationWindow {
         }
     }
 
+    MainToolStrip {
+        id: leftMainToolStrip
+    }
+
     FlyView {
         id:             flightView
-        anchors.fill:   parent
+//        anchors.fill:   parent
+        width: parent.width - leftMainToolStrip.width
+        height: parent.height
+        anchors.top: leftMainToolStrip.top
+        anchors.left: leftMainToolStrip.right
     }
 
     PlanView {
         id:             planView
-        anchors.fill:   parent
+//        anchors.fill:   parent
+        width: parent.width - leftMainToolStrip.width
+        height: parent.height
+        anchors.top: parent.top
+        anchors.left: leftMainToolStrip.right
         visible:        false
     }
 

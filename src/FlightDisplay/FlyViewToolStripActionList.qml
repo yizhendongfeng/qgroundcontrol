@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -18,11 +18,11 @@ ToolStripActionList {
     signal displayPreFlightChecklist
 
     model: [
-        ToolStripAction {
-            text:           qsTr("Plan")
-            iconSource:     "/qmlimages/Plan.svg"
-            onTriggered:    mainWindow.showPlanView()
-        },
+//        ToolStripAction {
+//            text:           qsTr("Plan")
+//            iconSource:     "/qmlimages/Plan.svg"
+//            onTriggered:    mainWindow.showPlanView()
+//        },
         PreFlightCheckListShowAction { onTriggered: displayPreFlightChecklist() },
         GuidedActionTakeoff { },
         GuidedActionLand { },

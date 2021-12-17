@@ -1,4 +1,4 @@
-Module QGroundControl.Controls
+﻿Module QGroundControl.Controls
 
 AnalyzePage                             1.0 AnalyzePage.qml
 AppMessages                             1.0 AppMessages.qml
@@ -105,8 +105,10 @@ TransectStyleComplexItemStats           1.0 TransectStyleComplexItemStats.qml
 TransectStyleComplexItemTabBar          1.0 TransectStyleComplexItemTabBar.qml
 TransectStyleComplexItemTerrainFollow   1.0 TransectStyleComplexItemTerrainFollow.qml
 TransectStyleMapVisuals                 1.0 TransectStyleMapVisuals.qml
-ToolStrip                               1.0 ToolStrip.qml
+ToolStripRow                            1.0 ToolStripRow.qml
+ToolStripColumn                         1.0 ToolStripColumn.qml
 ToolStripHoverButton                    1.0 ToolStripHoverButton.qml
 VehicleRotationCal                      1.0 VehicleRotationCal.qml
 VehicleSummaryRow                       1.0 VehicleSummaryRow.qml
 MAVLinkChart                            1.0 MAVLinkChart.qml
+QGCIconButton                           1.0 QGCIconButton.qml
