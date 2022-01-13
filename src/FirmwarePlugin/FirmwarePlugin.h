@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -230,6 +230,7 @@ public:
     /// Important: Only CompInfoParam code should use this method
     virtual FactMetaData* _getMetaDataForFact(QObject* /*parameterMetaData*/, const QString& /*name*/, FactMetaData::ValueType_t /* type */, MAV_TYPE /*vehicleType*/) { return nullptr; }
 
+    virtual FactMetaData* _getMetaDataForFactByIndexes(QObject* /*parameterMetaData*/, uint8_t idGroup, uint16_t addrOffset, MAV_TYPE /*vehicleType*/) { return nullptr; }
     /// List of supported mission commands. Empty list for all commands supported.
     virtual QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass);
 

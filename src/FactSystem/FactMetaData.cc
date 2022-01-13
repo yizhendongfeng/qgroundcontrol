@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -95,6 +95,11 @@ const FactMetaData::AppSettingsTranslation_s FactMetaData::_rgAppSettingsTransla
 };
 
 const char* FactMetaData::_rgKnownTypeStrings[] = {
+    // LDT开头的为沈航数据类型标识
+    "LDT_f32",
+    "LDT_u16",
+    "LDT_u8",
+
     "Uint8",
     "Int8",
     "Uint16",
@@ -112,6 +117,11 @@ const char* FactMetaData::_rgKnownTypeStrings[] = {
 };
 
 const  FactMetaData::ValueType_t FactMetaData::_rgKnownValueTypes[] = {
+    // 沈航数据类型标识
+    valueTypeFloat,
+    valueTypeInt16,
+    valueTypeUint8,
+
     valueTypeUint8,
     valueTypeInt8,
     valueTypeUint16,
@@ -1510,6 +1520,34 @@ QVariant FactMetaData::cookedMin(void) const
 {
     // We have to be careful with cooked min/max. Running the raw values through the translator could flip min and max.
     return qMin(_rawTranslator(_rawMax).toDouble(), _rawTranslator(_rawMin).toDouble());
+}
+
+uint8_t FactMetaData::getTypeSize(ValueType_t type)
+{
+    switch (type) {
+    case valueTypeUint8:
+    case valueTypeInt8:
+    case valueTypeBool:
+         return 1;
+    case valueTypeUint16:
+    case valueTypeInt16:
+        return 2;
+    case valueTypeUint32:
+    case valueTypeInt32:
+    case valueTypeFloat:
+        return 4;
+    case valueTypeUint64:
+    case valueTypeInt64:
+    case valueTypeDouble:
+        return 8;
+    default:
+        return 0;
+    }
+}
+
+uint8_t FactMetaData::getTypeSize()
+{
+    return getTypeSize(_type);
 }
 
 void FactMetaData::setVolatileValue(bool bValue)

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -62,6 +62,7 @@ public:
     static constexpr FirmwareClass_t FirmwareClassPX4       = MAV_AUTOPILOT_PX4;
     static constexpr FirmwareClass_t FirmwareClassArduPilot = MAV_AUTOPILOT_ARDUPILOTMEGA;
     static constexpr FirmwareClass_t FirmwareClassGeneric   = MAV_AUTOPILOT_GENERIC;
+    static constexpr FirmwareClass_t FirmwareClassShenHang  = MAV_AUTOPILOT_SHEN_HANG;
 
     static constexpr VehicleClass_t VehicleClassAirship     = MAV_TYPE_AIRSHIP;
     static constexpr VehicleClass_t VehicleClassFixedWing   = MAV_TYPE_FIXED_WING;
@@ -73,6 +74,7 @@ public:
 
     static bool                     isPX4FirmwareClass          (MAV_AUTOPILOT autopilot) { return autopilot == MAV_AUTOPILOT_PX4; }
     static bool                     isArduPilotFirmwareClass    (MAV_AUTOPILOT autopilot) { return autopilot == MAV_AUTOPILOT_ARDUPILOTMEGA; }
+    static bool                     isShenHangFirmwareClass     (MAV_AUTOPILOT autopilot) { return autopilot == MAV_AUTOPILOT_SHEN_HANG; }
     static bool                     isGenericFirmwareClass      (MAV_AUTOPILOT autopilot) { return !isPX4FirmwareClass(autopilot) && ! isArduPilotFirmwareClass(autopilot); }
     static FirmwareClass_t          firmwareClass               (MAV_AUTOPILOT autopilot);
     static MAV_AUTOPILOT            firmwareClassToAutopilot    (FirmwareClass_t firmwareClass) { return static_cast<MAV_AUTOPILOT>(firmwareClass); }

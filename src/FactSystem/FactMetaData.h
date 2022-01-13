@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -104,6 +104,8 @@ public:
 
     static const QString defaultCategory    ();
     static const QString defaultGroup       ();
+    static uint8_t getTypeSize(ValueType_t type);
+    uint8_t getTypeSize();
 
     int             decimalPlaces           (void) const;
     QVariant        rawDefaultValue         (void) const;
@@ -133,7 +135,6 @@ public:
     bool            readOnly                (void) const { return _readOnly; }
     bool            writeOnly               (void) const { return _writeOnly; }
     bool            volatileValue           (void) const { return _volatile; }
-
     /// Amount to increment value when used in controls such as spin button or slider with detents.
     /// NaN for no increment available.
     double          rawIncrement            (void) const { return _rawIncrement; }
@@ -161,11 +162,14 @@ public:
     void setRawMax                  (const QVariant& rawMax);
     void setRawMin                  (const QVariant& rawMin);
     void setName                    (const QString& name)               { _name = name; }
+    void setTag                     (const QString& tag)                { _tag = tag; }
+    void setAuth                    (const QString& auth)               { _auth = auth; }
     void setShortDescription        (const QString& shortDescription)   { _shortDescription = shortDescription; }
     void setRawUnits                (const QString& rawUnits);
     void setVehicleRebootRequired   (bool rebootRequired)               { _vehicleRebootRequired = rebootRequired; }
     void setQGCRebootRequired       (bool rebootRequired)               { _qgcRebootRequired = rebootRequired; }
     void setRawIncrement            (double increment)                  { _rawIncrement = increment; }
+    void setRawDecrement            (double decrement)                  { _rawDecrement = decrement; }
     void setHasControl              (bool bValue)                       { _hasControl = bValue; }
     void setReadOnly                (bool bValue)                       { _readOnly = bValue; }
     void setWriteOnly               (bool bValue)                       { _writeOnly = bValue; }
@@ -205,6 +209,7 @@ public:
     static ValueType_t stringToType(const QString& typeString, bool& unknownType);
     static QString typeToString(ValueType_t type);
     static size_t typeToSize(ValueType_t type);
+    ValueType_t type(){ return _type;}
 
     static const char* qgcFileType;
 
@@ -303,7 +308,7 @@ private:
     static void _loadJsonDefines(const QJsonObject& jsonDefinesObject, QMap<QString, QString>& defineMap);
 
     ValueType_t     _type;                  // must be first for correct constructor init
-    int             _decimalPlaces;
+    int             _decimalPlaces = 2;
     QVariant        _rawDefaultValue;
     bool            _defaultValueAvailable;
     QStringList     _bitmaskStrings;
@@ -318,6 +323,8 @@ private:
     QVariant        _rawMin;
     bool            _minIsDefaultForType;
     QString         _name;
+    QString         _tag;
+    QString         _auth;
     QString         _shortDescription;
     QString         _rawUnits;
     QString         _cookedUnits;
@@ -326,6 +333,7 @@ private:
     bool            _vehicleRebootRequired;
     bool            _qgcRebootRequired;
     double          _rawIncrement;
+    double          _rawDecrement;
     bool            _hasControl;
     bool            _readOnly;
     bool            _writeOnly;

@@ -166,6 +166,11 @@ contains (CONFIG, QGC_DISABLE_PX4_PLUGIN) {
 } else {
     CONFIG += PX4FirmwarePlugin
 }
+contains (CONFIG, QGC_DISABLE_ShenHang_PLUGIN) {
+    message("Disable PX4 Plugin")
+} else {
+    CONFIG += ShenHangFirmwarePlugin
+}
 
 contains (CONFIG, QGC_DISABLE_PX4_PLUGIN_FACTORY) {
     message("Disable PX4 Plugin Factory")
@@ -425,12 +430,14 @@ contains (DEFINES, QGC_ENABLE_PAIRING) {
 
 HEADERS += \
     src/QmlControls/QmlUnitsConversion.h \
+    src/Vehicle/ShenHangVehicleData.h \
     src/Vehicle/VehicleEscStatusFactGroup.h \
     src/api/QGCCorePlugin.h \
     src/api/QGCOptions.h \
     src/api/QGCSettings.h \
     src/api/QmlComponentInfo.h \
     src/GPS/Drivers/src/base_station.h \
+    src/comm/ShenHangProtocol.h
 
 contains (DEFINES, QGC_ENABLE_PAIRING) {
     HEADERS += \
@@ -443,6 +450,7 @@ SOURCES += \
     src/api/QGCOptions.cc \
     src/api/QGCSettings.cc \
     src/api/QmlComponentInfo.cc \
+    src/comm/ShenHangProtocol.cc
 
 contains (DEFINES, QGC_ENABLE_PAIRING) {
     SOURCES += \
@@ -1181,6 +1189,58 @@ PX4FirmwarePluginFactory {
     SOURCES   += src/FirmwarePlugin/PX4/PX4FirmwarePluginFactory.cc
 }
 
+#ShenHang FirmwarePlugin
+ShenHangFirmwarePlugin {
+    RESOURCES *= src/FirmwarePlugin/ShenHang/ShenHangResources.qrc
+
+    INCLUDEPATH += \
+        src/AutoPilotPlugins/ShenHang \
+        src/FirmwarePlugin/ShenHang \
+
+    HEADERS += \
+        src/AutoPilotPlugins/ShenHang/AirframeComponent.h \
+        src/AutoPilotPlugins/ShenHang/AirframeComponentAirframes.h \
+        src/AutoPilotPlugins/ShenHang/AirframeComponentController.h \
+        src/AutoPilotPlugins/ShenHang/CameraComponent.h \
+        src/AutoPilotPlugins/ShenHang/FlightModesComponent.h \
+        src/AutoPilotPlugins/ShenHang/PowerComponent.h \
+        src/AutoPilotPlugins/ShenHang/PowerComponentController.h \
+        src/AutoPilotPlugins/ShenHang/SafetyComponent.h \
+        src/AutoPilotPlugins/ShenHang/SensorsComponent.h \
+        src/AutoPilotPlugins/ShenHang/SensorsComponentController.h \
+        src/AutoPilotPlugins/ShenHang/ShenHangAdvancedFlightModesController.h \
+        src/AutoPilotPlugins/ShenHang/ShenHangAirframeLoader.h \
+        src/AutoPilotPlugins/ShenHang/ShenHangAutoPilotPlugin.h \
+        src/AutoPilotPlugins/ShenHang/ShenHangRadioComponent.h \
+        src/AutoPilotPlugins/ShenHang/ShenHangSimpleFlightModesController.h \
+        src/AutoPilotPlugins/ShenHang/ShenHangTuningComponent.h \
+        src/FirmwarePlugin/ShenHang/ShenHangFirmwarePlugin.h \
+        src/FirmwarePlugin/ShenHang/ShenHangFirmwarePluginFactory.h \
+        src/FirmwarePlugin/ShenHang/ShenHangParameterMetaData.h \
+        src/FirmwarePlugin/ShenHang/ShenHang_custom_mode.h  \
+
+    SOURCES += \
+        src/AutoPilotPlugins/ShenHang/AirframeComponent.cc \
+        src/AutoPilotPlugins/ShenHang/AirframeComponentAirframes.cc \
+        src/AutoPilotPlugins/ShenHang/AirframeComponentController.cc \
+        src/AutoPilotPlugins/ShenHang/CameraComponent.cc \
+        src/AutoPilotPlugins/ShenHang/FlightModesComponent.cc \
+        src/AutoPilotPlugins/ShenHang/PowerComponent.cc \
+        src/AutoPilotPlugins/ShenHang/PowerComponentController.cc \
+        src/AutoPilotPlugins/ShenHang/SafetyComponent.cc \
+        src/AutoPilotPlugins/ShenHang/SensorsComponent.cc \
+        src/AutoPilotPlugins/ShenHang/SensorsComponentController.cc \
+        src/AutoPilotPlugins/ShenHang/ShenHangAdvancedFlightModesController.cc \
+        src/AutoPilotPlugins/ShenHang/ShenHangAirframeLoader.cc \
+        src/AutoPilotPlugins/ShenHang/ShenHangAutoPilotPlugin.cc \
+        src/AutoPilotPlugins/ShenHang/ShenHangRadioComponent.cc \
+        src/AutoPilotPlugins/ShenHang/ShenHangSimpleFlightModesController.cc \
+        src/AutoPilotPlugins/ShenHang/ShenHangTuningComponent.cc \
+        src/FirmwarePlugin/ShenHang/ShenHangFirmwarePlugin.cc \
+        src/FirmwarePlugin/ShenHang/ShenHangFirmwarePluginFactory.cc \
+        src/FirmwarePlugin/ShenHang/ShenHangParameterMetaData.cc \
+}
+
 # Fact System code
 
 INCLUDEPATH += \
@@ -1435,4 +1495,37 @@ contains (CONFIG, QGC_DISABLE_INSTALLER_SETUP) {
 }
 
 DISTFILES += \
+    src/AutoPilotPlugins/ShenHang/AirframeComponent.qml \
+    src/AutoPilotPlugins/ShenHang/AirframeComponentSummary.qml \
+    src/AutoPilotPlugins/ShenHang/AirframeFactMetaData.xml \
+    src/AutoPilotPlugins/ShenHang/BatteryParams.qml \
+    src/AutoPilotPlugins/ShenHang/CMakeLists.txt \
+    src/AutoPilotPlugins/ShenHang/CameraComponent.qml \
+    src/AutoPilotPlugins/ShenHang/CameraComponentSummary.qml \
+    src/AutoPilotPlugins/ShenHang/FlightModesComponentSummary.qml \
+    src/AutoPilotPlugins/ShenHang/PowerComponent.qml \
+    src/AutoPilotPlugins/ShenHang/PowerComponentSummary.qml \
+    src/AutoPilotPlugins/ShenHang/SafetyComponent.qml \
+    src/AutoPilotPlugins/ShenHang/SafetyComponentSummary.qml \
+    src/AutoPilotPlugins/ShenHang/SensorsComponent.qml \
+    src/AutoPilotPlugins/ShenHang/SensorsComponentSummary.qml \
+    src/AutoPilotPlugins/ShenHang/SensorsComponentSummaryFixedWing.qml \
+    src/AutoPilotPlugins/ShenHang/SensorsSetup.qml \
+    src/AutoPilotPlugins/ShenHang/ShenHangAdvancedFlightModes.qml \
+    src/AutoPilotPlugins/ShenHang/ShenHangFlightModes.qml \
+    src/AutoPilotPlugins/ShenHang/ShenHangRadioComponentSummary.qml \
+    src/AutoPilotPlugins/ShenHang/ShenHangSimpleFlightModes.qml \
+    src/AutoPilotPlugins/ShenHang/ShenHangTuningComponentCopter.qml \
+    src/AutoPilotPlugins/ShenHang/ShenHangTuningComponentPlane.qml \
+    src/AutoPilotPlugins/ShenHang/ShenHangTuningComponentVTOL.qml \
+    src/FirmwarePlugin/ShenHang/PX4BrandImage.png \
+    src/FirmwarePlugin/ShenHang/ShenHang-MavCmdInfoCommon.json \
+    src/FirmwarePlugin/ShenHang/ShenHang-MavCmdInfoFixedWing.json \
+    src/FirmwarePlugin/ShenHang/ShenHang-MavCmdInfoMultiRotor.json \
+    src/FirmwarePlugin/ShenHang/ShenHang-MavCmdInfoRover.json \
+    src/FirmwarePlugin/ShenHang/ShenHang-MavCmdInfoSub.json \
+    src/FirmwarePlugin/ShenHang/ShenHang-MavCmdInfoVTOL.json \
+    src/FirmwarePlugin/ShenHang/ShenHangParameterFactMetaData.xml \
+    src/FirmwarePlugin/ShenHang/V1.4.OfflineEditing.params \
+    src/FirmwarePlugin/ShenHang/cfg_prm.xml \
     src/QmlControls/QGroundControl/Specific/qmldir

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -20,6 +20,7 @@
 #include "QGCLoggingCategory.h"
 #include "QGCToolbox.h"
 #include "MAVLinkProtocol.h"
+#include "ShenHangProtocol.h"
 #if !defined(__mobile__)
 #include "LogReplayLink.h"
 #include "UdpIODevice.h"
@@ -115,11 +116,20 @@ public:
     virtual void setToolbox(QGCToolbox *toolbox);
 
     static constexpr uint8_t invalidMavlinkChannel(void) { return std::numeric_limits<uint8_t>::max(); }
+    static constexpr uint8_t invalidShenHangProtocolChannel(void) { return std::numeric_limits<uint8_t>::max(); }
 
     /// Allocates a mavlink channel for use
     /// @return Mavlink channel index, invalidMavlinkChannel() for no channels available
     uint8_t allocateMavlinkChannel(void);
+
+    /**
+     * @brief allocateShenHangProtocolChannel 分配一个通信通道给沈航通信，通信通道包含
+     * @return
+     */
+    uint8_t allocateShenHangProtocolChannel(void);
+
     void freeMavlinkChannel(uint8_t channel);
+    void freeShenHangProtocolChannel(uint8_t channel);
 
     /// If you are going to hold a reference to a LinkInterface* in your object you must reference count it
     /// by using this method to get access to the shared pointer.
@@ -161,9 +171,11 @@ private:
     QString                             _connectionsSuspendedReason;                ///< User visible reason for suspension
     QTimer                              _portListTimer;
     uint32_t                            _mavlinkChannelsUsedBitMask;
+    uint32_t                            _shenHangProtocolChannelsUsedBitMask;
 
     AutoConnectSettings*                _autoConnectSettings;
     MAVLinkProtocol*                    _mavlinkProtocol;
+    ShenHangProtocol*                   _shenHangProtocol;
 
     QList<SharedLinkInterfacePtr>       _rgLinks;
     QList<SharedLinkConfigurationPtr>   _rgLinkConfigs;

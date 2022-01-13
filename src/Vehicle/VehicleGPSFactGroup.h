@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -11,6 +11,7 @@
 
 #include "FactGroup.h"
 #include "QGCMAVLink.h"
+#include "ShenHangProtocol.h"
 
 class VehicleGPSFactGroup : public FactGroup
 {
@@ -39,6 +40,7 @@ public:
 
     // Overrides from FactGroup
     void handleMessage(Vehicle* vehicle, mavlink_message_t& message) override;
+    void setShenHangGpsInfo(GpsRawInt& gpsRawInt);
 
     static const char* _latFactName;
     static const char* _lonFactName;

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -63,6 +63,8 @@ public:
 
     uint8_t mavlinkChannel              (void) const;
     bool    mavlinkChannelIsSet         (void) const;
+    uint8_t shenHangProtocolChannel     (void) const;
+    bool    shenHangProtocolChannelIsSet(void) const;
 
     bool    decodedFirstMavlinkPacket   (void) const { return _decodedFirstMavlinkPacket; }
     bool    setDecodedFirstMavlinkPacket(bool decodedFirstMavlinkPacket) { return _decodedFirstMavlinkPacket = decodedFirstMavlinkPacket; }
@@ -96,6 +98,9 @@ protected:
     virtual bool _allocateMavlinkChannel();
     virtual void _freeMavlinkChannel    ();
 
+    virtual bool _allocateShenHangProtocolChannel();
+    virtual void _freeShenHangProtocolChannel    ();
+
 private:
     // connect is private since all links should be created through LinkManager::createConnectedLink calls
     virtual bool _connect(void) = 0;
@@ -103,6 +108,7 @@ private:
     virtual void _writeBytes(const QByteArray) = 0; // Not thread safe, only writeBytesThreadSafe is thread safe
 
     uint8_t _mavlinkChannel             = std::numeric_limits<uint8_t>::max();
+    uint8_t _shenHangProtocolChannel    = std::numeric_limits<uint8_t>::max();
     bool    _decodedFirstMavlinkPacket  = false;
     bool    _isPX4Flow                  = false;
     int     _vehicleReferenceCount      = 0;

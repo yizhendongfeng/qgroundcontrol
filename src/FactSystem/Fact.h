@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -26,6 +26,7 @@ class Fact : public QObject
     
 public:
     Fact(QObject* parent = nullptr);
+    Fact(int componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t type, QString name, QObject* parent = nullptr);
     Fact(int componentId, QString name, FactMetaData::ValueType_t type, QObject* parent = nullptr);
     Fact(const Fact& other, QObject* parent = nullptr);
 
@@ -83,6 +84,8 @@ public:
     QVariant        cookedValue             (void) const;   /// Value after translation
     QVariant        rawValue                (void) const { return _rawValue; }  /// value prior to translation, careful
     int             componentId             (void) const;
+    uint8_t         groupId                 (void) const { return _groupId; }
+    uint16_t        addrOffset              (void) const { return _addrOffset; }
     int             decimalPlaces           (void) const;
     QVariant        rawDefaultValue         (void) const;
     QVariant        cookedDefaultValue      (void) const;
@@ -108,6 +111,7 @@ public:
     QString         name                    (void) const;
     QString         shortDescription        (void) const;
     FactMetaData::ValueType_t type          (void) const;
+
     QString         cookedUnits             (void) const;
     QString         rawUnits                (void) const;
     QString         rawValueString          (void) const;
@@ -202,6 +206,8 @@ protected:
 
     QString                     _name;
     int                         _componentId;
+    uint8_t                     _groupId;
+    uint16_t                    _addrOffset;
     QVariant                    _rawValue;
     FactMetaData::ValueType_t   _type;
     FactMetaData*               _metaData;

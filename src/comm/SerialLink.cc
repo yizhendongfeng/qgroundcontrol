@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -68,7 +68,8 @@ void SerialLink::_writeBytes(const QByteArray data)
 {
     if(_port && _port->isOpen()) {
         emit bytesSent(this, data);
-        _port->write(data);
+        qint64 length = _port->write(data);
+        qCDebug(SerialLinkLog) << "_writeBytes:" << length;
     } else {
         // Error occurred
         qWarning() << "Serial port not writeable";

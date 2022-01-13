@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -39,6 +39,9 @@
 #include "GeoFenceManager.h"
 #include "RallyPointManager.h"
 #include "FTPManager.h"
+
+#include "ShenHangVehicleData.h"
+#include "ShenHangProtocol.h"
 
 class UAS;
 class UASInterface;
@@ -227,6 +230,12 @@ public:
     Q_PROPERTY(quint64              mavlinkReceivedCount        READ mavlinkReceivedCount                                           NOTIFY mavlinkStatusChanged)
     Q_PROPERTY(quint64              mavlinkLossCount            READ mavlinkLossCount                                               NOTIFY mavlinkStatusChanged)
     Q_PROPERTY(float                mavlinkLossPercent          READ mavlinkLossPercent                                             NOTIFY mavlinkStatusChanged)
+
+    Q_PROPERTY(quint64              shenHangSentCount           READ shenHangSentCount                                              NOTIFY shenHangStatusChanged)
+    Q_PROPERTY(quint64              shenHangReceivedCount       READ shenHangReceivedCount                                          NOTIFY shenHangStatusChanged)
+    Q_PROPERTY(quint64              shenHangLossCount           READ shenHangLossCount                                              NOTIFY shenHangStatusChanged)
+    Q_PROPERTY(float                shenHangLossPercent         READ shenHangLossPercent                                            NOTIFY shenHangStatusChanged)
+
     Q_PROPERTY(qreal                gimbalRoll                  READ gimbalRoll                                                     NOTIFY gimbalRollChanged)
     Q_PROPERTY(qreal                gimbalPitch                 READ gimbalPitch                                                    NOTIFY gimbalPitchChanged)
     Q_PROPERTY(qreal                gimbalYaw                   READ gimbalYaw                                                      NOTIFY gimbalYawChanged)
@@ -428,6 +437,7 @@ public:
     /// Sends a message to the specified link
     /// @return true: message sent, false: Link no longer connected
     bool sendMessageOnLinkThreadSafe(LinkInterface* link, mavlink_message_t message);
+    bool sendShenHangMessageOnLinkThreadSafe(LinkInterface* link, ShenHangProtocolMessage message);
 
     /// Sends the specified messages multiple times to the vehicle in order to attempt to
     /// guarantee that it makes it to the vehicle.
@@ -450,6 +460,10 @@ public:
     void setArmedShowError  (bool armed) { setArmed(armed, true); }
 
     bool flightModeSetAvailable             ();
+
+    QStringList shenHangFlightModes;
+
+    QString shenHangFlightMode{"RcAngle"};
     QStringList flightModes                 ();
     QStringList extraJoystickFlightModes    ();
     QString flightMode                      () const;
@@ -749,6 +763,11 @@ public:
     quint64     mavlinkLossCount        () { return _mavlinkLossCount; }        /// Total number of lost messages
     float       mavlinkLossPercent      () { return _mavlinkLossPercent; }      /// Running loss rate
 
+    quint64     shenHangSentCount        () { return _shenHangSentCount; }        /// Calculated total number of messages sent to us
+    quint64     shenHangReceivedCount    () { return _shenHangReceivedCount; }    /// Total number of sucessful messages received
+    quint64     shenHangLossCount        () { return _shenHangLossCount; }        /// Total number of lost messages
+    float       shenHangLossPercent      () { return _shenHangLossPercent; }      /// Running loss rate
+
     qreal       gimbalRoll              () { return static_cast<qreal>(_curGimbalRoll);}
     qreal       gimbalPitch             () { return static_cast<qreal>(_curGimbalPitch); }
     qreal       gimbalYaw               () { return static_cast<qreal>(_curGinmbalYaw); }
@@ -763,7 +782,7 @@ public slots:
     void _offlineFirmwareTypeSettingChanged (QVariant varFirmwareType); // Should only be used by MissionControler to set firmware from Plan file
     void _offlineVehicleTypeSettingChanged  (QVariant varVehicleType);  // Should only be used by MissionController to set vehicle type from Plan file
 
-signals:
+signals:    
     void coordinateChanged              (QGeoCoordinate coordinate);
     void joystickEnabledChanged         (bool enabled);
     void mavlinkMessageReceived         (const mavlink_message_t& message);
@@ -856,6 +875,7 @@ signals:
     // MAVLink protocol version
     void requestProtocolVersion         (unsigned version);
     void mavlinkStatusChanged           ();
+    void shenHangStatusChanged          ();
 
     void gimbalRollChanged              ();
     void gimbalPitchChanged             ();
@@ -866,6 +886,7 @@ signals:
 
 private slots:
     void _mavlinkMessageReceived            (LinkInterface* link, mavlink_message_t message);
+    void _shenHangMessageReceived           (LinkInterface* link, ShenHangProtocolMessage message);
     void _sendMessageMultipleNext           ();
     void _parametersReady                   (bool parametersReady);
     void _remoteControlRSSIChanged          (uint8_t rssi);
@@ -881,6 +902,7 @@ private slots:
     void _firstGeoFenceLoadComplete         ();
     void _firstRallyPointLoadComplete       ();
     void _sendMavCommandResponseTimeoutCheck();
+    void _sendShenHangCommandResponseTimeoutCheck();
     void _clearCameraTriggerPoints          ();
     void _updateDistanceHeadingToHome       ();
     void _updateMissionItemIndex            ();
@@ -890,6 +912,7 @@ private slots:
     void _vehicleParamLoaded                (bool ready);
     void _sendQGCTimeToVehicle              ();
     void _mavlinkMessageStatus              (int uasId, uint64_t totalSent, uint64_t totalReceived, uint64_t totalLoss, float lossPercent);
+    void _shenHangMessageStatus             (int uasId, uint64_t totalSent, uint64_t totalReceived, uint64_t totalLoss, float lossPercent);
     void _trafficUpdate                     (bool alert, QString traffic_id, QString vehicle_id, QGeoCoordinate location, float heading);
     void _orbitTelemetryTimeout             ();
     void _updateFlightTime                  ();
@@ -961,6 +984,7 @@ private:
     QObject*            _firmwarePluginInstanceData = nullptr;
     AutoPilotPlugin*    _autopilotPlugin = nullptr;
     MAVLinkProtocol*    _mavlink = nullptr;
+    ShenHangProtocol*   _shenHangProtocol = nullptr;
     bool                _soloFirmware = false;
     QGCToolbox*         _toolbox = nullptr;
     SettingsManager*    _settingsManager = nullptr;
@@ -1098,6 +1122,11 @@ private:
     uint64_t    _mavlinkLossCount       = 0;
     float       _mavlinkLossPercent     = 0.0f;
 
+    uint64_t    _shenHangSentCount       = 0;
+    uint64_t    _shenHangReceivedCount   = 0;
+    uint64_t    _shenHangLossCount       = 0;
+    float       _shenHangLossPercent     = 0.0f;
+
     QMap<QString, QTime> _noisySpokenPrearmMap; ///< Used to prevent PreArm messages from being spoken too often
 
     // Orbit status values
@@ -1176,6 +1205,41 @@ private:
     static const int                _mavCommandResponseCheckTimeoutMSecs    = 500;
     static const int                _mavCommandAckTimeoutMSecs              = 3000;
     static const int                _mavCommandAckTimeoutMSecsHighLatency   = 120000;
+
+
+    /******************** 沈航协议命令收发相关变量 ********************/
+    /**
+     * @brief getShenHangCommandName 获取命令名，界面显示用
+     * @param tyMsg0
+     * @param tyMsg1
+     * @return
+     */
+    QString getShenHangCommandName(uint8_t tyMsg0, uint8_t tyMsg1);
+
+    struct ShenHangCommandListEntry {
+        uint8_t tyMsg0;
+        uint8_t tyMsg1;
+        uint16_t idTarget;      // 目标编号
+        bool showError  = true;
+        int maxTries  = _shenHangCommandMaxRetryCount;
+        int tryCount  = 0;
+        QElapsedTimer elapsedTimer;
+        int ackTimeoutMSecs  = _shenHangCommandAckTimeoutMSecs;
+        uint8_t data[20] = {};
+    };
+
+    QList<ShenHangCommandListEntry> _shenHangCommandList;
+    QTimer                          _shenHangCommandResponseCheckTimer;
+    static const int                _shenHangCommandMaxRetryCount                = 3;
+    static const int                _shenHangCommandResponseCheckTimeoutMSecs    = 500;
+    static const int                _shenHangCommandAckTimeoutMSecs              = 3000;
+    ShenHangProtocolMessage msgSend;
+    int  _findShenHangCommandListEntryIndex(uint8_t tyMsg0, uint8_t tyMsg1);
+    void _sendShenHangCommandWorker (bool showError = true);
+    void _sendShenHangCommandFromList(int index);
+    /********************  ********************/
+
+
 
     void _sendMavCommandWorker  (bool commandInt, bool requestMessage, bool showError, MavCmdResultHandler resultHandler, void* resultHandlerData, int compId, MAV_CMD command, MAV_FRAME frame, float param1, float param2, float param3, float param4, float param5, float param6, float param7);
     void _sendMavCommandFromList(int index);
@@ -1265,6 +1329,193 @@ private:
     // Settings keys
     static const char* _settingsGroup;
     static const char* _joystickEnabledSettingsKey;
+
+private:
+    #define MAX_SEND_BUFFER_LENGTH 64
+    uint16_t idSource = 255;
+    uint16_t idTarget = 1;
+    uint8_t counter = 0;
+    GpsRawInt gpsRawInt = {};
+    uint8_t bufferSend[MAX_SEND_BUFFER_LENGTH] = {};
+public:
+    /******************** 解析数据包中的数据 ********************/
+    /******************** 常规报文 ********************/
+    /**
+     * @brief HandleWaypointInfo 解析航路点信息报文（ty_msg0=1）
+     * @param msg
+     */
+    void HandleWaypointInfo(ShenHangProtocolMessage& msg);
+
+    /**
+     * @brief HandleGeneralStatus 解析常规状态信息报文（ty_msg0=2）
+     * @param msg
+     */
+    void HandleGeneralStatus(ShenHangProtocolMessage& msg);
+
+    /**
+     * @brief HandlePosVelTime 解析位置-速度-时间（ty_msg0=3）
+     * @param msg
+     */
+    void HandlePosVelTime(ShenHangProtocolMessage& msg);
+
+    /**
+     * @brief HandleAttitude 解析姿态信息（ty_msg0=4）
+     * @param msg
+     */
+    void HandleAttitude(ShenHangProtocolMessage& msg);
+
+    /**
+     * @brief HandleGeneralData 解析一般数据（ty_msg0=5）
+     * @param msg
+     */
+    void HandleGeneralData(ShenHangProtocolMessage& msg);
+
+
+
+
+    /******************** 无人机应答报文 ********************/
+    /**
+     * @brief HandleAckReset 待定 载具操纵命令回复（ty_msg0=192）
+     * @param msg
+     */
+    void HandleAckReset(ShenHangProtocolMessage& msg);
+
+    /**
+     * @brief HandleAckCommandParam  设置命令的回复（ty_msg0=193）
+     * @param msg
+     */
+    void HandleAckCommandParam(ShenHangProtocolMessage& msg);
+
+    /**
+     * @brief HandleAckCommandBank 该航线相关命令（ty_msg0=130）的返回报文
+     * @param msg
+     */
+    void HandleAckCommandBank(ShenHangProtocolMessage& msg);
+
+
+    /******************** 发送数据 ********************/
+    /**
+     * @brief EncodeMessageToBuffer 将数据打包到缓冲区中
+     * @param buf
+     * @param msg
+     * @return 缓冲区长度
+     */
+    int EncodeMessageToBuffer(uint8_t* buf, ShenHangProtocolMessage& msg);
+
+    /******************** 命令报文 ********************/
+    /**
+     * @brief PackVehicleCommand 载具操纵命令（ty_msg0=128）具体内容未定，暂且保留
+     */
+    void PackVehicleCommand();
+
+    /**
+     * @brief PackSetParamCommand 设置相关命令（ty_msg0=129）
+     * @param msg
+     * @param typeMsg1
+     * @param idGroup
+     * @param length
+     * @param addrOffset
+     * @param data
+     * @param dataLength
+     */
+    void PackSetParamCommand(ShenHangProtocolMessage& msg, CommandParamType typeMsg1, uint8_t idGroup, uint8_t length = 0, uint16_t addrOffset = 0, uint8_t* data = nullptr, uint8_t dataLength = 0);
+
+    /**
+     * @brief PackCommandParamReset 重置设置（ty_msg0=129,ty_msg1=0）
+     * @param msg 传出参数
+     * @param idGroup 0~0xFE对应各设置组id；0xFF重置所有设置组
+     */
+    void PackCommandParamReset(ShenHangProtocolMessage& msg, uint8_t idGroup);
+
+    /**
+     * @brief PackCommandParamLoad 载入设置（ty_msg0=129,ty_msg1=1）
+     * @param msg 传出参数
+     * @param idGroup 0~0xFE对应各设置组id；0xFF载入所有设置组
+     */
+    void PackCommandParamLoad(ShenHangProtocolMessage& msg, uint8_t idGroup);
+
+    /**
+     * @brief PackCommandParamSave 保存设置（ty_msg0=129,ty_msg1=2）
+     * @param msg 传出参数
+     * @param idGroup 0~0xFE对应各设置组id；0xFF保存所有设置组
+     */
+    void PackCommandParamSave(ShenHangProtocolMessage& msg, uint8_t idGroup);
+
+    /**
+     * @brief PackCommandParamQuery 查询设置（ty_msg0=129,ty_msg1=3）
+     * @param msg 传出参数
+     * @param idGroup 0~0xFE对应各设置组id
+     * @param length 要查询的设置参数的字节数，根据xml文件确定
+     * @param addrOffset 要查询的设置参数在对应组内的偏移地址，根据xml文件确定
+     */
+    void PackCommandParamQuery(ShenHangProtocolMessage& msg, uint8_t idGroup, uint8_t length, uint16_t addrOffset);
+
+    /**
+     * @brief PackCommandSet  设置参数（ty_msg0=129,ty_msg1=4）
+     * @param msg 传出参数
+     * @param idGroup  0~0xFE对应各设置组id
+     * @param length 要设置的参数的字节数，根据xml文件确定
+     * @param addrOffset 要设置的参数在对应组内的偏移地址，根据xml文件确定
+     * @param data 具体设置值，按内存顺序排列，低字节在前，高字节在后
+     */
+    void PackCommandSet(ShenHangProtocolMessage& msg, uint8_t idGroup, uint8_t length, uint16_t addrOffset, uint8_t* data);
+    /******************** 航线相关命令（ty_msg0=130） ********************/
+    /**
+     * @brief PackCommandBankQueryAll 查询整体航路信息（ty_msg0=130,ty_msg1=0）
+     * @param msg
+     */
+    void PackCommandBankQueryAll(ShenHangProtocolMessage& msg);
+
+    /**
+     * @brief PackCommandBankQuerySingle 查询单个bank信息（ty_msg0=130,ty_msg1=1）
+     * @param msg
+     * @param idBank
+     */
+    void PackCommandBankQuerySingle(ShenHangProtocolMessage& msg, uint16_t idBank);
+
+    /**
+     * @brief PackCommandBankSetSingle 设置单个bank（ty_msg0=130,ty_msg1=2）
+     * @param msg 传出参数
+     * @param idBank 对应需要设置的bank编号
+     * @param idBankSuc 对应接续航线bank编号
+     * @param idBankIwpSuc 对应接续航线中航点编号
+     * @param actBankEnd 设置航线完成动作，暂未定义，保留
+     * @param flagBankVerified 设置航线校验位，0：校验未通过，1：校验通过
+     * @param flagBankLock 设置航线锁定位，0：解除锁定，1：设置锁定
+     */
+    void PackCommandBankSetSingle(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t idBankSuc, uint16_t idBankIwpSuc, uint16_t actBankEnd, uint8_t flagBankVerified, uint8_t flagBankLock);
+
+    /**
+     * @brief PackRefactorInfoSlot 重构infoslot表单（ty_msg0=130,ty_msg1=3）
+     * @param msg 传出参数
+     * @param idBank 对应需要重构的bank编号
+     * @param nWp 对应bank内的航路点数目
+     * @param nInfoSlot 对应bank内的infoslot数目
+     */
+    void PackRefactorInfoSlot(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t nWp, uint16_t nInfoSlot);
+
+    /**
+     * @brief PackQuerySingleInfoSlot 查询单个infoslot（ty_msg0=130,ty_msg1=4）
+     * @param msg 传出参数
+     * @param idBank 对应要查询的infoslot所在的bank编号
+     * @param idInfoSlot 对应需要查询的infoslot编号
+     */
+    void PackQuerySingleInfoSlot(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t idInfoSlot);
+
+    /**
+     * @brief PackEnableBankAutoSw 航线自动跳转控制命令（ty_msg0=130,ty_msg1=5）
+     * @param msg 传出参数
+     * @param flagHalt 0：航路点自动切换使能，1：航路点自动切换失能
+     */
+    void PackEnableBankAutoSw(ShenHangProtocolMessage& msg, uint8_t flagHalt);
+
+    /**
+     * @brief PackWaypointAutoSw 航路点跳转命令（ty_msg0=130,ty_msg1=6）
+     * @param idBank 对应跳转目标bank编号
+     * @param idWp 对应跳转目标bank内的路点
+     * @param switchMode 跳转时机，0：立即跳转，1：满足当前航点切换条件后跳转
+     */
+    void PackWaypointAutoSw(uint16_t idBank, uint16_t idWp, uint8_t switchMode);
 };
 
 Q_DECLARE_METATYPE(Vehicle::MavCmdResultFailureCode_t)

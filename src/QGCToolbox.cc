@@ -1,4 +1,4 @@
- /****************************************************************************
+﻿ /****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -17,6 +17,7 @@
 #include "JoystickManager.h"
 #include "LinkManager.h"
 #include "MAVLinkProtocol.h"
+#include "ShenHangProtocol.h"
 #include "MissionCommandTree.h"
 #include "MultiVehicleManager.h"
 #include "QGCImageProvider.h"
@@ -66,6 +67,7 @@ QGCToolbox::QGCToolbox(QGCApplication* app)
     _joystickManager        = new JoystickManager           (app, this);
     _linkManager            = new LinkManager               (app, this);
     _mavlinkProtocol        = new MAVLinkProtocol           (app, this);
+    _shenHangProtocol       = new ShenHangProtocol          (app, this);
     _missionCommandTree     = new MissionCommandTree        (app, this);
     _multiVehicleManager    = new MultiVehicleManager       (app, this);
     _mapEngineManager       = new QGCMapEngineManager       (app, this);
@@ -110,6 +112,7 @@ void QGCToolbox::setChildToolboxes(void)
     _joystickManager->setToolbox(this);
     _linkManager->setToolbox(this);
     _mavlinkProtocol->setToolbox(this);
+    _shenHangProtocol->setToolbox(this);
     _missionCommandTree->setToolbox(this);
     _multiVehicleManager->setToolbox(this);
     _mapEngineManager->setToolbox(this);

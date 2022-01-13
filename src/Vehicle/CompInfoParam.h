@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -30,14 +30,15 @@ public:
     CompInfoParam(uint8_t compId, Vehicle* vehicle, QObject* parent = nullptr);
 
     FactMetaData* factMetaDataForName(const QString& name, FactMetaData::ValueType_t type);
+    FactMetaData* factMetaDataByIndexes(uint8_t idGroup, uint16_t addrOffset);
 
     // Overrides from CompInfo
     void setJson(const QString& metadataJsonFileName, const QString& translationJsonFileName) override;
 
     static void _cachePX4MetaDataFile(const QString& metaDataFile);
 
-private:
     QObject* _getOpaqueParameterMetaData(void);
+private:
 
     static FirmwarePlugin*  _anyVehicleTypeFirmwarePlugin   (MAV_AUTOPILOT firmwareType);
     static QString          _parameterMetaDataFile          (Vehicle* vehicle, MAV_AUTOPILOT firmwareType, int& majorVersion, int& minorVersion);

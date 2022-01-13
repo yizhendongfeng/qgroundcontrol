@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -20,16 +20,16 @@ import QGroundControl.Controllers   1.0
 import QGroundControl.FactSystem    1.0
 import QGroundControl.FactControls  1.0
 
-Item {
+Rectangle {
     id:         _root
-
+    color:  qgcPal.window
     property Fact   _editorDialogFact: Fact { }
     property int    _rowHeight:         ScreenTools.defaultFontPixelHeight * 2
     property int    _rowWidth:          10 // Dynamic adjusted at runtime
     property bool   _searchFilter:      searchText.text.trim() != "" || controller.showModifiedOnly  ///< true: showing results of search
     property var    _searchResults      ///< List of parameter names from search results
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
-    property bool   _showRCToParam:     _activeVehicle.px4Firmware
+    property bool   _showRCToParam:     false   //_activeVehicle.px4Firmware
     property var    _appSettings:       QGroundControl.settingsManager.appSettings
     property var    _controller:        controller
 
@@ -45,6 +45,8 @@ Item {
         id:             header
         anchors.left:   parent.left
         anchors.right:  parent.right
+        anchors.top: parent.top
+        anchors.topMargin: 10
         spacing:        ScreenTools.defaultFontPixelWidth
 
         Timer {
@@ -86,16 +88,58 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             checked:                controller.showModifiedOnly
             onClicked:              controller.showModifiedOnly = checked
-            visible:                QGroundControl.multiVehicleManager.activeVehicle.px4Firmware
+            visible:                false//QGroundControl.multiVehicleManager.activeVehicle.px4Firmware
         }
     } // Row - Header
 
+    /******************** 增加对每组参数的设置：重置、载入、保存 ********************/
+    Row {
+        anchors.left: groupScroll.right
+        anchors.top:  header.top
+        spacing:        ScreenTools.defaultFontPixelWidth
+        QGCButton {
+            id:             buttongRest
+            width:          ScreenTools.defaultFontPixelWidth * 20
+            text:           "Reset group"
+            height:         _rowHeight
+            onClicked: {
+                console.log("Rest group:", controller.currentGroup.groupId, controller.currentGroup.name)
+                controller.parameterGroupCommand(0/*重置*/, controller.currentGroup.groupId, checkBoxAll.checked)
+            }
+        }
+        QGCButton {
+            id:             buttonLoad
+            width:          ScreenTools.defaultFontPixelWidth * 20
+            text:           "Load group"
+            height:         _rowHeight
+            onClicked: {
+                controller.parameterGroupCommand(1/*载入*/, controller.currentGroup.groupId, checkBoxAll.checked)
+                console.log("Load group", controller.currentGroup.groupId, controller.currentGroup.name)
+            }
+        }
+        QGCButton {
+            id:             buttonSave
+            width:          ScreenTools.defaultFontPixelWidth * 20
+            text:           "Save group"
+            height:         _rowHeight
+            onClicked: {
+                controller.parameterGroupCommand(2/*保存*/, controller.currentGroup.groupId, checkBoxAll.checked)
+                console.log("Save group", controller.currentGroup.groupId, controller.currentGroup.name)
+            }
+        }
+
+        QGCCheckBox {
+            id: checkBoxAll
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Apply to all"
+        }
+    }
     QGCButton {
         anchors.top:    header.top
         anchors.bottom: header.bottom
         anchors.right:  parent.right
         text:           qsTr("Tools")
-        visible:        !_searchFilter
+        visible:        false               //!_searchFilter
         onClicked:      toolsMenu.popup()
     }
 
@@ -111,7 +155,7 @@ Item {
         }
         QGCMenuItem {
             text:           qsTr("Reset to vehicle's configuration defaults")
-            visible:        !_activeVehicle.apmFirmware
+            visible:        false //!_activeVehicle.apmFirmware
             onTriggered:    mainWindow.showComponentDialog(resetToVehicleConfigurationConfirmComponent, qsTr("Reset All"), mainWindow.showDialogDefaultWidth, StandardButton.Cancel | StandardButton.Reset)
         }
         QGCMenuSeparator { }
@@ -147,7 +191,7 @@ Item {
     /// Group buttons
     QGCFlickable {
         id :                groupScroll
-        width:              ScreenTools.defaultFontPixelWidth * 25
+        width:              ScreenTools.defaultFontPixelWidth * 50
         anchors.top:        header.bottom
         anchors.bottom:     parent.bottom
         clip:               true
@@ -187,9 +231,9 @@ Item {
 
                     Repeater {
                         model: categoryHeader.checked ? object.groups : 0
-
                         QGCButton {
-                            width:          ScreenTools.defaultFontPixelWidth * 25
+                            id:             buttonGroup
+                            width:          ScreenTools.defaultFontPixelWidth * 50
                             text:           object.name
                             height:         _rowHeight
                             checked:        object == controller.currentGroup
@@ -200,6 +244,7 @@ Item {
                                 checked = true
                                 controller.currentGroup = object
                             }
+                            Component.onCompleted:  console.log("object.name:", object.name)
                         }
                     }
                 }
@@ -276,6 +321,7 @@ Item {
                 }
             }
         }
+        Component.onCompleted: console.log("Parameter list, ", controller.currentCategory.name, controller.currentCategory.groups.count)
     }
 
     QGCFileDialog {

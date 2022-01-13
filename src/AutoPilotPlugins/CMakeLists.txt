@@ -2,6 +2,7 @@
 add_subdirectory(APM)
 add_subdirectory(Common)
 add_subdirectory(PX4)
+add_subdirectory(ShenHang)
 
 add_library(AutoPilotPlugins
 	APM/APMAirframeComponent.cc

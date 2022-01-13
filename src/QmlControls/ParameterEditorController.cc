@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -38,31 +38,35 @@ ParameterEditorController::~ParameterEditorController()
 
 void ParameterEditorController::_buildListsForComponent(int compId)
 {
-    for (const QString& factName: _parameterMgr->parameterNames(compId)) {
-        Fact* fact = _parameterMgr->getParameter(compId, factName);
+    QMap<int /* comp id */, QMap<uint8_t /* groupId */, QMap<uint16_t /* addrOffset */, Fact*>>> compGroupId2FactMap =_parameterMgr->getCompGroupId2FactMap();
+    for (const uint8_t groupId: compGroupId2FactMap[compId].keys()) {
+        for (const uint16_t addrOffset: compGroupId2FactMap[compId][groupId].keys()) {
+            Fact* fact = _parameterMgr->getParameter(compId, groupId, addrOffset);
 
-        ParameterEditorCategory* category = nullptr;
-        if (_mapCategoryName2Category.contains(fact->category())) {
-            category = _mapCategoryName2Category[fact->category()];
-        } else {
-            category        = new ParameterEditorCategory(this);
-            category->name  = fact->category();
-            _mapCategoryName2Category[fact->category()] = category;
-            _categories.append(category);
+            ParameterEditorCategory* category = nullptr;
+            if (_mapCategoryName2Category.contains(fact->category())) {
+                category = _mapCategoryName2Category[fact->category()];
+            } else {
+                category        = new ParameterEditorCategory(this);
+                category->name  = fact->category();
+                _mapCategoryName2Category[fact->category()] = category;
+                _categories.append(category);
+            }
+
+            ParameterEditorGroup* group = nullptr;
+            if (category->mapGroupName2Group.contains(fact->group())) {
+                group = category->mapGroupName2Group[fact->group()];
+            } else {
+                group               = new ParameterEditorGroup(this);
+                group->componentId  = compId;
+                group->name         = fact->group();
+                group->groupId      = fact->groupId();
+                category->mapGroupName2Group[fact->group()] = group;
+                category->groups.append(group);
+            }
+
+            group->facts.append(fact);
         }
-
-        ParameterEditorGroup* group = nullptr;
-        if (category->mapGroupName2Group.contains(fact->group())) {
-            group = category->mapGroupName2Group[fact->group()];
-        } else {
-            group               = new ParameterEditorGroup(this);
-            group->componentId  = compId;
-            group->name         = fact->group();
-            category->mapGroupName2Group[fact->group()] = group;
-            category->groups.append(group);
-        }
-
-        group->facts.append(fact);
     }
 }
 
@@ -241,7 +245,10 @@ void ParameterEditorController::sendDiff(void)
 
         if (paramDiff->load) {
             if (paramDiff->noVehicleValue) {
-                _parameterMgr->_factRawValueUpdateWorker(paramDiff->componentId, paramDiff->name, paramDiff->valueType, paramDiff->fileValueVar);
+                _parameterMgr->_factRawValueUpdateWorker(paramDiff->componentId, paramDiff->groupId,
+                                                         FactMetaData::getTypeSize(paramDiff->valueType),
+                                                         paramDiff->addrOffset, paramDiff->valueType,
+                                                         paramDiff->fileValueVar);
             } else {
                 Fact* fact = _parameterMgr->getParameter(paramDiff->componentId, paramDiff->name);
                 fact->setRawValue(paramDiff->fileValueVar);
@@ -350,6 +357,11 @@ void ParameterEditorController::resetAllToVehicleConfiguration(void)
 {
     _parameterMgr->resetAllToVehicleConfiguration();
     refresh();
+}
+
+void ParameterEditorController::parameterGroupCommand (int command, int groupId, bool all)
+{
+    _parameterMgr->ParameterGroupCommand(static_cast<CommandParamType>(command), groupId, all);
 }
 
 bool ParameterEditorController::_shouldShow(Fact* fact)

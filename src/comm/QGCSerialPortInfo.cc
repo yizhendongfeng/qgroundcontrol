@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -237,7 +237,6 @@ bool QGCSerialPortInfo::getBoardInfo(QGCSerialPortInfo::BoardType_t& boardType, 
 
         for (int i=0; i<_boardDescriptionFallbackList.count(); i++) {
             const BoardRegExpFallback_t& boardFallback = _boardDescriptionFallbackList[i];
-
             if (description().contains(QRegExp(boardFallback.regExp, Qt::CaseInsensitive))) {
 #ifndef __android
                 if (boardFallback.androidOnly) {

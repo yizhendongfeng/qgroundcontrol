@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -40,6 +40,20 @@ void VehicleLinkManager::mavlinkMessageReceived(LinkInterface* link, mavlink_mes
             if (_rgLinkInfo[linkIndex].commLost) {
                 _commRegainedOnLink(link);
             }
+        }
+    }
+}
+
+void VehicleLinkManager::shenHangMessageReceived(LinkInterface* link, ShenHangProtocolMessage message)
+{
+    int linkIndex = _containsLinkIndex(link);
+    if (linkIndex == -1) {
+        _addLink(link);
+    } else {
+        LinkInfo_t& linkInfo = _rgLinkInfo[linkIndex];
+        linkInfo.heartbeatElapsedTimer.restart();
+        if (_rgLinkInfo[linkIndex].commLost) {
+            _commRegainedOnLink(link);
         }
     }
 }

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -91,56 +91,66 @@ FactMetaData* CompInfoParam::factMetaDataForName(const QString& name, FactMetaDa
 {
     FactMetaData* factMetaData = nullptr;
 
-    if (_noJsonMetadata) {
-        QObject* opaqueMetaData = _getOpaqueParameterMetaData();
-        if (opaqueMetaData) {
-            factMetaData = vehicle->firmwarePlugin()->_getMetaDataForFact(opaqueMetaData, name, type, vehicle->vehicleType());
-        }
+//    if (_noJsonMetadata) {
+//        QObject* opaqueMetaData = _getOpaqueParameterMetaData();
+//        if (opaqueMetaData) {
+//            factMetaData = vehicle->firmwarePlugin()->_getMetaDataForFactByIndexes(opaqueMetaData, name, type, vehicle->vehicleType());
+//        }
+//    }
+
+//    if (!factMetaData) {
+//        if (_nameToMetaDataMap.contains(name)) {
+//            factMetaData = _nameToMetaDataMap[name];
+//        } else {
+//            // We didn't get any direct matches. Try an indexed name.
+//            for (int i=0; i<_indexedNameMetaDataList.count(); i++) {
+//                const RegexFactMetaDataPair_t& pair = _indexedNameMetaDataList[i];
+
+//                QString indexedName = pair.first;
+//                QString indexedRegex("(\\d+)");
+//                indexedName.replace(_indexedNameTag, indexedRegex);
+
+//                QRegularExpression      regex(indexedName);
+//                QRegularExpressionMatch match = regex.match(name);
+
+//                QStringList captured = match.capturedTexts();
+//                if (captured.count() == 2) {
+//                    factMetaData = new FactMetaData(*pair.second, this);
+//                    factMetaData->setName(name);
+
+//                    QString shortDescription = factMetaData->shortDescription();
+//                    shortDescription.replace(_indexedNameTag, captured[1]);
+//                    factMetaData->setShortDescription(shortDescription);
+//                    QString longDescription = factMetaData->shortDescription();
+//                    longDescription.replace(_indexedNameTag, captured[1]);
+//                    factMetaData->setLongDescription(longDescription);
+//                }
+//            }
+
+//            if (!factMetaData) {
+//                factMetaData = new FactMetaData(type, this);
+//                int i = name.indexOf("_");
+//                if (i > 0) {
+//                    factMetaData->setGroup(name.left(i));
+//                }
+//                if (compId != MAV_COMP_ID_AUTOPILOT1) {
+//                    factMetaData->setCategory(tr("Component %1").arg(compId));
+//                }
+//            }
+//            _nameToMetaDataMap[name] = factMetaData;
+//        }
+//    }
+
+    return factMetaData;
+}
+
+FactMetaData* CompInfoParam::factMetaDataByIndexes(uint8_t idGroup, uint16_t addrOffset)
+{
+    FactMetaData* factMetaData = nullptr;
+    QObject* opaqueMetaData = _getOpaqueParameterMetaData();
+    if (opaqueMetaData) {
+        factMetaData = vehicle->firmwarePlugin()->_getMetaDataForFactByIndexes(opaqueMetaData, idGroup, addrOffset, vehicle->vehicleType());
     }
-
-    if (!factMetaData) {
-        if (_nameToMetaDataMap.contains(name)) {
-            factMetaData = _nameToMetaDataMap[name];
-        } else {
-            // We didn't get any direct matches. Try an indexed name.
-            for (int i=0; i<_indexedNameMetaDataList.count(); i++) {
-                const RegexFactMetaDataPair_t& pair = _indexedNameMetaDataList[i];
-
-                QString indexedName = pair.first;
-                QString indexedRegex("(\\d+)");
-                indexedName.replace(_indexedNameTag, indexedRegex);
-
-                QRegularExpression      regex(indexedName);
-                QRegularExpressionMatch match = regex.match(name);
-
-                QStringList captured = match.capturedTexts();
-                if (captured.count() == 2) {
-                    factMetaData = new FactMetaData(*pair.second, this);
-                    factMetaData->setName(name);
-
-                    QString shortDescription = factMetaData->shortDescription();
-                    shortDescription.replace(_indexedNameTag, captured[1]);
-                    factMetaData->setShortDescription(shortDescription);
-                    QString longDescription = factMetaData->shortDescription();
-                    longDescription.replace(_indexedNameTag, captured[1]);
-                    factMetaData->setLongDescription(longDescription);
-                }
-            }
-
-            if (!factMetaData) {
-                factMetaData = new FactMetaData(type, this);
-                int i = name.indexOf("_");
-                if (i > 0) {
-                    factMetaData->setGroup(name.left(i));
-                }
-                if (compId != MAV_COMP_ID_AUTOPILOT1) {
-                    factMetaData->setCategory(tr("Component %1").arg(compId));
-                }
-            }
-            _nameToMetaDataMap[name] = factMetaData;
-        }
-    }
-
     return factMetaData;
 }
 

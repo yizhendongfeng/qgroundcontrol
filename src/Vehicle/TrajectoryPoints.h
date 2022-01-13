@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -14,7 +14,6 @@
 #include <QGeoCoordinate>
 
 class Vehicle;
-
 class TrajectoryPoints : public QObject
 {
     Q_OBJECT

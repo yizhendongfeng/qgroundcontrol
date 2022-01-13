@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -102,6 +102,19 @@ const char* Vehicle::_terrainFactGroupName =            "terrain";
 
 const QList<int> Vehicle::_pidTuningMessages = {MAVLINK_MSG_ID_ATTITUDE_QUATERNION, MAVLINK_MSG_ID_ATTITUDE_TARGET};
 
+
+static const struct Bit2Name FlightMode2Name[] = {
+    { FlyMode::RC_ANGULAR_VEL,             "RcAngularVel" },
+    { FlyMode::RC_ANGLE,                  "RcAngle" },
+    { FlyMode::RADIO_ANGULAR_VEL,          "RadioAngularVel" },
+    { FlyMode::RADIO_ANGLE,               "RadioAngle" },
+    { FlyMode::ALTITUDE_RC_ANGLE,          "AltitudeRcAngle" },
+    { FlyMode::ALTITUDE_RADIO_ANGLE,       "AltitudeRadioAngle" },
+    { FlyMode::ALTITUDE_RC_SPEED_HEAD,      "AltitudeRcSpeedHead" },
+    { FlyMode::ALTITUDE_RADIO_SPEED_HEAD,   "AltitudeRadioSpeedHead" },
+    { FlyMode::PROGRAM_CONTROL,           "ProgramControl" }
+};
+
 // Standard connected vehicle
 Vehicle::Vehicle(LinkInterface*             link,
                  int                        vehicleId,
@@ -160,10 +173,14 @@ Vehicle::Vehicle(LinkInterface*             link,
     connect(qgcApp()->toolbox()->multiVehicleManager(), &MultiVehicleManager::activeVehicleAvailableChanged, this, &Vehicle::_loadSettings);
 
     _mavlink = _toolbox->mavlinkProtocol();
+    _shenHangProtocol = _toolbox->shenHangProtocol();
     qCDebug(VehicleLog) << "Link started with Mavlink " << (_mavlink->getCurrentVersion() >= 200 ? "V2" : "V1");
 
     connect(_mavlink, &MAVLinkProtocol::messageReceived,        this, &Vehicle::_mavlinkMessageReceived);
     connect(_mavlink, &MAVLinkProtocol::mavlinkMessageStatus,   this, &Vehicle::_mavlinkMessageStatus);
+
+    connect(_shenHangProtocol, &ShenHangProtocol::shenHangMessageReceived, this, &Vehicle::_shenHangMessageReceived);
+    connect(_shenHangProtocol, &ShenHangProtocol::shenHangMessageStatus,   this, &Vehicle::_shenHangMessageStatus);
 
     connect(this, &Vehicle::flightModeChanged,          this, &Vehicle::_handleFlightModeChanged);
     connect(this, &Vehicle::armedChanged,               this, &Vehicle::_announceArmedChanged);
@@ -211,6 +228,12 @@ Vehicle::Vehicle(LinkInterface*             link,
     _mavCommandResponseCheckTimer.start();
     connect(&_mavCommandResponseCheckTimer, &QTimer::timeout, this, &Vehicle::_sendMavCommandResponseTimeoutCheck);
 
+    // Send ShenHang ack timer
+    _shenHangCommandResponseCheckTimer.setSingleShot(false);
+    _shenHangCommandResponseCheckTimer.setInterval(_shenHangCommandResponseCheckTimeoutMSecs);
+    _shenHangCommandResponseCheckTimer.start();
+    connect(&_shenHangCommandResponseCheckTimer, &QTimer::timeout, this, &Vehicle::_sendShenHangCommandResponseTimeoutCheck);
+
     // Chunked status text timeout timer
     _chunkedStatusTextTimer.setSingleShot(true);
     _chunkedStatusTextTimer.setInterval(1000);
@@ -245,6 +268,12 @@ Vehicle::Vehicle(LinkInterface*             link,
     // Start csv logger
     connect(&_csvLogTimer, &QTimer::timeout, this, &Vehicle::_writeCsvLine);
     _csvLogTimer.start(1000);
+    for (size_t i = 0; i < sizeof(FlightMode2Name) / sizeof(FlightMode2Name[0]); i++)
+        shenHangFlightModes << FlightMode2Name[i].name;
+    emit flightModesChanged();
+
+//    PackWaypointAutoSw(1, 2, 3);
+//    setArmed(true, true);
 }
 
 // Disconnected Vehicle for offline editing
@@ -733,6 +762,52 @@ void Vehicle::_mavlinkMessageReceived(LinkInterface* link, mavlink_message_t mes
     emit mavlinkMessageReceived(message);
 
     _uas->receiveMessage(message);
+}
+
+void Vehicle::_shenHangMessageReceived(LinkInterface* link, ShenHangProtocolMessage message)
+{
+    // We give the link manager first whack since it it reponsible for adding new links
+    _vehicleLinkManager->shenHangMessageReceived(link, message);
+    idTarget = message.idSource;
+    _parameterManager->shenHangMessageReceived(message);
+    switch (message.tyMsg0)
+    {
+    case WAYPOINT_INFO_SLOT:
+        HandleWaypointInfo(message);
+        break;
+    case GENERAL_STATUS:
+        HandleGeneralStatus(message);
+        break;
+    case POS_VEL_TIME:
+        HandlePosVelTime(message);
+        break;
+    case ATTITUDE:
+        HandleAttitude(message);
+        break;
+    case GENERAL_DATA:
+        HandleGeneralData(message);
+        break;
+
+    /******************** 回复报文编号 ********************/
+    case ACK_COMMAND_VEHICLE:
+        break;
+    case ACK_COMMAND_PARAM:
+        HandleAckCommandParam(message);
+        break;
+    case ACK_COMMAND_BANK:
+        HandleAckCommandBank(message);
+        break;
+    case ACK_COMMAND_PAYLOAD:
+        break;
+    case ACK_COMMAND_REMOTE_CONTROL:
+        break;
+    case ACK_COMMAND_COMM:
+        break;
+    case ACK_COMMAND_ORGANIZE:
+        break;
+    default:
+        break;
+    }
 }
 
 #if !defined(NO_ARDUPILOT_DIALECT)
@@ -1623,13 +1698,31 @@ bool Vehicle::sendMessageOnLinkThreadSafe(LinkInterface* link, mavlink_message_t
     _firmwarePlugin->adjustOutgoingMavlinkMessageThreadSafe(this, link, &message);
 
     // Write message into buffer, prepending start sign
-    uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
-    int len = mavlink_msg_to_send_buffer(buffer, &message);
+//    uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+//    int len = mavlink_msg_to_send_buffer(buffer, &message);
+//    Q_UNUSED(len)
+//    link->writeBytesThreadSafe((const char*)buffer, len);
+//    _messagesSent++;
+//    emit messagesSentChanged();
 
-    link->writeBytesThreadSafe((const char*)buffer, len);
+    return true;
+}
+
+bool Vehicle::sendShenHangMessageOnLinkThreadSafe(LinkInterface* link, ShenHangProtocolMessage message)
+{
+    if (!link->isConnected()) {
+        qCDebug(VehicleLog) << "sendShenHangMessageOnLinkThreadSafe" << link << "not connected!";
+        return false;
+    }
+
+    // Write message into buffer, prepending start sign
+    message.idSource = idSource;
+    message.idTarget = idTarget;
+    uint16_t len = _shenHangProtocol->Encode(message, bufferSend);
+
+    link->writeBytesThreadSafe((const char*)bufferSend, len);
     _messagesSent++;
     emit messagesSentChanged();
-
     return true;
 }
 
@@ -1883,12 +1976,12 @@ void Vehicle::forceArm(void)
 
 bool Vehicle::flightModeSetAvailable()
 {
-    return _firmwarePlugin->isCapable(this, FirmwarePlugin::SetFlightModeCapability);
+    return true;            // _firmwarePlugin->isCapable(this, FirmwarePlugin::SetFlightModeCapability);
 }
 
 QStringList Vehicle::flightModes()
 {
-    return _firmwarePlugin->flightModes(this);
+    return shenHangFlightModes;     //_firmwarePlugin->flightModes(this);
 }
 
 QStringList Vehicle::extraJoystickFlightModes()
@@ -1898,7 +1991,7 @@ QStringList Vehicle::extraJoystickFlightModes()
 
 QString Vehicle::flightMode() const
 {
-    return _firmwarePlugin->flightMode(_base_mode, _custom_mode);
+    return shenHangFlightMode;      //_firmwarePlugin->flightMode(_base_mode, _custom_mode);
 }
 
 void Vehicle::setFlightMode(const QString& flightMode)
@@ -2053,13 +2146,13 @@ void Vehicle::_updateFlightTime()
 void Vehicle::_firstMissionLoadComplete()
 {
     disconnect(_missionManager, &MissionManager::newMissionItemsAvailable, this, &Vehicle::_firstMissionLoadComplete);
-    _initialConnectStateMachine->advance();
+//    _initialConnectStateMachine->advance();
 }
 
 void Vehicle::_firstGeoFenceLoadComplete()
 {
     disconnect(_geoFenceManager, &GeoFenceManager::loadComplete, this, &Vehicle::_firstGeoFenceLoadComplete);
-    _initialConnectStateMachine->advance();
+//    _initialConnectStateMachine->advance();
 }
 
 void Vehicle::_firstRallyPointLoadComplete()
@@ -2067,7 +2160,7 @@ void Vehicle::_firstRallyPointLoadComplete()
     disconnect(_rallyPointManager, &RallyPointManager::loadComplete, this, &Vehicle::_firstRallyPointLoadComplete);
     _initialPlanRequestComplete = true;
     emit initialPlanRequestCompleteChanged(true);
-    _initialConnectStateMachine->advance();
+//    _initialConnectStateMachine->advance();
 }
 
 void Vehicle::_parametersReady(bool parametersReady)
@@ -2081,7 +2174,7 @@ void Vehicle::_parametersReady(bool parametersReady)
     if (parametersReady) {
         disconnect(_parameterManager, &ParameterManager::parametersReadyChanged, this, &Vehicle::_parametersReady);
         _setupAutoDisarmSignalling();
-        _initialConnectStateMachine->advance();
+//        _initialConnectStateMachine->advance();
     }
 }
 
@@ -2802,8 +2895,28 @@ void Vehicle::_sendMavCommandResponseTimeoutCheck(void)
     for (int i=_mavCommandList.count()-1; i>=0; i--) {
         MavCommandListEntry_t& commandEntry = _mavCommandList[i];
         if (commandEntry.elapsedTimer.elapsed() > commandEntry.ackTimeoutMSecs) {
+            qDebug() << "*************" << QDateTime::currentDateTime() << commandEntry.elapsedTimer.elapsed();
+
             // Try sending command again
             _sendMavCommandFromList(i);
+        }
+    }
+}
+
+void Vehicle::_sendShenHangCommandResponseTimeoutCheck()
+{
+    if (_shenHangCommandList.isEmpty()) {
+        return;
+    }
+
+    // Walk the list backwards since _sendMavCommandFromList can remove entries
+    for (int i=_shenHangCommandList.count()-1; i>=0; i--) {
+        ShenHangCommandListEntry& commandEntry = _shenHangCommandList[i];
+        if (commandEntry.elapsedTimer.elapsed() > commandEntry.ackTimeoutMSecs) {
+            qDebug() << "*************" << QDateTime::currentDateTime() << commandEntry.elapsedTimer.elapsed();
+
+            // Try sending command again
+            _sendShenHangCommandFromList(i);
         }
     }
 }
@@ -3003,6 +3116,119 @@ void Vehicle::_requestMessageWaitForMessageResultHandler(void* resultHandlerData
 
     pInfo->messageReceived = true;
     (*pInfo->resultHandler)(pInfo->resultHandlerData, noResponsefromVehicle ? MAV_RESULT_FAILED : MAV_RESULT_ACCEPTED, noResponsefromVehicle ? RequestMessageFailureMessageNotReceived : RequestMessageNoFailure, message);
+}
+
+QString Vehicle::getShenHangCommandName(uint8_t tyMsg0, uint8_t tyMsg1)
+{
+    switch (tyMsg0)
+    {
+    case COMMAND_VEHICLE:
+        return "Command Vehicle";
+    case COMMAND_PARAM:
+        // 设置参数（ty_msg0=129,ty_msg1=4）
+        switch (tyMsg1)
+        {
+        case COMMAND_RESET_PARAM: return "Reset Parameter";
+        case COMMAND_LOAD_PARAM: return "Load Parameter";
+        case COMMAND_SAVE_PARAM: return "Save Parameter";
+        case COMMAND_QUERY_PARAM: return "Query Parameter";
+        case COMMAND_SET_PARAM: return "Set Parameter";
+        default: return "Unknown Parameter Command";
+        }
+    case COMMAND_BANK:
+        switch (tyMsg1)
+        {
+        case QUERY_ALL_BANK: return "Query All Banks";
+        case QUERY_SINGLE_BANK: return "Query Single Bank";
+        case SET_SINGLE_BANK: return "Set Single Bank";
+        case REFACTOR_INFO_SLOT: return "Refactor Single Infoslot";
+        case QUERY_SINGLE_INFO_SLOT: return "Set Single Infoslot";
+        case ENABLE_BANK_AUTO_SW: return "Bank Auto Switch";
+        case WAYPOINT_AUTO_SW: return "Waypoint Auto Switch";
+        default: return "Unknown Bank Command";
+        }
+    case COMMAND_PAYLOAD:   return "Command Poyload";
+    case COMMAND_REMOTE_CONTROL:    return "Command Remote Control";
+    case COMMAND_COMM:      return "Command Communication";
+    case COMMAND_ORGANIZE:  return "Command Organize";
+    default:                return "Unknown command";
+    }
+}
+
+int Vehicle::_findShenHangCommandListEntryIndex(uint8_t tyMsg0, uint8_t tyMsg1)
+{
+    for (int i=0; i<_shenHangCommandList.count(); i++) {
+        const ShenHangCommandListEntry& entry = _shenHangCommandList[i];
+        if (entry.tyMsg0 == tyMsg0 && entry.tyMsg1 == tyMsg1) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void Vehicle::_sendShenHangCommandWorker(bool showError)
+{
+    int entryIndex = _findShenHangCommandListEntryIndex(msgSend.tyMsg0, msgSend.tyMsg1);
+    if (entryIndex != -1) { // 相同命令已发送直接返回
+        QString rawCommandName  = getShenHangCommandName(msgSend.tyMsg0, msgSend.tyMsg1);
+        qCDebug(VehicleLog) << QStringLiteral("_sendShenHangCommandWorker failing duplicate command") << rawCommandName;
+        if (showError) {
+            qgcApp()->showAppMessage(tr("Unable to send command: Waiting on previous response to same command.."));
+        }
+        return;
+    }
+    SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
+    if (!sharedLink) {
+        qCDebug(VehicleLog) << "_sendMavCommandWorker: primary link gone!";
+        return;
+    }
+    ShenHangCommandListEntry entry;
+    entry.tyMsg0 = msgSend.tyMsg0;
+    entry.tyMsg1 = msgSend.tyMsg1;
+    entry.showError = showError;
+    entry.maxTries =  _shenHangCommandMaxRetryCount;
+    entry.ackTimeoutMSecs =  _mavCommandAckTimeoutMSecs;
+    entry.idTarget = idTarget;
+    entry.elapsedTimer.start();
+    memcpy(entry.data, msgSend.payload, sizeof(entry.data));
+    _shenHangCommandList.append(entry);
+    _sendShenHangCommandFromList(_shenHangCommandList.count() - 1);
+}
+
+void Vehicle::_sendShenHangCommandFromList(int index)
+{
+    ShenHangCommandListEntry commandEntry = _shenHangCommandList[index];
+    QString rawCommandName  = getShenHangCommandName(commandEntry.tyMsg0, commandEntry.tyMsg1);
+
+    if (++_shenHangCommandList[index].tryCount > commandEntry.maxTries) {
+        qCDebug(VehicleLog) << "_sendMavCommandFromList giving up after max retries" << rawCommandName;
+        _shenHangCommandList.removeAt(index);
+        if (commandEntry.showError) {
+            qgcApp()->showAppMessage(tr("Vehicle did not respond to command: %1").arg(rawCommandName));
+        }
+        return;
+    }
+
+//    if (commandEntry.requestMessage) {
+//        RequestMessageInfo_t* pInfo = static_cast<RequestMessageInfo_t*>(commandEntry.resultHandlerData);
+//        _waitForMavlinkMessage(_requestMessageWaitForMessageResultHandler, pInfo, pInfo->msgId, 1000);
+//    }
+
+    qCDebug(VehicleLog) << "_sendMavCommandFromList command:tryCount" << rawCommandName << commandEntry.tryCount;
+
+    SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
+    if (!sharedLink) {
+        qCDebug(VehicleLog) << "_sendShenHangCommandFromList: primary link gone!";
+        return;
+    }
+
+    ShenHangProtocolMessage msg = {};
+    msg.tyMsg0 = commandEntry.tyMsg0;
+    msg.tyMsg1 = commandEntry.tyMsg1;
+    msg.idSource = static_cast<uint16_t>(_shenHangProtocol->getSystemId());
+    msg.idTarget = idTarget;
+    memcpy(msg.payload, commandEntry.data, sizeof(msg.payload));
+    sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
 }
 
 void Vehicle::setPrearmError(const QString& prearmError)
@@ -3553,6 +3779,16 @@ void Vehicle::_mavlinkMessageStatus(int uasId, uint64_t totalSent, uint64_t tota
         emit mavlinkStatusChanged();
     }
 }
+void Vehicle::_shenHangMessageStatus(int uasId, uint64_t totalSent, uint64_t totalReceived, uint64_t totalLoss, float lossPercent)
+{
+    if(uasId == _id) {
+        _mavlinkSentCount       = totalSent;
+        _mavlinkReceivedCount   = totalReceived;
+        _mavlinkLossCount       = totalLoss;
+        _mavlinkLossPercent     = lossPercent;
+        emit mavlinkStatusChanged();
+    }
+}
 
 int  Vehicle::versionCompare(QString& compare)
 {
@@ -3885,4 +4121,312 @@ void Vehicle::triggerSimpleCamera()
                    true,                        // show errors
                    0.0, 0.0, 0.0, 0.0,          // param 1-4 unused
                    1.0);                        // trigger camera
+}
+
+
+void Vehicle::HandleWaypointInfo(ShenHangProtocolMessage& msg)
+{
+    WaypointInfoSlot waypointInfoSlot;
+//    if (msg.tyMsg1 == 0)
+    memcpy(&waypointInfoSlot, msg.payload, sizeof(waypointInfoSlot));
+}
+
+void Vehicle::HandleGeneralStatus(ShenHangProtocolMessage& msg)
+{
+    GeneralStatus generalStatus;
+    memcpy(&generalStatus, msg.payload, sizeof(generalStatus));
+
+    /******************** 处理飞行模式 ********************/
+    QString shenHangPreviousFlightMode = shenHangFlightMode;
+    for (size_t i=0; i<sizeof(FlightMode2Name)/sizeof(FlightMode2Name[0]); i++) {
+        if (generalStatus.modeOp == FlightMode2Name[i].flightMode) {
+            shenHangFlightMode = FlightMode2Name[i].name;
+            break;
+        }
+    }
+    if (shenHangPreviousFlightMode != shenHangFlightMode) {
+        emit flightModeChanged(shenHangFlightMode);
+    }
+
+    /******************** 处理GPS信息 ********************/
+    gpsRawInt.satellitesUsed = generalStatus.modeGnssSv & 0B00001111;
+    gpsRawInt.fixType = (generalStatus.modeGnssSv & 0B00110000) >> 4;
+    gpsRawInt.doubleAntenna = generalStatus.modeGnssSv >> 7;
+//    gpsRawInt.yaw = generalStatus.crsDeg100x;
+    _gpsFactGroup.setShenHangGpsInfo(gpsRawInt);
+    _headingFact.setRawValue(generalStatus.crsDeg100x / 100.f);
+}
+
+void Vehicle::HandlePosVelTime(ShenHangProtocolMessage& msg)
+{
+    PosVelTime posVelTime;
+    memcpy(&posVelTime, msg.payload, sizeof(posVelTime));
+
+    /******************** 处理GPS信息 ********************/
+    gpsRawInt.lat = static_cast<int32_t>(posVelTime.latDeg * 1e7);
+    gpsRawInt.lon = static_cast<int32_t>(posVelTime.lonDeg * 1e7);
+    gpsRawInt.alt = static_cast<int32_t>(posVelTime.alt * 1e3);
+    gpsRawInt.vel = static_cast<uint16_t>(posVelTime.vG * 1e3f);
+    gpsRawInt.cog = static_cast<int16_t>(qRadiansToDegrees(posVelTime.crsRad) * 100);
+    _climbRateFact.setRawValue(posVelTime.vUp);
+}
+
+void Vehicle::HandleAttitude(ShenHangProtocolMessage& msg)
+{
+    Attitude attitude;
+    memcpy(&attitude, msg.payload, sizeof(attitude));
+    
+//    Eigen::Quaternionf quat(attitude.q1Int16 / 32767.f, attitude.q2Int16 / 32767.f, attitude.q3Int16 / 32767.f, attitude.q4Int16 / 32767.f);
+//    float roll, pitch, yaw;
+//    float q[] = { quat.w(), quat.x(), quat.y(), quat.z() };
+//    mavlink_quaternion_to_euler(q, &roll, &pitch, &yaw);
+//    Fact _rollFact;
+//    Fact _pitchFact;
+//    Fact _headingFact;
+    
+    _rollRateFact.setRawValue(qRadiansToDegrees(attitude.p1000x / 1000.f));
+    _pitchRateFact.setRawValue(qRadiansToDegrees(attitude.q1000x / 1000.f));
+    _yawRateFact.setRawValue(qRadiansToDegrees(attitude.r1000x / 1000.f));
+}
+
+void Vehicle::HandleGeneralData(ShenHangProtocolMessage& msg)
+{
+
+}
+
+void Vehicle::HandleAckReset(ShenHangProtocolMessage& msg)
+{
+
+}
+
+void Vehicle::HandleAckCommandParam(ShenHangProtocolMessage& msg)
+{
+    uint8_t idCfgGroup0;
+    uint8_t execuateState;
+
+    // 单个参数查询返回（ty_msg0=193,ty_msg1=3）；单个参数设置返回（ty_msg0=193,ty_msg1=4）
+    uint8_t lenCfg;         // 查询的设置参数的字节数，根据xml文件确定
+    uint16_t addrOffset;    // 查询的设置参数在对应组内的偏移地址，根据xml文件确定
+    uint8_t data[16];       // 具体设置值，按内存顺序排列，低字节在前，高字节在后
+
+    // 错误信息返回（ty_msg0=193,ty_msg1=255）
+    uint8_t errTyMsg1;      // 出错的命令对应的ty_msg1编号
+    uint8_t dgnCode;        // 错误编码，2：编号超界，4：无效指令，其他：保留
+    switch (msg.tyMsg1)
+    {
+    case ACK_RESET_PARAM:
+        idCfgGroup0 = msg.payload[0];
+        execuateState = msg.payload[1];
+        break;
+    case ACK_LOAD_PARAM:
+        idCfgGroup0 = msg.payload[0];
+        execuateState = msg.payload[1];
+        break;
+    case ACK_SAVE_PARAM:
+        idCfgGroup0 = msg.payload[0];
+        execuateState = msg.payload[1];
+        break;
+    case ACK_QUERY_PARAM:
+        idCfgGroup0 = msg.payload[0];
+        lenCfg = msg.payload[1];
+        memcpy(&addrOffset, msg.payload + 2, 2);
+        memcpy(data, msg.payload + 4, sizeof(data));
+        break;
+    case ACK_SET_PARAM:
+        idCfgGroup0 = msg.payload[0];
+        lenCfg = msg.payload[1];
+        memcpy(&addrOffset, msg.payload + 2, 2);
+        memcpy(data, msg.payload + 4, sizeof(data));
+        break;
+    case ACK_ERROR_PARAM:
+        errTyMsg1 = msg.payload[0];
+        dgnCode = msg.payload[1];
+        break;
+    default:
+        break;
+    }
+}
+
+void Vehicle::HandleAckCommandBank(ShenHangProtocolMessage& msg)
+{
+    TotalBankInfo totalBankInfo = {};
+    SingleBankInfo singleBankInfo = {};
+    SingleBankCheckInfo refactorInfoSlot = {};
+    struct WaypointInfoSlot waypointInfoSlot = {};
+    ErrorBankInfo errorBankInfo = {};
+    switch (msg.tyMsg1)
+    {
+    case ACK_QUERY_ALL:
+        memcpy(&totalBankInfo, msg.payload, sizeof(totalBankInfo));
+        break;
+    case ACK_QUERY_SINGLE_BANK:
+    case ACK_SET_SINGLE_BANK:
+    case ACK_BANK_AUTO_SW:
+    case ACK_WAYPOINT_AUTO_SW:
+        memcpy(&singleBankInfo, msg.payload, sizeof(singleBankInfo));
+        break;
+    case REFACTOR_INFO_SLOT:
+        memcpy(&refactorInfoSlot, msg.payload, sizeof(refactorInfoSlot));
+        break;
+    case ACK_QUERY_SINGLE_INFO_SLOT:
+        memcpy(&waypointInfoSlot, msg.payload, sizeof(waypointInfoSlot));
+        break;
+    case ACK_BANK_ERROR:
+        memcpy(&errorBankInfo, msg.payload, sizeof(errorBankInfo));
+        break;
+    default:
+        break;
+    }
+}
+
+void Vehicle::PackVehicleCommand()
+{
+
+}
+
+void Vehicle::PackSetParamCommand(ShenHangProtocolMessage& msg, CommandParamType typeMsg1, uint8_t idGroup, uint8_t length, uint16_t addrOffset, uint8_t* data, uint8_t dataLength)
+{
+    msg.tyMsg0 = COMMAND_PARAM;
+    msg.tyMsg1 = typeMsg1;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    msg.payload[0] = idGroup;
+    msg.payload[1] = length;
+    memcpy(msg.payload + 2, &addrOffset, 2);
+    memcpy(msg.payload + 4, &data, sizeof(dataLength));
+}
+
+void Vehicle::PackCommandParamReset(ShenHangProtocolMessage& msg, uint8_t idGroup)
+{
+    msg.tyMsg0 = COMMAND_PARAM;
+    msg.tyMsg1 = ACK_RESET_PARAM;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    msg.payload[0] = idGroup;
+}
+
+void Vehicle::PackCommandParamLoad(ShenHangProtocolMessage& msg, uint8_t idGroup)
+{
+    msg.tyMsg0 = COMMAND_PARAM;
+    msg.tyMsg1 = COMMAND_LOAD_PARAM;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    msg.payload[0] = idGroup;
+}
+
+void Vehicle::PackCommandParamSave(ShenHangProtocolMessage& msg, uint8_t idGroup)
+{
+    msg.tyMsg0 = COMMAND_PARAM;
+    msg.tyMsg1 = COMMAND_SAVE_PARAM;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    msg.payload[0] = idGroup;
+}
+
+void Vehicle::PackCommandParamQuery(ShenHangProtocolMessage& msg, uint8_t idGroup, uint8_t length, uint16_t addrOffset)
+{
+    msg.tyMsg0 = COMMAND_PARAM;
+    msg.tyMsg1 = COMMAND_QUERY_PARAM;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    msg.payload[0] = idGroup;
+    msg.payload[1] = length;
+    memcpy(msg.payload + 2, &addrOffset, 2);
+}
+
+void Vehicle::PackCommandSet(ShenHangProtocolMessage& msg, uint8_t idGroup, uint8_t length, uint16_t addrOffset, uint8_t* data)
+{
+    msg.tyMsg0 = COMMAND_PARAM;
+    msg.tyMsg1 = COMMAND_SET_PARAM;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    msg.payload[0] = idGroup;
+    msg.payload[1] = length;
+    memcpy(msg.payload + 2, &addrOffset, 2);
+    memcpy(msg.payload + 4, data, 16);
+}
+
+void Vehicle::PackCommandBankQueryAll(ShenHangProtocolMessage& msg)
+{
+    msg.tyMsg0 = COMMAND_BANK;
+    msg.tyMsg1 = QUERY_ALL_BANK;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+}
+
+void Vehicle::PackCommandBankQuerySingle(ShenHangProtocolMessage& msg, uint16_t idBank)
+{
+    msg.tyMsg0 = COMMAND_BANK;
+    msg.tyMsg1 = QUERY_SINGLE_BANK;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    memcpy(msg.payload, &idBank, 2);
+}
+
+void Vehicle::PackCommandBankSetSingle(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t idBankSuc, uint16_t idBankIwpSuc, uint16_t actBankEnd, uint8_t flagBankVerified, uint8_t flagBankLock)
+{
+    msg.tyMsg0 = COMMAND_BANK;
+    msg.tyMsg1 = SET_SINGLE_BANK;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    memcpy(msg.payload, &idBank, 2);
+    memcpy(msg.payload + 2, &idBankSuc, 2);
+    memcpy(msg.payload + 4, &idBankIwpSuc, 2);
+    memcpy(msg.payload + 6, &actBankEnd, 2);
+    msg.payload[8] = flagBankVerified;
+    msg.payload[9] = flagBankLock;
+}
+
+void Vehicle::PackRefactorInfoSlot(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t nWp, uint16_t nInfoSlot)
+{
+    msg.tyMsg0 = COMMAND_BANK;
+    msg.tyMsg1 = REFACTOR_INFO_SLOT;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    memcpy(msg.payload, &idBank, 2);
+    memcpy(msg.payload + 2, &nWp, 2);
+    memcpy(msg.payload + 4, &nInfoSlot, 2);
+}
+
+void Vehicle::PackQuerySingleInfoSlot(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t idInfoSlot)
+{
+    msg.tyMsg0 = COMMAND_BANK;
+    msg.tyMsg1 = QUERY_SINGLE_INFO_SLOT;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    memset(msg.payload, 0, sizeof(msg.payload));
+    memcpy(msg.payload, &idBank, 2);
+    memcpy(msg.payload + 2, &idInfoSlot, 2);
+}
+
+void Vehicle::PackEnableBankAutoSw(ShenHangProtocolMessage& msg, uint8_t flagHalt)
+{
+    msg.tyMsg0 = COMMAND_BANK;
+    msg.tyMsg1 = ENABLE_BANK_AUTO_SW;
+    msg.idSource = idSource;
+    msg.idTarget = idTarget;
+    msg.payload[0] = flagHalt;
+}
+
+void Vehicle::PackWaypointAutoSw(uint16_t idBank, uint16_t idWp, uint8_t switchMode)
+{
+    msgSend.tyMsg0 = COMMAND_BANK;
+    msgSend.tyMsg1 = WAYPOINT_AUTO_SW;
+    msgSend.idSource = idSource;
+    msgSend.idTarget = idTarget;
+    memset(msgSend.payload, 0, sizeof(msgSend.payload));
+    memcpy(msgSend.payload, &idBank, 2);
+    memcpy(msgSend.payload + 2, &idWp, 2);
+    msgSend.payload[4] = switchMode;
+    _sendShenHangCommandWorker();
 }

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -114,6 +114,7 @@ protected:
 
     bool        versionMismatchIgnore;
     int         systemId;
+    int         shenHangSystemId;
     unsigned    _current_version;
     int         _radio_version_mismatch_count;
 

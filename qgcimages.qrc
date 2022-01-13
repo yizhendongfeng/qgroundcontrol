@@ -201,6 +201,7 @@
         <file alias="SaveFile.svg">src/FlightMap/Images/SaveFile.svg</file>
         <file alias="Edit.svg">src/FlightMap/Images/Edit.svg</file>
         <file alias="Done.svg">src/FlightMap/Images/Done.svg</file>
+        <file alias="ShenHang/BrandImage">src/FirmwarePlugin/ShenHang/ShenHangBrandImage.png</file>
     </qresource>
     <qresource prefix="/">
         <file>src/FlightMap/Images/OpenFile.svg</file>

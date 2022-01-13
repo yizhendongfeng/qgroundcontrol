@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -53,11 +53,13 @@ void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
     _firmwarePluginManager =     _toolbox->firmwarePluginManager();
     _joystickManager =           _toolbox->joystickManager();
     _mavlinkProtocol =           _toolbox->mavlinkProtocol();
+    _shenHangProtocol =          _toolbox->shenHangProtocol();
 
     QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
     qmlRegisterUncreatableType<MultiVehicleManager>("QGroundControl.MultiVehicleManager", 1, 0, "MultiVehicleManager", "Reference only");
 
     connect(_mavlinkProtocol, &MAVLinkProtocol::vehicleHeartbeatInfo, this, &MultiVehicleManager::_vehicleHeartbeatInfo);
+    connect(_shenHangProtocol, &ShenHangProtocol::shenHangVehicleTypeInfo, this, &MultiVehicleManager::_shenHangVehicleTypeInfo);
     connect(&_gcsHeartbeatTimer, &QTimer::timeout, this, &MultiVehicleManager::_sendGCSHeartbeat);
 
     if (_gcsHeartbeatEnabled) {
@@ -149,6 +151,59 @@ void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicle
     }
 #endif
 
+}
+
+void MultiVehicleManager::_shenHangVehicleTypeInfo(LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType)
+{
+    if (_vehicles.count() > 0 && !qgcApp()->toolbox()->corePlugin()->options()->multiVehicleEnabled()) {
+        return;
+    }
+    if (_ignoreVehicleIds.contains(vehicleId) || getVehicleById(vehicleId) || vehicleId == 0) {
+        return;
+    }
+
+//    switch (vehicleType) {
+//    case MAV_TYPE_GCS:
+//    case MAV_TYPE_ONBOARD_CONTROLLER:
+//    case MAV_TYPE_GIMBAL:
+//    case MAV_TYPE_ADSB:
+//        // These are not vehicles, so don't create a vehicle for them
+//        return;
+//    default:
+//        // All other MAV_TYPEs create vehicles
+//        break;
+//    }
+
+    qCDebug(MultiVehicleManagerLog()) << "Adding new **ShenHang** vehicle link:vehicleId:componentId:vehicleFirmwareType:vehicleType "
+                                      << link->linkConfiguration()->name()
+                                      << vehicleId
+                                      << componentId
+                                      << vehicleFirmwareType
+                                      << vehicleType;
+
+    if (vehicleId == _shenHangProtocol->getSystemId()) {
+        _app->showAppMessage(tr("Warning: A vehicle is using the same system id as %1: %2").arg(qgcApp()->applicationName()).arg(vehicleId));
+    }
+
+    Vehicle* vehicle = new Vehicle(link, vehicleId, componentId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager, _joystickManager);
+    connect(vehicle,                        &Vehicle::requestProtocolVersion,           this, &MultiVehicleManager::_requestProtocolVersion);
+    connect(vehicle->vehicleLinkManager(),  &VehicleLinkManager::allLinksRemoved,       this, &MultiVehicleManager::_deleteVehiclePhase1);
+    connect(vehicle->parameterManager(),    &ParameterManager::parametersReadyChanged,  this, &MultiVehicleManager::_vehicleParametersReadyChanged);
+
+    _vehicles.append(vehicle);
+
+    // Send QGC heartbeat ASAP, this allows PX4 to start accepting commands
+//    _sendGCSHeartbeat();
+
+    qgcApp()->toolbox()->settingsManager()->appSettings()->defaultFirmwareType()->setRawValue(vehicleFirmwareType);
+
+    emit vehicleAdded(vehicle);
+
+    if (_vehicles.count() > 1) {
+        qgcApp()->showAppMessage(tr("Connected to Vehicle %1").arg(vehicleId));
+    } else {
+        setActiveVehicle(vehicle);
+    }
 }
 
 /// This slot is connected to the Vehicle::requestProtocolVersion signal such that the vehicle manager

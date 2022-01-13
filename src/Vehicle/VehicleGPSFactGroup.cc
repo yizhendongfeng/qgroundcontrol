@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -63,6 +63,18 @@ void VehicleGPSFactGroup::handleMessage(Vehicle* /* vehicle */, mavlink_message_
     default:
         break;
     }
+}
+
+void VehicleGPSFactGroup::setShenHangGpsInfo(GpsRawInt& gpsRawInt)
+{
+    lat()->setRawValue              (gpsRawInt.lat * 1e-7);
+    lon()->setRawValue              (gpsRawInt.lon * 1e-7);
+    mgrs()->setRawValue             (convertGeoToMGRS(QGeoCoordinate(gpsRawInt.lat * 1e-7, gpsRawInt.lon * 1e-7)));
+    count()->setRawValue            (gpsRawInt.satellitesUsed == 255 ? 0 : gpsRawInt.satellitesUsed);
+    hdop()->setRawValue             (gpsRawInt.eph == UINT16_MAX ? qQNaN() : gpsRawInt.eph / 100.0);
+    vdop()->setRawValue             (gpsRawInt.epv == UINT16_MAX ? qQNaN() : gpsRawInt.epv / 100.0);
+    courseOverGround()->setRawValue (gpsRawInt.cog == INT16_MAX ? qQNaN() : gpsRawInt.cog / 100.0);
+    lock()->setRawValue             (gpsRawInt.fixType);
 }
 
 void VehicleGPSFactGroup::_handleGpsRawInt(mavlink_message_t& message)

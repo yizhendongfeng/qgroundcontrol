@@ -128,6 +128,7 @@ ApplicationWindow {
         toolDrawer.toolSource   = ""
         flightView.visible      = false
         planView.visible        = false
+        loaderParameter.visible = false
         toolbar.currentToolbar  = currentToolbar
     }
 
@@ -158,6 +159,12 @@ ApplicationWindow {
 
     function showSetupTool() {
         showTool(qsTr("Vehicle Setup"), "SetupView.qml", "/qmlimages/Gears.svg")
+    }
+
+    function showParameterTool() {
+        viewSwitch(toolbar.parameterToolbar)
+        loaderParameter.source = "SetupParameterEditor.qml"
+        loaderParameter.visible = true
     }
 
     function showSettingsTool() {
@@ -459,6 +466,7 @@ ApplicationWindow {
 
     MainToolStrip {
         id: leftMainToolStrip
+        currentVehicleSetupComplete: QGroundControl.multiVehicleManager.activeVehicle.autopilot.setupComplete
     }
 
     FlyView {
@@ -478,6 +486,13 @@ ApplicationWindow {
         anchors.top: parent.top
         anchors.left: leftMainToolStrip.right
         visible:        false
+    }
+    Loader {
+        id:             loaderParameter
+        width: parent.width - leftMainToolStrip.width
+        height: parent.height
+        anchors.top: parent.top
+        anchors.left: leftMainToolStrip.right
     }
 
     Drawer {

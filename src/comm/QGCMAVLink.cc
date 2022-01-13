@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -61,7 +61,10 @@ QGCMAVLink::FirmwareClass_t QGCMAVLink::firmwareClass(MAV_AUTOPILOT autopilot)
         return FirmwareClassPX4;
     } else if (isArduPilotFirmwareClass(autopilot)) {
         return FirmwareClassArduPilot;
-    } else {
+    } else if (isShenHangFirmwareClass(autopilot)) {
+        return FirmwareClassShenHang;
+    }
+    else {
         return FirmwareClassGeneric;
     }
 }

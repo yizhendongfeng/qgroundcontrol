@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -57,6 +57,7 @@ LinkManager::LinkManager(QGCApplication* app, QGCToolbox* toolbox)
     , _configurationsLoaded(false)
     , _connectionsSuspended(false)
     , _mavlinkChannelsUsedBitMask(1)    // We never use channel 0 to avoid sequence numbering problems
+    , _shenHangProtocolChannelsUsedBitMask(1)    // We never use channel 0 to avoid sequence numbering problems
     , _autoConnectSettings(nullptr)
     , _mavlinkProtocol(nullptr)
     #ifndef __mobile__
@@ -85,6 +86,7 @@ void LinkManager::setToolbox(QGCToolbox *toolbox)
 
     _autoConnectSettings = toolbox->settingsManager()->autoConnectSettings();
     _mavlinkProtocol = _toolbox->mavlinkProtocol();
+    _shenHangProtocol = _toolbox->shenHangProtocol();
 
     connect(&_portListTimer, &QTimer::timeout, this, &LinkManager::_updateAutoConnectLinks);
     _portListTimer.start(_autoconnectUpdateTimerMSecs); // timeout must be long enough to get past bootloader on second pass
@@ -137,8 +139,12 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr& config, bool i
     }
 
     if (link) {
-        if (false == link->_allocateMavlinkChannel() ) {
-            qCWarning(LinkManagerLog) << "Link failed to setup mavlink channels";
+//        if (false == link->_allocateMavlinkChannel() ) {
+//            qCWarning(LinkManagerLog) << "Link failed to setup mavlink channels";
+//            return false;
+//        }
+        if (false == link->_allocateShenHangProtocolChannel() ) {
+            qCWarning(LinkManagerLog) << "Link failed to setup ShenHangProtocol channels";
             return false;
         }
 
@@ -146,7 +152,8 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr& config, bool i
         config->setLink(link);
 
         connect(link.get(), &LinkInterface::communicationError,  _app,                &QGCApplication::criticalMessageBoxOnMainThread);
-        connect(link.get(), &LinkInterface::bytesReceived,       _mavlinkProtocol,    &MAVLinkProtocol::receiveBytes);
+//        connect(link.get(), &LinkInterface::bytesReceived,       _mavlinkProtocol,    &MAVLinkProtocol::receiveBytes);
+        connect(link.get(), &LinkInterface::bytesReceived,       _shenHangProtocol,   &ShenHangProtocol::receiveBytes);
         connect(link.get(), &LinkInterface::bytesSent,           _mavlinkProtocol,    &MAVLinkProtocol::logSentBytes);
         connect(link.get(), &LinkInterface::disconnected,        this,                &LinkManager::_linkDisconnected);
 
@@ -194,11 +201,13 @@ void LinkManager::_linkDisconnected(void)
     }
 
     disconnect(link, &LinkInterface::communicationError,  _app,                &QGCApplication::criticalMessageBoxOnMainThread);
-    disconnect(link, &LinkInterface::bytesReceived,       _mavlinkProtocol,    &MAVLinkProtocol::receiveBytes);
+//    disconnect(link, &LinkInterface::bytesReceived,       _mavlinkProtocol,    &MAVLinkProtocol::receiveBytes);
+    disconnect(link, &LinkInterface::bytesReceived,       _shenHangProtocol,   &ShenHangProtocol::receiveBytes);
     disconnect(link, &LinkInterface::bytesSent,           _mavlinkProtocol,    &MAVLinkProtocol::logSentBytes);
     disconnect(link, &LinkInterface::disconnected,        this,                &LinkManager::_linkDisconnected);
 
     link->_freeMavlinkChannel();
+    link->_freeShenHangProtocolChannel();
     for (int i=0; i<_rgLinks.count(); i++) {
         if (_rgLinks[i].get() == link) {
             qCDebug(LinkManagerLog) << "LinkManager::_linkDisconnected" << _rgLinks[i]->linkConfiguration()->name() << _rgLinks[i].use_count();
@@ -854,6 +863,23 @@ uint8_t LinkManager::allocateMavlinkChannel(void)
     return invalidMavlinkChannel();   // All channels reserved
 }
 
+uint8_t LinkManager::allocateShenHangProtocolChannel()
+{
+    // Find a mavlink channel to use for this link
+    for (uint8_t shenHangProtocolChannel = 0; shenHangProtocolChannel < SHENHANG_COMM_NUM_BUFFERS; shenHangProtocolChannel++) {
+        if (!(_shenHangProtocolChannelsUsedBitMask & 1 << shenHangProtocolChannel)) {
+            // Start the channel on Mav 1 protocol
+            ShenHangProtocolStatus* shenHangProtocolStatus = ShenHangProtocol::ShenHangProtocolGetChannelStatus(shenHangProtocolChannel);
+            memset(shenHangProtocolStatus, 0, sizeof(ShenHangProtocolStatus));
+            _shenHangProtocolChannelsUsedBitMask |= 1 << shenHangProtocolChannel;
+            qCDebug(LinkManagerLog) << "allocateshenHangProtocolChannel" << shenHangProtocolChannel;
+            return shenHangProtocolChannel;
+        }
+    }
+    qWarning(LinkManagerLog) << "allocateshenHangProtocolChannel: all channels reserved!";
+    return std::numeric_limits<uint8_t>::max();   // All channels reserved
+}
+
 void LinkManager::freeMavlinkChannel(uint8_t channel)
 {
     qCDebug(LinkManagerLog) << "freeMavlinkChannel" << channel;
@@ -861,6 +887,15 @@ void LinkManager::freeMavlinkChannel(uint8_t channel)
         return;
     }
     _mavlinkChannelsUsedBitMask &= ~(1 << channel);
+}
+
+void LinkManager::freeShenHangProtocolChannel(uint8_t channel)
+{
+    qCDebug(LinkManagerLog) << "freeShenHangProtocolChannel" << channel;
+    if (invalidShenHangProtocolChannel() == channel) {
+        return;
+    }
+    _shenHangProtocolChannelsUsedBitMask &= ~(1 << channel);
 }
 
 LogReplayLink* LinkManager::startLogReplay(const QString& logFile)

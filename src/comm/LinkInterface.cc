@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -47,6 +47,19 @@ bool LinkInterface::mavlinkChannelIsSet(void) const
     return (LinkManager::invalidMavlinkChannel() != _mavlinkChannel);
 }
 
+uint8_t LinkInterface::shenHangProtocolChannel() const
+{
+    if (!shenHangProtocolChannelIsSet()) {
+        qCWarning(LinkInterfaceLog) << "shenHangProtocolChannelIsSet isSet() == false";
+    }
+    return _shenHangProtocolChannel;
+}
+
+bool LinkInterface::shenHangProtocolChannelIsSet() const
+{
+    return (LinkManager::invalidShenHangProtocolChannel() != _shenHangProtocolChannel);
+}
+
 bool LinkInterface::_allocateMavlinkChannel()
 {
     // should only be called by the LinkManager during setup
@@ -76,6 +89,37 @@ void LinkInterface::_freeMavlinkChannel()
     auto mgr = qgcApp()->toolbox()->linkManager();
     mgr->freeMavlinkChannel(_mavlinkChannel);
     _mavlinkChannel = LinkManager::invalidMavlinkChannel();
+}
+
+bool LinkInterface::_allocateShenHangProtocolChannel()
+{
+    // should only be called by the LinkManager during setup
+    Q_ASSERT(!shenHangProtocolChannelIsSet());
+    if (shenHangProtocolChannelIsSet()) {
+        qCWarning(LinkInterfaceLog) << "_allocateShenHangProtocolChannel already have " << _shenHangProtocolChannel;
+        return true;
+    }
+
+    auto mgr = qgcApp()->toolbox()->linkManager();
+    _shenHangProtocolChannel = mgr->allocateShenHangProtocolChannel();
+    if (!shenHangProtocolChannelIsSet()) {
+        qCWarning(LinkInterfaceLog) << "shenHangProtocolChannelIsSet failed";
+        return false;
+    }
+    qCDebug(LinkInterfaceLog) << "_allocateMavlinkChannel" << _shenHangProtocolChannel;
+    return true;
+}
+
+void LinkInterface::_freeShenHangProtocolChannel()
+{
+    qCDebug(LinkInterfaceLog) << "_freeShenHangProtocolChannel" << _mavlinkChannel;
+    if (LinkManager::invalidShenHangProtocolChannel() == _shenHangProtocolChannel) {
+        return;
+    }
+
+    auto mgr = qgcApp()->toolbox()->linkManager();
+    mgr->freeShenHangProtocolChannel(_shenHangProtocolChannel);
+    _mavlinkChannel = LinkManager::invalidShenHangProtocolChannel();
 }
 
 void LinkInterface::writeBytesThreadSafe(const char *bytes, int length)

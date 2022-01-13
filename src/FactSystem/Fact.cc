@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -29,6 +29,26 @@ Fact::Fact(QObject* parent)
     , _valueSliderModel         (nullptr)
     , _ignoreQGCRebootRequired  (false)
 {    
+    FactMetaData* metaData = new FactMetaData(_type, this);
+    setMetaData(metaData);
+
+    _init();
+}
+
+Fact::Fact(int componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t type, QString name, QObject* parent)
+    : QObject                   (parent)
+    , _name                     (name)
+    , _componentId              (componentId)
+    , _groupId                  (groupId)
+    , _addrOffset               (addrOffset)
+    , _rawValue                 (0)
+    , _type                     (type)
+    , _metaData                 (nullptr)
+    , _sendValueChangedSignals  (true)
+    , _deferredValueChangeSignal(false)
+    , _valueSliderModel         (nullptr)
+    , _ignoreQGCRebootRequired  (false)
+{
     FactMetaData* metaData = new FactMetaData(_type, this);
     setMetaData(metaData);
 

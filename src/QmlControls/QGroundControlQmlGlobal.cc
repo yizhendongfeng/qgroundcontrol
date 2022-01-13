@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -177,6 +177,7 @@ void QGroundControlQmlGlobal::setIsVersionCheckEnabled(bool enable)
 void QGroundControlQmlGlobal::setMavlinkSystemID(int id)
 {
     qgcApp()->toolbox()->mavlinkProtocol()->setSystemId(id);
+    qgcApp()->toolbox()->shenHangProtocol()->setSystemId(id);
     emit mavlinkSystemIDChanged(id);
 }
 

@@ -22,8 +22,7 @@ ToolStripColumn {
     readonly property int centerButtonIndex:    7
     //        property bool _isRallyLayer:    _editingLayer == _layerRallyPoints
     //        property bool _isMissionLayer:  _editingLayer == _layerMission
-
-
+    property bool currentVehicleSetupComplete: false
     ToolStripActionList {
         id: toolStripActionList
         model: [
@@ -49,19 +48,19 @@ ToolStripColumn {
                         mainWindow.showPlanView()
                     }
                 }
-            }
+            },
 
-//            ToolStripAction {
-//                text: qsTr("Vehicle")
-//                visible: true
-//                checkable: true
-//                iconSource: "/qmlimages/Gears.svg"
-//                onTriggered: {
-//                    if (!mainWindow.preventViewSwitch()) {
-//                        mainWindow.showSetupTool()
-//                    }
-//                }
-//            },
+            ToolStripAction {
+                text: qsTr("Parameter")
+                visible: currentVehicleSetupComplete
+                checkable: true
+                iconSource: "/qmlimages/Gears.svg"
+                onTriggered: {
+                    if (!mainWindow.preventViewSwitch()) {
+                        mainWindow.showParameterTool()
+                    }
+                }
+            }
 //            ToolStripAction {
 //                text: qsTr("Analyze")
 //                visible: true

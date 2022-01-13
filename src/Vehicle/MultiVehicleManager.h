@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -92,6 +92,7 @@ private slots:
     void _vehicleParametersReadyChanged (bool parametersReady);
     void _sendGCSHeartbeat              (void);
     void _vehicleHeartbeatInfo          (LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType);
+    void _shenHangVehicleTypeInfo       (LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType);
     void _requestProtocolVersion        (unsigned version);
     void _coordinateChanged             (QGeoCoordinate coordinate);
 
@@ -113,6 +114,7 @@ private:
     FirmwarePluginManager*      _firmwarePluginManager;
     JoystickManager*            _joystickManager;
     MAVLinkProtocol*            _mavlinkProtocol;
+    ShenHangProtocol*           _shenHangProtocol;
     QGeoCoordinate              _lastKnownLocation;
 
     QTimer              _gcsHeartbeatTimer;             ///< Timer to emit heartbeats

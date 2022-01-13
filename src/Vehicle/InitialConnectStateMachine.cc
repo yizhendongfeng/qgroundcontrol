@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -19,13 +19,13 @@
 QGC_LOGGING_CATEGORY(InitialConnectStateMachineLog, "InitialConnectStateMachineLog")
 
 const StateMachine::StateFn InitialConnectStateMachine::_rgStates[] = {
-    InitialConnectStateMachine::_stateRequestCapabilities,
-    InitialConnectStateMachine::_stateRequestProtocolVersion,
-    InitialConnectStateMachine::_stateRequestCompInfo,
+//    InitialConnectStateMachine::_stateRequestCapabilities,
+//    InitialConnectStateMachine::_stateRequestProtocolVersion,
+//    InitialConnectStateMachine::_stateRequestCompInfo,
     InitialConnectStateMachine::_stateRequestParameters,
-    InitialConnectStateMachine::_stateRequestMission,
-    InitialConnectStateMachine::_stateRequestGeoFence,
-    InitialConnectStateMachine::_stateRequestRallyPoints,
+//    InitialConnectStateMachine::_stateRequestMission,
+//    InitialConnectStateMachine::_stateRequestGeoFence,
+//    InitialConnectStateMachine::_stateRequestRallyPoints,
     InitialConnectStateMachine::_stateSignalInitialConnectComplete
 };
 

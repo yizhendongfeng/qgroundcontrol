@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -27,10 +27,13 @@ public:
 
     Q_PROPERTY(QString              name    MEMBER name     CONSTANT)
     Q_PROPERTY(QmlObjectListModel*  facts   READ getFacts   CONSTANT)
+    Q_PROPERTY(int  groupId   READ getGroupId   CONSTANT)
 
     QmlObjectListModel*  getFacts(void) { return &facts; }
+    int  getGroupId(void) { return groupId; }
 
     int                 componentId;
+    int                 groupId;
     QString             name;
     QmlObjectListModel  facts;
 };
@@ -50,6 +53,7 @@ public:
     QString             name;
     QmlObjectListModel  groups;
     QMap<QString, ParameterEditorGroup*> mapGroupName2Group;
+    QMap<uint8_t, ParameterEditorGroup*> mapGroupIndex2Group;
 };
 
 class ParameterEditorDiff : public QObject
@@ -68,6 +72,8 @@ public:
     Q_PROPERTY(bool     load                MEMBER load             NOTIFY loadChanged)
 
     int                         componentId;
+    int                         groupId;
+    uint16_t                    addrOffset;
     QString                     name;
     FactMetaData::ValueType_t   valueType;
     QString                     fileValue;
@@ -110,6 +116,11 @@ public:
     Q_INVOKABLE void refresh                        (void);
     Q_INVOKABLE void resetAllToDefaults             (void);
     Q_INVOKABLE void resetAllToVehicleConfiguration (void);
+
+    /******************** 沈航参数组 设置 ********************/
+    Q_INVOKABLE void parameterGroupCommand (int command, int groupId, bool all);
+
+
 
     QObject*            currentCategory     (void) { return _currentCategory; }
     QObject*            currentGroup        (void) { return _currentGroup; }

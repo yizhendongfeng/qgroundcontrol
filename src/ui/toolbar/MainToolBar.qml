@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -27,7 +27,7 @@ Rectangle {
 
     readonly property int flyViewToolbar:   0
     readonly property int planViewToolbar:  1
-    readonly property int simpleToolbar:    2
+    readonly property int parameterToolbar: 2
 
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
     property bool   _communicationLost: _activeVehicle ? _activeVehicle.vehicleLinkManager.communicationLost : false
@@ -47,12 +47,12 @@ Rectangle {
 
     Rectangle {
         anchors.fill:   viewButtonRow
-        visible:        currentToolbar === flyViewToolbar
+        visible:        currentToolbar === flyViewToolbar || currentToolbar === parameterToolbar
 
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0;                                     color: _mainStatusBGColor }
-            GradientStop { position: currentButton.x + currentButton.width; color: _mainStatusBGColor }
+//            GradientStop { position: currentButton.x + currentButton.width; color: _mainStatusBGColor }
             GradientStop { position: 1;                                     color: _root.color }
         }
     }
@@ -69,12 +69,12 @@ Rectangle {
             Layout.preferredHeight: viewButtonRow.height
             icon.source:            "/res/QGCLogoFull"
             logo:                   true
-            onClicked:              mainWindow.showToolSelectDialog()
+//            onClicked:              mainWindow.showToolSelectDialog()
         }
 
         MainStatusIndicator {
             Layout.preferredHeight: viewButtonRow.height
-            visible:                currentToolbar === flyViewToolbar
+            visible:                currentToolbar === flyViewToolbar || currentToolbar === parameterToolbar
         }
 
         QGCButton {
@@ -103,7 +103,7 @@ Rectangle {
             anchors.bottom:     parent.bottom
             source:             currentToolbar === flyViewToolbar ?
                                     "qrc:/toolbar/MainToolBarIndicators.qml" :
-                                    (currentToolbar == planViewToolbar ? "qrc:/qml/PlanToolBarIndicators.qml" : "")
+                                    (currentToolbar == planViewToolbar ? "qrc:/qml/PlanToolBarIndicators.qml" : "qrc:/toolbar/MainToolBarIndicators.qml")
         }
     }
 
