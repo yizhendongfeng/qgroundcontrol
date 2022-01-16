@@ -21,10 +21,10 @@ Button {
     hoverEnabled:   true
     enabled:        toolStripAction.enabled
     visible:        toolStripAction.visible
-    imageSource:    toolStripAction.showAlternateIcon ? modelData.alternateIconSource : modelData.iconSource
+    imageSource:    toolStripAction.showAlternateIcon ? toolStripAction.alternateIconSource : toolStripAction.iconSource
     text:           toolStripAction.text
     checked:        toolStripAction.checked
-    checkable:      toolStripAction.dropPanelComponent || modelData.checkable
+    checkable:      toolStripAction.dropPanelComponent || toolStripAction.checkable
 
     property var    toolStripAction:    undefined
     property var    dropPanel:          undefined

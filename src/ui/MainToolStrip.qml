@@ -61,6 +61,25 @@ ToolStripColumn {
                     }
                 }
             }
+
+//            ToolStripAction {       // 作为弹簧控件使用，让设置按钮出现在最下边
+//                text: qsTr("")
+//                visible: true       //false
+//                checkable: false
+//                iconSource: ""
+//            },
+
+//            ToolStripAction {
+//                text: qsTr("Settings")
+//                visible: true //currentVehicleSetupComplete
+//                checkable: true
+//                iconSource: "/qmlimages/Gears.svg"
+//                onTriggered: {
+//                    if (!mainWindow.preventViewSwitch()) {
+//                        mainWindow.showParameterTool()
+//                    }
+//                }
+//            }
 //            ToolStripAction {
 //                text: qsTr("Analyze")
 //                visible: true
@@ -88,5 +107,46 @@ ToolStripColumn {
             fitFunctions:   mapFitFunctions
         }
     }
+    ToolStripAction {
+        id: toolStripActionSettings
+        text: qsTr("Settings")
+        visible: true //currentVehicleSetupComplete
+        checkable: true
+        iconSource: "/qmlimages/Gears.svg"
+        onTriggered: {
+            if (!mainWindow.preventViewSwitch()) {
+                mainWindow.showSettingsTool()
+            }
+        }
+    }
 
+    ToolStripHoverButton {
+        id:                 buttonSettings
+        anchors.left:       parent.left
+        anchors.right:      parent.right
+        anchors.bottom:     parent.bottom
+        anchors.bottomMargin: 5
+
+        height:             width
+        radius:             ScreenTools.defaultFontPixelWidth / 2
+        fontPointSize:      ScreenTools.smallFontPointSize
+        toolStripAction:    toolStripActionSettings
+        dropPanel:          _dropPanel
+        showText:           showActionText
+        onDropped:          _root.dropped(index)
+        onCheckedChanged: {
+            uncheckAllActionButton()
+            // We deal with exclusive check state manually since usinug autoExclusive caused all sorts of crazt problems
+//            if (checked) {
+//                for (var i=0; i<repeater.count; i++) {
+//                    if (i != index) {
+//                        var button = repeater.itemAt(i)
+//                        if (button.checked) {
+//                            button.checked = false
+//                        }
+//                    }
+//                }
+//            }
+        }
+    }
 }

@@ -129,6 +129,7 @@ ApplicationWindow {
         flightView.visible      = false
         planView.visible        = false
         loaderParameter.visible = false
+        settingsView.visible    = false
         toolbar.currentToolbar  = currentToolbar
     }
 
@@ -168,8 +169,13 @@ ApplicationWindow {
     }
 
     function showSettingsTool() {
-        showTool(qsTr("Application Settings"), "AppSettings.qml", "/res/QGCLogoWhite")
+        viewSwitch(toolbar.flyViewToolbar)
+        settingsView.visible = true
     }
+
+//    function showSettingsTool() {
+//        showTool(qsTr("Application Settings"), "AppSettings.qml", "/res/QGCLogoWhite")
+//    }
 
     //-------------------------------------------------------------------------
     //-- Global simple message dialog
@@ -487,6 +493,17 @@ ApplicationWindow {
         anchors.left: leftMainToolStrip.right
         visible:        false
     }
+
+    AppSettings {
+        id:             settingsView
+        //        anchors.fill:   parent
+        width: parent.width - leftMainToolStrip.width
+        height: parent.height
+        anchors.top: parent.top
+        anchors.left: leftMainToolStrip.right
+        visible:        false
+    }
+
     Loader {
         id:             loaderParameter
         width: parent.width - leftMainToolStrip.width

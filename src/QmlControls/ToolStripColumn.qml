@@ -9,7 +9,7 @@
 
 import QtQuick          2.11
 import QtQuick.Controls 2.2
-
+import QtQuick.Layouts 1.3
 import QGroundControl               1.0
 import QGroundControl.ScreenTools   1.0
 import QGroundControl.Palette       1.0
@@ -79,15 +79,15 @@ Rectangle {
                 horizontalAlignment:    Text.AlignHCenter
                 font.pointSize:         ScreenTools.smallFontPointSize
                 visible:                title != ""
+                Layout.fillWidth: true
             }
 
             Repeater {
                 id: repeater
-
                 ToolStripHoverButton {
                     id:                 buttonTemplate
-                    anchors.left:       toolStripColumn.left
-                    anchors.right:      toolStripColumn.right
+                    anchors.left:       parent.left
+                    anchors.right:      parent.right
                     height:             width
                     radius:             ScreenTools.defaultFontPixelWidth / 2
                     fontPointSize:      ScreenTools.smallFontPointSize
@@ -95,7 +95,6 @@ Rectangle {
                     dropPanel:          _dropPanel
                     showText:           showActionText
                     onDropped:          _root.dropped(index)
-
                     onCheckedChanged: {
                         // We deal with exclusive check state manually since usinug autoExclusive caused all sorts of crazt problems
                         if (checked) {
@@ -107,6 +106,8 @@ Rectangle {
                                     }
                                 }
                             }
+                            if (buttonSettings)
+                                buttonSettings.checked = false
                         }
                     }
                 }
@@ -129,4 +130,15 @@ Rectangle {
         else
             anchors.leftMargin = -width
     }
+
+    function uncheckAllActionButton() {
+        // We deal with exclusive check state manually since usinug autoExclusive caused all sorts of crazt problems
+        for (var i=0; i<repeater.count; i++) {
+            var button = repeater.itemAt(i)
+            if (button.checked) {
+                button.checked = false
+            }
+        }
+    }
+
 }
