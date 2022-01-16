@@ -104,7 +104,7 @@ Rectangle {
             height:         _rowHeight
             onClicked: {
                 console.log("Rest group:", controller.currentGroup.groupId, controller.currentGroup.name)
-                controller.parameterGroupCommand(0/*重置*/, controller.currentGroup.groupId, checkBoxAll.checked)
+                controller.parameterGroupCommand(0/*重置*/, checkBoxAll.checked ? 0xff : controller.currentGroup.groupId)
             }
         }
         QGCButton {
@@ -113,7 +113,7 @@ Rectangle {
             text:           "Load group"
             height:         _rowHeight
             onClicked: {
-                controller.parameterGroupCommand(1/*载入*/, controller.currentGroup.groupId, checkBoxAll.checked)
+                controller.parameterGroupCommand(1/*载入*/, checkBoxAll.checked ? 0xff : controller.currentGroup.groupId)
                 console.log("Load group", controller.currentGroup.groupId, controller.currentGroup.name)
             }
         }
@@ -123,7 +123,7 @@ Rectangle {
             text:           "Save group"
             height:         _rowHeight
             onClicked: {
-                controller.parameterGroupCommand(2/*保存*/, controller.currentGroup.groupId, checkBoxAll.checked)
+                controller.parameterGroupCommand(2/*保存*/, checkBoxAll.checked ? 0xff : controller.currentGroup.groupId)
                 console.log("Save group", controller.currentGroup.groupId, controller.currentGroup.name)
             }
         }
@@ -244,7 +244,7 @@ Rectangle {
                                 checked = true
                                 controller.currentGroup = object
                             }
-                            Component.onCompleted:  console.log("object.name:", object.name)
+//                            Component.onCompleted:  console.log("object.name:", object.name)
                         }
                     }
                 }

@@ -261,7 +261,7 @@ void InitialConnectStateMachine::_stateRequestParameters(StateMachine* stateMach
     Vehicle*                    vehicle         = connectMachine->_vehicle;
 
     qCDebug(InitialConnectStateMachineLog) << "_stateRequestParameters";
-    vehicle->_parameterManager->refreshAllParameters();
+    vehicle->_parameterManager->refreshGroupParameters(MAV_COMP_ID_ALL);
 }
 
 void InitialConnectStateMachine::_stateRequestMission(StateMachine* stateMachine)

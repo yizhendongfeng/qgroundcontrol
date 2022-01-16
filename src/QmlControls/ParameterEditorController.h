@@ -118,7 +118,7 @@ public:
     Q_INVOKABLE void resetAllToVehicleConfiguration (void);
 
     /******************** 沈航参数组 设置 ********************/
-    Q_INVOKABLE void parameterGroupCommand (int command, int groupId, bool all);
+    Q_INVOKABLE void parameterGroupCommand (int command, int groupId);
 
 
 

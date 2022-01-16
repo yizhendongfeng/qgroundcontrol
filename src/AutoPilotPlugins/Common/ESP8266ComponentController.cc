@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -345,7 +345,7 @@ ESP8266ComponentController::_mavCommandResult(int vehicleId, int component, int 
             emit busyChanged();
             qCDebug(ESP8266ComponentControllerLog) << "_commandAck for" << command;
             if (command == MAV_CMD_PREFLIGHT_STORAGE) {
-                _vehicle->parameterManager()->refreshAllParameters(MAV_COMP_ID_UDP_BRIDGE);
+                _vehicle->parameterManager()->refreshGroupParameters(MAV_COMP_ID_UDP_BRIDGE);
             }
         }
     }

@@ -74,7 +74,12 @@ public:
     QList<int> componentIds(void);
 
     /// Re-request the full set of parameters from the autopilot
-    void refreshAllParameters(uint8_t componentID = MAV_COMP_ID_ALL);
+    /**
+     * @brief refreshGroupParameters 请求参数，默认请求所有参数组参数
+     * @param componentID
+     * @param groupId 0~0xFE对应各设置组id；0xff查询所有设置组。
+     */
+    void refreshGroupParameters(uint8_t componentID, uint8_t groupId = 0xff);
 
     /// Request a refresh on the specific parameter
     void refreshParameter(int componentId, const QString& paramName);
@@ -88,11 +93,18 @@ public:
     /******************** 沈航参数组操作函数 ********************/
     /**
      * 操作参数组，默认其addrOffset为0，便于超时检测
+     * @param groupId 0~0xFE对应各设置组id；0xFF重置所有设置组
      * @param command COMMAND_RESET_PARAM = 0,COMMAND_LOAD_PARAM = 1, COMMAND_SAVE_PARAM = 2
-     *
      */
-    void ParameterGroupCommand(CommandParamType command, uint8_t groupId, bool all);
-    void ParameterGroupCommandWorker(CommandParamType command, uint8_t groupId, bool all);
+    void ParameterGroupCommand(CommandParamType command, uint8_t groupId);
+    void ParameterGroupCommandWorker(uint8_t groupId, CommandParamType command);
+    /**
+     * @brief RefreshParameterGroup 在重置参数组后重新获取该组参数
+     * @param groupId
+     * @param all   true: 所有组参数， false: 仅获取groupId组的参数
+     */
+    void RefreshParameterGroup(uint8_t groupId, bool all);
+
 
     /// Returns true if the specifed parameter exists
     ///     @param componentId: Component id or FactSystem::defaultComponentId
@@ -144,11 +156,12 @@ private slots:
     void    _factRawValueUpdated                (const QVariant& rawValue);
 
 private:
-    void    _handleParamValue                   (uint8_t componentId, uint8_t idGroup, uint16_t addrOffset, FactMetaData::ValueType_t mavParamType, QVariant parameterValue);
+    void    _handleParamValue                   (uint8_t componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t mavParamType, QVariant parameterValue);
     void    _factRawValueUpdateWorker           (int componentId, uint8_t groupId, uint8_t lenCfg, uint16_t addrOffset, FactMetaData::ValueType_t valueType, const QVariant& rawValue);
     void    _waitingParamTimeout                (void);
     void    _tryCacheLookup                     (void);
     void    _initialRequestTimeout              (void);
+    void    _groupCommandTimeout                (void);
     int     _actualComponentId                  (int componentId);
     void    _readParameterRaw                   (int componentId, uint8_t groupId, uint8_t lenCfg, uint16_t addrOffset);
     void    _sendParamSetToVehicle              (int componentId, uint8_t groupId, uint8_t lenCfg, uint16_t addrOffset, FactMetaData::ValueType_t valueType, const QVariant& value);
@@ -198,6 +211,8 @@ private:
 
     static const int    _maxInitialRequestListRetry = 4;        ///< Maximum retries for request list
     int                 _initialRequestRetryCount;              ///< Current retry count for request list
+    static const int    _maxGroupCommandRetry = 4;              ///< Maximum retries for group command list
+    int                 _groupCommandRetryCount;                ///< Current retry count for group command list
     static const int    _maxInitialLoadRetrySingleParam = 5;    ///< Maximum retries for initial index based load of a single param
     static const int    _maxReadWriteRetry = 5;                 ///< Maximum retries read/write
     bool                _disableAllRetries;                     ///< true: Don't retry any requests (used for testing)
@@ -210,6 +225,9 @@ private:
     ///Key: ComponentId, Value:{ Key: GroupId, Value: Map { Key: addrOffset, Value: retry count } }
     QMap<int, QMap<uint8_t, QMap<uint16_t, int> > > _waitingReadParamIndexMap;
     QMap<int, QMap<uint8_t, QMap<uint16_t, int> > > _waitingWriteParamIndexMap;
+    ///Key: ComponentId, Value:{ Key: GroupId, Value: Map { Key: CommandParamType, Value: retry count } }
+    QMap<int, QMap<uint8_t, QMap<CommandParamType, int> > > _waitingGroupCommandMap;
+
 
     QMap<int, QMap<QString, int> >  _waitingReadParamNameMap;   ///< Key: Component id, Value: Map { Key: groupId still waiting for, Value: retry count }
     QMap<int, QMap<QString, int> >  _waitingWriteParamNameMap;  ///< Key: Component id, Value: Map { Key: groupId name still waiting for, Value: retry count }
@@ -220,12 +238,13 @@ private:
     int _waitingReadParamNameBatchCount = 0;    ///< Number of parameters which are batched up waiting on read responses
 
     QTimer _initialRequestTimeoutTimer;
+    QTimer _groupCommandTimeoutTimer;
     QTimer _waitingParamTimeoutTimer;
     ShenHangParameterMetaData* shenHangMetaData;
     Fact _defaultFact;   ///< Used to return default fact, when parameter not found
     CommandParamType lastCommandGroupType;
     uint8_t lastCommandGroupId;
-    bool commandGroupApplyToAll;
+    bool lastCommandGroupApplyToAll;
     static const char* _jsonParametersKey;
     static const char* _jsonCompIdKey;
     static const char* _jsonParamNameKey;

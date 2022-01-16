@@ -344,7 +344,7 @@ bool ParameterEditorController::buildDiffFromFile(const QString& filename)
 
 void ParameterEditorController::refresh(void)
 {
-    _parameterMgr->refreshAllParameters();
+    _parameterMgr->refreshGroupParameters(MAV_COMP_ID_ALL, 0xff);
 }
 
 void ParameterEditorController::resetAllToDefaults(void)
@@ -359,9 +359,9 @@ void ParameterEditorController::resetAllToVehicleConfiguration(void)
     refresh();
 }
 
-void ParameterEditorController::parameterGroupCommand (int command, int groupId, bool all)
+void ParameterEditorController::parameterGroupCommand (int command, int groupId)
 {
-    _parameterMgr->ParameterGroupCommand(static_cast<CommandParamType>(command), groupId, all);
+    _parameterMgr->ParameterGroupCommand(static_cast<CommandParamType>(command), groupId);
 }
 
 bool ParameterEditorController::_shouldShow(Fact* fact)

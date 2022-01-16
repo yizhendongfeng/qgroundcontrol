@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -209,7 +209,7 @@ void APMAirframeComponentController::_loadParametersFromDownloadFile(const QStri
         }
     }
     qgcApp()->restoreOverrideCursor();
-    _vehicle->parameterManager()->refreshAllParameters();
+    _vehicle->parameterManager()->refreshGroupParameters(MAV_COMP_ID_ALL);
 }
 
 void APMAirframeComponentController::loadParameters(const QString& paramFile)

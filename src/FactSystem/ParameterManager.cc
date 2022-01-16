@@ -100,6 +100,10 @@ ParameterManager::ParameterManager(Vehicle* vehicle)
     _initialRequestTimeoutTimer.setInterval(5000);
     connect(&_initialRequestTimeoutTimer, &QTimer::timeout, this, &ParameterManager::_initialRequestTimeout);
 
+    _groupCommandTimeoutTimer.setSingleShot(true);
+    _groupCommandTimeoutTimer.setInterval(3000);
+    connect(&_groupCommandTimeoutTimer, &QTimer::timeout, this, &ParameterManager::_groupCommandTimeout);
+
     _waitingParamTimeoutTimer.setSingleShot(true);
     _waitingParamTimeoutTimer.setInterval(3000);
     connect(&_waitingParamTimeoutTimer, &QTimer::timeout, this, &ParameterManager::_waitingParamTimeout);
@@ -217,7 +221,7 @@ void ParameterManager::shenHangMessageReceived(ShenHangProtocolMessage message)
     if (message.tyMsg0 == ACK_COMMAND_PARAM)
     {
         ParamUnion paramUnion;
-        uint8_t idGroup = 0;
+        uint8_t groupId = 0;
 
         uint8_t lenCfg;
         uint16_t addrOffset = 0;
@@ -230,39 +234,62 @@ void ParameterManager::shenHangMessageReceived(ShenHangProtocolMessage message)
         switch (message.tyMsg1)
         {
         case ACK_RESET_PARAM:
-            idGroup = message.payload[0];
+            groupId = message.payload[0];
             execuateState = message.payload[1];
+            if(_waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].contains(groupId)
+                    && _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].contains(COMMAND_RESET_PARAM)) {
+                _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].remove(COMMAND_RESET_PARAM);
+                if (_waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].size() == 0) {
+                    _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].remove(groupId);
+                }
+            }
             if (execuateState != 0) {
-                qgcApp()->showAppMessage(QString("Rest groupId: %1 parameter failed!").arg(idGroup));
+                qgcApp()->showAppMessage(QString("Rest groupId: %1 parameter failed!").arg(groupId));
+            } else {    // 重置成功
+                refreshGroupParameters(MAV_COMP_ID_AUTOPILOT1, groupId);
             }
 
             break;
         case ACK_LOAD_PARAM:
-            idGroup = message.payload[0];
+            groupId = message.payload[0];
             execuateState = message.payload[1];
+            if(_waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].contains(groupId)
+                    && _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].contains(COMMAND_LOAD_PARAM)) {
+                _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].remove(COMMAND_LOAD_PARAM);
+                if (_waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].size() == 0) {
+                    _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].remove(groupId);
+                }
+            }
             if (execuateState != 0) {
-                qgcApp()->showAppMessage(QString("Load groupId: %1 parameter failed!").arg(idGroup));
+                qgcApp()->showAppMessage(QString("Load groupId: %1 parameter failed!").arg(groupId));
             }
 
             break;
         case ACK_SAVE_PARAM:
-            idGroup = message.payload[0];
+            groupId = message.payload[0];
             execuateState = message.payload[1];
-            if (execuateState != 0) {
-                qgcApp()->showAppMessage(QString("Save groupId: %1 parameter failed!").arg(idGroup));
+            if(_waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].contains(groupId)
+                    && _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].contains(COMMAND_SAVE_PARAM)) {
+                _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].remove(COMMAND_SAVE_PARAM);
+                if (_waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].size() == 0) {
+                    _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].remove(groupId);
+                }
+                if (execuateState != 0) {
+                    qgcApp()->showAppMessage(QString("Save groupId: %1 parameter failed!").arg(groupId));
+                }
             }
 
             break;
         case ACK_QUERY_PARAM:
         case ACK_SET_PARAM:
-            idGroup = message.payload[0];
+            groupId = message.payload[0];
             lenCfg = message.payload[1];
             memcpy(&addrOffset, message.payload + 2, 2);
             memcpy(data, message.payload + 4, 16);
             memcpy(&paramUnion.paramFloat, data, lenCfg);
-            factMetaData = _vehicle->compInfoManager()->compInfoParam(MAV_COMP_ID_AUTOPILOT1)->factMetaDataByIndexes(idGroup, addrOffset);
+            factMetaData = _vehicle->compInfoManager()->compInfoParam(MAV_COMP_ID_AUTOPILOT1)->factMetaDataByIndexes(groupId, addrOffset);
             paramUnion.type = factMetaData->type();
-//            qCDebug(ParameterManagerLog) << QString("handle parameter groupId:%1, addrOffset:%2").arg(idGroup).arg(addrOffset);
+            //            qCDebug(ParameterManagerLog) << QString("handle parameter groupId:%1, addrOffset:%2").arg(groupId).arg(addrOffset);
             switch (paramUnion.type) {
             case FactMetaData::valueTypeFloat:
                 dataVariant.setValue(paramUnion.paramFloat);
@@ -295,16 +322,18 @@ void ParameterManager::shenHangMessageReceived(ShenHangProtocolMessage message)
         default:
             break;
         }
-        if (idGroup == 0 && addrOffset ==0)
-            return;
 
-        _handleParamValue(MAV_COMP_ID_AUTOPILOT1, idGroup, addrOffset, paramUnion.type, dataVariant);
+        _handleParamValue(MAV_COMP_ID_AUTOPILOT1, groupId, addrOffset, paramUnion.type, dataVariant);
+        if (_waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].keys().count() == 0
+                && _groupCommandTimeoutTimer.isActive())
+            _groupCommandTimeoutTimer.stop();
     }
 }
 
 
+
 /// Called whenever a parameter is updated or first seen.
-void ParameterManager::_handleParamValue(uint8_t componentId, uint8_t idGroup, uint16_t addrOffset, FactMetaData::ValueType_t mavParamType, QVariant parameterValue)
+void ParameterManager::_handleParamValue(uint8_t componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t mavParamType, QVariant parameterValue)
 {
 
     qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId) <<
@@ -359,27 +388,27 @@ void ParameterManager::_handleParamValue(uint8_t componentId, uint8_t idGroup, u
     }
 
     // Remove this parameter from the waiting lists
-    if (_waitingReadParamIndexMap[componentId].contains(idGroup)) {
-        if (_waitingReadParamIndexMap[componentId][idGroup].contains(addrOffset)) {
-            _waitingReadParamIndexMap[componentId][idGroup].remove(addrOffset);
-            if (_waitingReadParamIndexMap[componentId][idGroup].size() == 0) {
-                _waitingReadParamIndexMap[componentId].remove(idGroup);
+    if (_waitingReadParamIndexMap[componentId].contains(groupId)) {
+        if (_waitingReadParamIndexMap[componentId][groupId].contains(addrOffset)) {
+            _waitingReadParamIndexMap[componentId][groupId].remove(addrOffset);
+            if (_waitingReadParamIndexMap[componentId][groupId].size() == 0) {
+                _waitingReadParamIndexMap[componentId].remove(groupId);
             }
-            if (_indexBatchQueue.contains(idGroup) && _indexBatchQueue[idGroup].contains(addrOffset)) {
-                _indexBatchQueue[idGroup].removeOne(addrOffset);
-                if (_indexBatchQueue[idGroup].size() == 0) {
-                    _indexBatchQueue.remove(idGroup);
+            if (_indexBatchQueue.contains(groupId) && _indexBatchQueue[groupId].contains(addrOffset)) {
+                _indexBatchQueue[groupId].removeOne(addrOffset);
+                if (_indexBatchQueue[groupId].size() == 0) {
+                    _indexBatchQueue.remove(groupId);
                 }
             }
             _fillIndexBatchQueue(false /* waitingParamTimeout */);
         }
     }
 
-    if (_waitingWriteParamIndexMap[componentId].contains(idGroup) &&
-            _waitingWriteParamIndexMap[componentId][idGroup].contains(addrOffset)) {
-        _waitingWriteParamIndexMap[componentId][idGroup].remove(addrOffset);
-        if (_waitingWriteParamIndexMap[componentId][idGroup].size() == 0)
-            _waitingWriteParamIndexMap[componentId].remove(idGroup);
+    if (_waitingWriteParamIndexMap[componentId].contains(groupId) &&
+            _waitingWriteParamIndexMap[componentId][groupId].contains(addrOffset)) {
+        _waitingWriteParamIndexMap[componentId][groupId].remove(addrOffset);
+        if (_waitingWriteParamIndexMap[componentId][groupId].size() == 0)
+            _waitingWriteParamIndexMap[componentId].remove(groupId);
     }
 //    _waitingWriteParamNameMap[componentId].remove(parameterName);
 //    if (_waitingReadParamIndexMap[componentId].count()) {
@@ -441,16 +470,16 @@ void ParameterManager::_handleParamValue(uint8_t componentId, uint8_t idGroup, u
     _updateProgressBar();
     if (addrOffset != 0) {  // addrOffset=0时，是参数组命令，不能用于创建fact
         Fact* fact = nullptr;
-        if (_mapCompGroupId2FactMap.contains(componentId) && _mapCompGroupId2FactMap[componentId].contains(idGroup) &&
-                _mapCompGroupId2FactMap[componentId][idGroup].contains(addrOffset)) {
-            fact = _mapCompGroupId2FactMap[componentId][idGroup][addrOffset];
+        if (_mapCompGroupId2FactMap.contains(componentId) && _mapCompGroupId2FactMap[componentId].contains(groupId) &&
+                _mapCompGroupId2FactMap[componentId][groupId].contains(addrOffset)) {
+            fact = _mapCompGroupId2FactMap[componentId][groupId][addrOffset];
         } else {
-            FactMetaData* factMetaData = _vehicle->compInfoManager()->compInfoParam(componentId)->factMetaDataByIndexes(idGroup, addrOffset);
-            fact = new Fact(componentId, idGroup, addrOffset, factMetaData->type(), factMetaData->name(), this);
+            FactMetaData* factMetaData = _vehicle->compInfoManager()->compInfoParam(componentId)->factMetaDataByIndexes(groupId, addrOffset);
+            fact = new Fact(componentId, groupId, addrOffset, factMetaData->type(), factMetaData->name(), this);
             fact->setMetaData(factMetaData);
-            qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId) << "Adding new fact groupId:" << idGroup << "addrOffset:" << addrOffset
+            qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId) << "Adding new fact groupId:" << groupId << "addrOffset:" << addrOffset
                                                  << "type:" << factMetaData->type() << "name:" << factMetaData->name();
-            _mapCompGroupId2FactMap[componentId][idGroup][addrOffset] = fact;
+            _mapCompGroupId2FactMap[componentId][groupId][addrOffset] = fact;
 
             // We need to know when the fact value changes so we can update the vehicle
             connect(fact, &Fact::_containerRawValueChanged, this, &ParameterManager::_factRawValueUpdated);
@@ -481,6 +510,7 @@ void ParameterManager::_factRawValueUpdateWorker(int componentId, uint8_t groupI
         } else {
             _waitingWriteParamBatchCount++;
         }
+
         _waitingWriteParamIndexMap[componentId][groupId][addrOffset] = 0; // Add new entry and set retry count
         _updateProgressBar();
         _waitingParamTimeoutTimer.start();
@@ -489,8 +519,9 @@ void ParameterManager::_factRawValueUpdateWorker(int componentId, uint8_t groupI
     } else {
         qWarning() << "Internal error ParameterManager::_factValueUpdateWorker: component id not found" << componentId;
     }
-
     _sendParamSetToVehicle(componentId, groupId, lenCfg,  addrOffset, valueType, rawValue);
+
+
     qCDebug(ParameterManagerLog) << _logVehiclePrefix(componentId) << "Update parameter (_waitingParamTimeoutTimer started) - compId:name:rawValue" << componentId << groupId << rawValue;
 }
 
@@ -505,7 +536,7 @@ void ParameterManager::_factRawValueUpdated(const QVariant& rawValue)
     _factRawValueUpdateWorker(fact->componentId(), fact->groupId(), fact->metaData()->getTypeSize(), fact->addrOffset(), fact->type(), rawValue);
 }
 
-void ParameterManager::refreshAllParameters(uint8_t componentId)
+void ParameterManager::refreshGroupParameters(uint8_t componentId, uint8_t groupId)
 {
     WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
 
@@ -523,9 +554,10 @@ void ParameterManager::refreshAllParameters(uint8_t componentId)
         emit missingParametersChanged(_missingParameters);
     }
 
-//    if (!_initialLoadComplete) {
-//        _initialRequestTimeoutTimer.start();
-//    }
+    if (!_initialLoadComplete) {
+        _initialRequestTimeoutTimer.start();
+    }
+
 
     // Reset index wait lists
     ShenHangParameterMetaData* shenHangParameterMetaData = static_cast<ShenHangParameterMetaData*>(_vehicle->compInfoManager()->compInfoParam(MAV_COMP_ID_AUTOPILOT1)->_getOpaqueParameterMetaData());
@@ -535,33 +567,33 @@ void ParameterManager::refreshAllParameters(uint8_t componentId)
         // Add/Update all indices to the wait list, parameter index is 0-based
         if(componentId != MAV_COMP_ID_ALL && componentId != cid)
             continue;
-        for (uint8_t groupId: shenHangMetaDataGroups.keys()) {
-            for (uint16_t waitingIndex: shenHangMetaDataGroups[groupId].mapMetaData.keys()) {
-                // This will add a new waiting index if needed and set the retry count for that index to 0
-                _waitingReadParamIndexMap[cid][groupId][waitingIndex] = 0;
+        for (uint8_t waitingGroupId: shenHangMetaDataGroups.keys()) {
+            // 若请求所有参数组或与需要请求的参数组相同则加入待读
+            if (groupId == 0xff || waitingGroupId == groupId) {
+                for (uint16_t waitingIndex: shenHangMetaDataGroups[waitingGroupId].mapMetaData.keys()) {
+                    // This will add a new waiting index if needed and set the retry count for that index to 0
+                    _waitingReadParamIndexMap[cid][waitingGroupId][waitingIndex] = 0;
+                }
             }
         }
     }
+//    if (_waitingReadParamIndexMap[MAV_COMP_ID_AUTOPILOT1].keys().count() > 0)
+//        _waitingParamTimeoutTimer.start();
 
     _waitingForDefaultComponent = true;
-//    MAVLinkProtocol*        mavlink = qgcApp()->toolbox()->mavlinkProtocol();
-//    mavlink_message_t       msg;
-//    SharedLinkInterfacePtr  sharedLink = weakLink.lock();
-
-//    mavlink_msg_param_request_list_pack_chan(mavlink->getSystemId(),
-//                                             mavlink->getComponentId(),
-//                                             sharedLink->mavlinkChannel(),
-//                                             &msg,
-//                                             _vehicle->id(),
-//                                             componentId);
-//    _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
     ShenHangProtocolMessage msg;
     SharedLinkInterfacePtr  sharedLink = weakLink.lock();
     uint8_t data[16] = {};
-    _vehicle->PackSetParamCommand(msg, CommandParamType::COMMAND_QUERY_PARAM, 0XFF, 0, 0, data, 16);
-    _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
-    QString what = (componentId == MAV_COMP_ID_ALL) ? "MAV_COMP_ID_ALL" : QString::number(componentId);
-    qCDebug(ParameterManagerLog) << _logVehiclePrefix(-1) << "Request to refresh all parameters for component ID:" << what;
+    if (groupId == 0xff) {  // 查询所有组参数
+        _indexBatchQueueActive = false;
+        _initialLoadComplete = false;
+        _vehicle->PackSetParamCommand(msg, CommandParamType::COMMAND_QUERY_PARAM, 0XFF, 0, 0, data, 16);
+        _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
+        QString what = (componentId == MAV_COMP_ID_ALL) ? "MAV_COMP_ID_ALL" : QString::number(componentId);
+        qCDebug(ParameterManagerLog) << _logVehiclePrefix(-1) << "Request to refresh all parameters for component ID:" << what;
+    } else {
+        _fillIndexBatchQueue(false /* waitingParamTimeout */);
+    }
 }
 
 /// Translates FactSystem::defaultComponentId to real component id if needed
@@ -726,7 +758,8 @@ bool ParameterManager::_fillIndexBatchQueue(bool waitingParamTimeout)
                 if (_disableAllRetries || _waitingReadParamIndexMap[componentId][groupId][addrOffset] > _maxInitialLoadRetrySingleParam) {
                     // Give up on this index
                     _failedReadParamIndexMap[componentId] << groupId;
-                    qCDebug(ParameterManagerLog) << _logVehiclePrefix(componentId) << "Giving up on (paramIndex:" << groupId << "retryCount:" << _waitingReadParamIndexMap[componentId][groupId] << ")";
+                    qCDebug(ParameterManagerLog) << _logVehiclePrefix(componentId) << "Giving up on (paramIndex:"
+                                                 << groupId << "retryCount:" << _waitingReadParamIndexMap[componentId][groupId] << ")";
                     _waitingReadParamIndexMap[componentId][groupId].remove(addrOffset);
                     if(_waitingReadParamIndexMap[componentId][groupId].size() == 0)
                         _waitingReadParamIndexMap[componentId].remove(groupId);
@@ -786,7 +819,7 @@ void ParameterManager::_waitingParamTimeout(void)
                     _waitingWriteParamIndexMap[componentId][groupId][addrOffset]++;   // Bump retry count
                     if (_waitingWriteParamIndexMap[componentId][groupId][addrOffset] <= _maxReadWriteRetry) {
                         if (addrOffset == 0) {//参数组命令
-                            ParameterGroupCommandWorker(lastCommandGroupType, groupId, commandGroupApplyToAll);
+                            ParameterGroupCommandWorker(groupId, lastCommandGroupType);
                         } else {
                             Fact* fact = getParameter(componentId, groupId, addrOffset);
                             if (!fact) {
@@ -1294,7 +1327,7 @@ void ParameterManager::_initialRequestTimeout(void)
 {
     if (!_disableAllRetries && ++_initialRequestRetryCount <= _maxInitialRequestListRetry) {
         qCDebug(ParameterManagerLog) << _logVehiclePrefix(-1) << "Retrying initial parameter request list";
-        refreshAllParameters();
+        refreshGroupParameters(MAV_COMP_ID_ALL, 0xff);
         _initialRequestTimeoutTimer.start();
     } else {
         if (!_vehicle->genericFirmware()) {
@@ -1302,6 +1335,39 @@ void ParameterManager::_initialRequestTimeout(void)
                                   "This will cause %2 to be unable to display its full user interface.").arg(_vehicle->id()).arg(qgcApp()->applicationName());
             qCDebug(ParameterManagerLog) << errorMsg;
             qgcApp()->showAppMessage(errorMsg);
+        }
+    }
+}
+
+void ParameterManager::_groupCommandTimeout()
+{
+    for (int cid: _waitingGroupCommandMap.keys()) {
+        // Add/Update all indices to the wait list, parameter index is 0-based
+        for (uint8_t waitingGroupId: _waitingGroupCommandMap[cid].keys()) {
+            for (CommandParamType waitingGroupCommand: _waitingGroupCommandMap[cid][waitingGroupId].keys()) {
+                // This will add a new waiting index if needed and set the retry count for that index to 0
+                if (!_disableAllRetries && ++_waitingGroupCommandMap[cid][waitingGroupId][waitingGroupCommand] <= _maxGroupCommandRetry) {
+                    qCDebug(ParameterManagerLog) << _logVehiclePrefix(-1) << "Retrying group command list, groupId:"
+                                                 << waitingGroupId << "command:" << waitingGroupCommand;
+                    ParameterGroupCommandWorker(waitingGroupId, waitingGroupCommand);
+                    _groupCommandTimeoutTimer.start();
+                } else {
+                    _waitingGroupCommandMap[cid][waitingGroupId].remove(waitingGroupCommand);
+                    if (_waitingGroupCommandMap[cid][waitingGroupId].size() == 0) {
+                        _waitingGroupCommandMap[cid].remove(waitingGroupId);
+                        if (_waitingGroupCommandMap[cid].size() == 0) {
+                            _waitingGroupCommandMap.remove(cid);
+                        }
+                    }
+                    if (!_vehicle->genericFirmware()) {
+                        QString errorMsg = tr("Vehicle %1 did not respond to parameters group command. "
+                                              "This will cause %2 to be unable to display its full user interface.")
+                                .arg(_vehicle->id()).arg(qgcApp()->applicationName());
+                        qCDebug(ParameterManagerLog) << errorMsg;
+                        qgcApp()->showAppMessage(errorMsg);
+                    }
+                }
+            }
         }
     }
 }
@@ -1446,32 +1512,29 @@ void ParameterManager::resetAllToVehicleConfiguration()
     //    }
 }
 
-void ParameterManager::ParameterGroupCommand(CommandParamType command, uint8_t groupId, bool all)
+void ParameterManager::ParameterGroupCommand(CommandParamType command, uint8_t groupId)
 {
-
-        if (_waitingWriteParamIndexMap.contains(MAV_COMP_ID_AUTOPILOT1)) {
-            if ( _waitingWriteParamIndexMap[MAV_COMP_ID_AUTOPILOT1].contains(groupId)
-                 && _waitingWriteParamIndexMap[MAV_COMP_ID_AUTOPILOT1][groupId].contains(0)) {
-                _waitingWriteParamIndexMap[MAV_COMP_ID_AUTOPILOT1][groupId].remove(0);
-                if (_waitingWriteParamIndexMap[MAV_COMP_ID_AUTOPILOT1][groupId].size() == 0)
-                    _waitingWriteParamIndexMap[MAV_COMP_ID_AUTOPILOT1].remove(groupId);
-            } else {
-                _waitingWriteParamBatchCount++;
-            }
-            _waitingWriteParamIndexMap[MAV_COMP_ID_AUTOPILOT1][groupId][0] = 0; // Add new entry and set retry count
-            _updateProgressBar();
-            _waitingParamTimeoutTimer.start();
-            _saveRequired = true;
+    if (_waitingGroupCommandMap.contains(MAV_COMP_ID_AUTOPILOT1)) {
+        if ( _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].contains(groupId)
+             && _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].contains(command)) {
+            _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].remove(command);
+            if (_waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId].size() == 0)
+                _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1].remove(groupId);
         } else {
-            qWarning() << "Internal error ParameterManager::_factValueUpdateWorker: component id not found" << MAV_COMP_ID_AUTOPILOT1;
+            _waitingWriteParamBatchCount++;
         }
-        ParameterGroupCommandWorker(command, groupId, all);
-        lastCommandGroupType = command;
-        commandGroupApplyToAll = all;
-        lastCommandGroupId = groupId;
+
+    } else {
+        qWarning() << "Internal error ParameterManager::_factValueUpdateWorker: component id not found" << MAV_COMP_ID_AUTOPILOT1;
+    }
+    _waitingGroupCommandMap[MAV_COMP_ID_AUTOPILOT1][groupId][command] = 0; // Add new entry and set retry count
+    _saveRequired = true;
+    ParameterGroupCommandWorker(groupId, command);
+//    lastCommandGroupType = command;
+//    lastCommandGroupId = groupId;
 }
 
-void ParameterManager::ParameterGroupCommandWorker(CommandParamType command, uint8_t groupId, bool all)
+void ParameterManager::ParameterGroupCommandWorker(uint8_t groupId, CommandParamType command)
 {
     WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
     if (!weakLink.expired()) {
@@ -1479,9 +1542,20 @@ void ParameterManager::ParameterGroupCommandWorker(CommandParamType command, uin
         ShenHangProtocolMessage message;
         message.tyMsg0 = MsgId::COMMAND_PARAM;
         message.tyMsg1 = command;
-        message.payload[0] = all ? 0xff : groupId;
+        message.payload[0] = groupId;
         _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), message);
+        _groupCommandTimeoutTimer.start();
     }
+}
+
+void ParameterManager::RefreshParameterGroup(uint8_t groupId, bool all)
+{
+//    if (_waitingWriteParamIndexMap[componentId].contains(groupId) &&
+//            _waitingWriteParamIndexMap[componentId][groupId].contains(addrOffset)) {
+//        _waitingWriteParamIndexMap[componentId][groupId].remove(addrOffset);
+//        if (_waitingWriteParamIndexMap[componentId][groupId].size() == 0)
+//            _waitingWriteParamIndexMap[componentId].remove(groupId);
+//    }
 }
 
 QString ParameterManager::_logVehiclePrefix(int componentId)
