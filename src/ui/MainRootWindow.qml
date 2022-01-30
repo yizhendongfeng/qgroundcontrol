@@ -86,6 +86,7 @@ ApplicationWindow {
 
         property var                planMasterControllerPlanView:   null
         property var                currentPlanMissionItem:         planMasterControllerPlanView ? planMasterControllerPlanView.missionController.currentPlanViewItem : null
+        property var                missionController :             planView._missionController
     }
 
     /// Default color palette used throughout the UI

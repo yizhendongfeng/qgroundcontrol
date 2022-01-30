@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -35,6 +35,15 @@ Rectangle {
     Component.onCompleted: {
         //-- Default Settings
         __rightPanel.source = QGroundControl.corePlugin.settingsPages[QGroundControl.corePlugin.defaultSettings].url
+    }
+
+    Rectangle {
+        id: leftBorder
+        width: 1
+        color: qgcPal.colorGrey
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
     }
 
     QGCFlickable {

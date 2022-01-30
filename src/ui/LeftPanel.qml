@@ -12,7 +12,7 @@ Rectangle {
     anchors.left:  parent.left
     anchors.top: parent.top
     color: qgcPal.windowShade
-    property var borderColor: "grey"//qgcPal.colorGrey
+    property var borderColor: qgcPal.colorGrey
     DeadMouseArea {
         anchors.fill: parent
     }

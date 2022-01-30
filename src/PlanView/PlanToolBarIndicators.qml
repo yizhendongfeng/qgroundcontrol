@@ -1,4 +1,4 @@
-import QtQuick          2.3
+﻿import QtQuick          2.3
 import QtQuick.Controls 1.2
 import QtQuick.Layouts  1.2
 import QtQuick.Dialogs  1.2
@@ -11,8 +11,9 @@ import QGroundControl.Palette           1.0
 
 // Toolbar for Plan View
 Item {
-    width: missionStats.width + _margins
+    width: missionStats.width + _margins + totalBankInfoStatus.width
 
+    property var    _missionController:         globals.missionController
     property var    _planMasterController:      globals.planMasterControllerPlanView
     property var    _currentMissionItem:        globals.currentPlanMissionItem          ///< Mission item to display status for
 
@@ -119,7 +120,7 @@ Item {
         anchors.leftMargin:     _margins
         anchors.left:           parent.left
         columnSpacing:          0
-        columns:                4
+        columns:                5
 
         GridLayout {
             columns:                8
@@ -232,6 +233,63 @@ Item {
             }
 
             Item { width: 1; height: 1 }
+        }
+
+
+        GridLayout {    // totalBankInfo
+            id: totalBankInfoStatus
+            columns:                8
+            rowSpacing:             _rowSpacing
+            columnSpacing:          _labelToValueSpacing
+            Layout.alignment:       Qt.AlignVCenter | Qt.AlignHCenter
+
+            QGCLabel {
+                text:               qsTr("Total Bank Info")
+                Layout.columnSpan:  8
+                font.pointSize:     ScreenTools.smallFontPointSize
+            }
+
+            QGCLabel { text: qsTr("largeBankInfoslCapacity:"); font.pointSize: _dataFontSize; }
+            QGCLabel {
+                text:                   _missionController.largeBankInfoslCapacity
+                font.pointSize:         _dataFontSize
+                Layout.minimumWidth:    _mediumValueWidth
+            }
+            Item { width: 1; height: 1 }
+
+            QGCLabel { text: qsTr("largeBankNumber:"); font.pointSize: _dataFontSize; }
+            QGCLabel {
+                text:                   _missionController.largeBankNumber
+                font.pointSize:         _dataFontSize
+                Layout.minimumWidth:    _largeValueWidth
+            }
+            Item { width: 1; height: 1 }
+
+            QGCLabel { text: qsTr("idTransientBank:"); font.pointSize: _dataFontSize; }
+            QGCLabel {
+                text:                   _missionController.idTransientBank
+                font.pointSize:         _dataFontSize
+                Layout.minimumWidth:    _smallValueWidth
+            }
+
+            QGCLabel { text: qsTr("smallBankInfoslCapacity:"); font.pointSize: _dataFontSize; }
+            QGCLabel {
+                text:                   _missionController.smallBankInfoslCapacity
+                font.pointSize:         _dataFontSize
+                Layout.minimumWidth:    _smallValueWidth
+            }
+
+            Item { width: 1; height: 1 }
+
+            QGCLabel { text: qsTr("smallBankNumber:"); font.pointSize: _dataFontSize; }
+            QGCLabel {
+                text:                   _missionController.smallBankNumber
+                font.pointSize:         _dataFontSize
+                Layout.minimumWidth:    _mediumValueWidth
+            }
+
+
+
         }
 
         QGCButton {

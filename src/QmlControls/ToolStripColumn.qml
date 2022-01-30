@@ -17,7 +17,7 @@ import QGroundControl.Controls      1.0
 
 Rectangle {
     id:         _root
-    color:      qgcPal.windowShadeDark    //qgcPal.toolbarBackground
+    color:      qgcPal.toolbarBackground
 
     width:      parent.width / 15 > _maxWidth ? _maxWidth : parent.width / 15
     property var    _maxWidth: 50

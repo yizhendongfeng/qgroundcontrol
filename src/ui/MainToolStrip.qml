@@ -51,7 +51,7 @@ ToolStripColumn {
             },
 
             ToolStripAction {
-                text: qsTr("Parameter")
+                text: qsTr("Parameters")
                 visible: currentVehicleSetupComplete
                 checkable: true
                 iconSource: "/qmlimages/Gears.svg"
@@ -112,7 +112,7 @@ ToolStripColumn {
         text: qsTr("Settings")
         visible: true //currentVehicleSetupComplete
         checkable: true
-        iconSource: "/qmlimages/Gears.svg"
+        iconSource: "/res/gear-white.svg"//"/qmlimages/Gears.svg"
         onTriggered: {
             if (!mainWindow.preventViewSwitch()) {
                 mainWindow.showSettingsTool()

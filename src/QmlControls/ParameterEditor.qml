@@ -37,6 +37,15 @@ Rectangle {
         id: controller
     }
 
+    Rectangle {
+        id: leftBorder
+        width: 1
+        color: qgcPal.colorGrey
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+    }
+
     ExclusiveGroup { id: sectionGroup }
 
     //---------------------------------------------
@@ -44,6 +53,7 @@ Rectangle {
     Row {
         id:             header
         anchors.left:   parent.left
+        anchors.leftMargin: ScreenTools.defaultFontPixelWidth / 2
         anchors.right:  parent.right
         anchors.top: parent.top
         anchors.topMargin: 10
@@ -194,6 +204,8 @@ Rectangle {
         width:              ScreenTools.defaultFontPixelWidth * 50
         anchors.top:        header.bottom
         anchors.bottom:     parent.bottom
+        anchors.left:       parent.left
+        anchors.leftMargin: ScreenTools.defaultFontPixelWidth / 2
         clip:               true
         pixelAligned:       true
         contentHeight:      groupedViewCategoryColumn.height
