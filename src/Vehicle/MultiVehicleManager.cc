@@ -63,7 +63,7 @@ void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
     connect(&_gcsHeartbeatTimer, &QTimer::timeout, this, &MultiVehicleManager::_sendGCSHeartbeat);
 
     if (_gcsHeartbeatEnabled) {
-        _gcsHeartbeatTimer.start();
+//        _gcsHeartbeatTimer.start();
     }
 
     _offlineEditingVehicle = new Vehicle(Vehicle::MAV_AUTOPILOT_TRACK, Vehicle::MAV_TYPE_TRACK, _firmwarePluginManager, this);
@@ -131,7 +131,7 @@ void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicle
     _vehicles.append(vehicle);
 
     // Send QGC heartbeat ASAP, this allows PX4 to start accepting commands
-    _sendGCSHeartbeat();
+//    _sendGCSHeartbeat();
 
     qgcApp()->toolbox()->settingsManager()->appSettings()->defaultFirmwareType()->setRawValue(vehicleFirmwareType);
 
@@ -438,9 +438,9 @@ void MultiVehicleManager::_sendGCSHeartbeat(void)
                                             0,                       // custom mode
                                             MAV_STATE_ACTIVE);       // MAV_STATE
 
-            uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
-            int len = mavlink_msg_to_send_buffer(buffer, &message);
-            link->writeBytesThreadSafe((const char*)buffer, len);
+//            uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
+//            int len = mavlink_msg_to_send_buffer(buffer, &message);
+//            link->writeBytesThreadSafe((const char*)buffer, len);
         }
     }
 }

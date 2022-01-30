@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -17,6 +17,7 @@
 #include "QGCMAVLink.h"
 #include "QGCLoggingCategory.h"
 #include "LinkInterface.h"
+#include "ShenHangProtocol.h"
 
 class Vehicle;
 class MissionCommandTree;
@@ -76,7 +77,9 @@ public:
     static const int _retryTimeoutMilliseconds = 250;
     static const int _maxRetryCount = 5;
 
+
 signals:
+    void totalBankInfoAvailbale(const TotalBankInfo& totalBankInfo);  //已获取整体航线信息
     void newMissionItemsAvailable   (bool removeAllRequested);
     void inProgressChanged          (bool inProgress);
     void error                      (int errorCode, const QString& errorMsg);
@@ -90,7 +93,9 @@ signals:
 
 private slots:
     void _mavlinkMessageReceived(const mavlink_message_t& message);
+    void _shenHangMessageReceived(const ShenHangProtocolMessage& message);
     void _ackTimeout(void);
+    void _ackTimeoutShenHang(void);
 
 protected:
     typedef enum {
@@ -102,6 +107,14 @@ protected:
         AckGuidedItem,      ///< MISSION_ACK expected in response to ArduPilot guided mode single item send
     } AckType_t;
 
+    enum MISSION_TYPE_SHENHANG
+    {
+       SHENHANG_MISSION_TYPE_MISSION=0, /* Items are mission commands for main mission. | */
+       SHENHANG_MISSION_TYPE_FENCE=1, /* Specifies GeoFence area(s). Items are MAV_CMD_NAV_FENCE_ GeoFence items. | */
+       SHENHANG_MISSION_TYPE_RALLY=2, /* Specifies the rally points for the vehicle. Rally points are alternative RTL points. Items are MAV_CMD_NAV_RALLY_POINT rally point items. | */
+       SHENHANG_MISSION_TYPE_ALL=255, /* Only used in MISSION_CLEAR_ALL to clear all mission types. | */
+       SHENHANG_MISSION_TYPE_ENUM_END=256, /*  | */
+    };
     typedef enum {
         TransactionNone,
         TransactionRead,
@@ -110,7 +123,9 @@ protected:
     } TransactionType_t;
 
     void _startAckTimeout(AckType_t ack);
+    void _startAckTimeoutShenHang(AckCommandBank ack);
     bool _checkForExpectedAck(AckType_t receivedAck);
+    bool _checkForExpectedAckShenHang(AckCommandBank receivedAck);
     void _readTransactionComplete(void);
     void _handleMissionCount(const mavlink_message_t& message);
     void _handleMissionItem(const mavlink_message_t& message, bool missionItemInt);
@@ -120,6 +135,7 @@ protected:
     void _clearMissionItems(void);
     void _sendError(ErrorCode_t errorCode, const QString& errorMsg);
     QString _ackTypeToString(AckType_t ackType);
+    QString _ackTypeToStringShenHang(AckCommandBank ackType);
     QString _missionResultToString(MAV_MISSION_RESULT result);
     void _finishTransaction(bool success, bool apmGuidedItemWrite = false);
     void _requestList(void);
@@ -131,7 +147,19 @@ protected:
     void _removeAllWorker(void);
     void _connectToMavlink(void);
     void _disconnectFromMavlink(void);
+
+    /******************** 沈航航线数据处理 ********************/
+    void _connectToShenHangVehicle(void);
+    void _disconnectFromShenHangVehicle(void);
+    void _handleShenHangBankMessage(const ShenHangProtocolMessage& msg);
+    void _handleAllBankInfo(const ShenHangProtocolMessage& message);
+    void _handleSingleBankInfo(const ShenHangProtocolMessage& message);
+    void _handleInfoSlot(const ShenHangProtocolMessage& message);
+
     QString _planTypeString(void);
+    void _queryAllBanks(void);
+    void _querySingleBankInfo(uint16_t idBank);
+    void _querySingleInfoSlot(uint16_t idBank, uint16_t idInfoSlot);
 
 protected:
     Vehicle*            _vehicle =              nullptr;
@@ -154,6 +182,26 @@ protected:
     int                 _currentMissionIndex;
     int                 _lastCurrentIndex;
 
+    /******************** 沈航数据 ********************/
+    int                     _retryCountShenHang;
+    AckCommandBank          _expectedAckShenHang;
+    MISSION_TYPE_SHENHANG   _planTypeShenHang;
+    SingleBankInfo          _currentSingleBankInfo = {};
+    QList<uint16_t>         _infoSlotIndicesToWrite;
+    QList<uint16_t>         _infoSlotIndicesToRead;
+    QMap<uint16_t, QList<uint16_t>> _mapInfoSlotIndicesToRead;
+    QList<uint16_t>         _bankIndicesToRead;
+    QMap<uint16_t, QMap<uint16_t, WaypointInfoSlot*>> _mapWaypointInfoSlot;
+    QList<uint16_t>         _bankIndicesToWrite;
+    uint16_t                _currentBankIndexToRead;    // 读取infoslot时，在map中的bank索引
+    uint16_t                _infoSlotCountToRead;
+    uint16_t                _bankCountToWrite = 2;
+    uint16_t                _infoSlotCountToWrite;
+
+//    QMap<uint16_t, SingleBankInfo> _mapBankInfo;
+    QMap<uint16_t, QMap<uint16_t, WaypointInfoSlot*>> _mapInfoSlots;  // <idBank, <idInfoslot, waypointInfoslot>>>
+    uint16_t                _lastBankIdRequested;
+    uint16_t                _lastInfoSlotIdRequested;
 private:
     void _setTransactionInProgress(TransactionType_t type);
 };

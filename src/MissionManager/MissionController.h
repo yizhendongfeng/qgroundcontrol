@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -111,6 +111,13 @@ public:
 
     Q_PROPERTY(QGroundControlQmlGlobal::AltitudeMode globalAltitudeMode         READ globalAltitudeMode         WRITE setGlobalAltitudeMode NOTIFY globalAltitudeModeChanged)   ///< AltitudeModeNone indicates the plan can used mixed modes
     Q_PROPERTY(QGroundControlQmlGlobal::AltitudeMode globalAltitudeModeDefault  READ globalAltitudeModeDefault  NOTIFY globalAltitudeModeChanged)                               ///< Default to use for newly created items
+
+    /******************** 沈航整体bank信息 ********************/
+    Q_PROPERTY(int largeBankInfoslCapacity READ getLargeBankInfoslCapacity NOTIFY largeBankInfoslCapacityChanged)
+    Q_PROPERTY(int smallBankInfoslCapacity READ getSmallBankInfoslCapacity NOTIFY smallBankInfoslCapacityChanged)
+    Q_PROPERTY(int largeBankNumber READ getLargeBankNumber NOTIFY largeBankNumberChanged)
+    Q_PROPERTY(int smallBankNumber READ getSmallBankNumber NOTIFY smallBankNumberChanged)
+    Q_PROPERTY(int idTransientBank READ getIdTransientBank NOTIFY idTransientBankChanged)
 
     Q_INVOKABLE void removeVisualItem(int viIndex);
 
@@ -258,6 +265,14 @@ public:
     QGroundControlQmlGlobal::AltitudeMode globalAltitudeModeDefault(void);
     void setGlobalAltitudeMode(QGroundControlQmlGlobal::AltitudeMode altMode);
 
+    int getLargeBankInfoslCapacity() const;
+    void setLargeBankInfoslCapacity(int newLargeBankInfoslCapacity);
+
+    int getSmallBankInfoslCapacity() const;
+    int getLargeBankNumber() const;
+    int getSmallBankNumber() const;
+    int getIdTransientBank() const;
+
 signals:
     void visualItemsChanged                 (void);
     void waypointPathChanged                (void);
@@ -299,7 +314,14 @@ signals:
     void _recalcFlightPathSegmentsSignal    (void);
     void globalAltitudeModeChanged          (void);
 
+    void largeBankInfoslCapacityChanged();
+    void smallBankInfoslCapacityChanged();
+    void largeBankNumberChanged();
+    void smallBankNumberChanged();
+    void idTransientBankChanged();
+
 private slots:
+    void _totalBankInfoChangedFromMissionManager(const TotalBankInfo& totalBankInfo);
     void _newMissionItemsAvailableFromVehicle   (bool removeAllRequested);
     void _itemCommandChanged                    (void);
     void _inProgressChanged                     (bool inProgress);
@@ -397,6 +419,14 @@ private:
     double                      _minAMSLAltitude =              0;
     double                      _maxAMSLAltitude =              0;
     bool                        _missionContainsVTOLTakeoff =   false;
+
+    /******************** 沈航bank信息 ********************/
+    int largeBankInfoslCapacity;
+    int smallBankInfoslCapacity;
+    int largeBankNumber;
+    int smallBankNumber;
+    int idTransientBank;
+    TotalBankInfo _totalBankInfo;
 
     QGroundControlQmlGlobal::AltitudeMode _globalAltMode = QGroundControlQmlGlobal::AltitudeModeRelative;
 

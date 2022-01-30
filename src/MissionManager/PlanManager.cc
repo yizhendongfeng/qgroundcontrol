@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -30,6 +30,7 @@ PlanManager::PlanManager(Vehicle* vehicle, MAV_MISSION_TYPE planType)
     , _currentMissionIndex      (-1)
     , _lastCurrentIndex         (-1)
 {
+    qRegisterMetaType<TotalBankInfo>();
     _ackTimeoutTimer = new QTimer(this);
     _ackTimeoutTimer->setSingleShot(true);
 
@@ -136,8 +137,10 @@ void PlanManager::loadFromVehicle(void)
 
     _retryCount = 0;
     _setTransactionInProgress(TransactionRead);
-    _connectToMavlink();
-    _requestList();
+//    _connectToMavlink();
+    _connectToShenHangVehicle();
+    _queryAllBanks();
+//    _requestList();
 }
 
 /// Internal call to request list of mission items. May be called during a retry sequence.
@@ -162,6 +165,7 @@ void PlanManager::_requestList(void)
                                                    _planType);
 
         _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), message);
+
     }
     _startAckTimeout(AckMissionCount);
 }
@@ -242,6 +246,79 @@ void PlanManager::_ackTimeout(void)
     }
 }
 
+void PlanManager::_ackTimeoutShenHang()
+{
+    if (_expectedAckShenHang == ACK_NONE) {
+        return;
+    }
+
+    switch (_expectedAckShenHang) {
+    case ACK_NONE:
+        qCWarning(PlanManagerLog) << QStringLiteral("_ackTimeout %1 timeout with AckNone").arg(_planTypeString());
+        _sendError(InternalError, tr("Internal error occurred during Mission Item communication: _ackTimeOut:_expectedAckShenHang == ACK_NONE"));
+        break;
+    case ACK_QUERY_ALL:
+        if (_retryCount > _maxRetryCount) {
+            _sendError(MaxRetryExceeded, tr("Query all bank info failed, maximum retries exceeded."));
+            _finishTransaction(false);
+        } else {
+            _retryCount++;
+            qCDebug(PlanManagerLog) << tr("Retrying %1 query all bank info retry Count").arg(_planTypeString()) << _retryCount;
+            _queryAllBanks();
+        }
+        break;
+    case ACK_QUERY_SINGLE_BANK:
+        if (_retryCount > _maxRetryCount) {
+            _sendError(MaxRetryExceeded, tr("Query single bank failed, maximum retries exceeded."));
+            _finishTransaction(false);
+        } else {
+            _retryCount++;
+            qCDebug(PlanManagerLog) << tr("Retrying %1 MISSION_REQUEST retry Count").arg(_planTypeString()) << _retryCount;
+            _requestNextMissionItem();
+        }
+        break;
+    case ACK_QUERY_SINGLE_INFO_SLOT:
+        // MISSION_REQUEST is expected, or MISSION_ACK to end sequence
+        if (_itemIndicesToWrite.count() == 0) {
+            // Vehicle did not send final MISSION_ACK at end of sequence
+            _sendError(ProtocolError, tr("Mission write failed, vehicle failed to send final ack."));
+            _finishTransaction(false);
+        } else if (_itemIndicesToWrite[0] == 0) {
+            // Vehicle did not respond to MISSION_COUNT, try again
+            if (_retryCount > _maxRetryCount) {
+                _sendError(MaxRetryExceeded, tr("Mission write mission count failed, maximum retries exceeded."));
+                _finishTransaction(false);
+            } else {
+                _retryCount++;
+                qCDebug(PlanManagerLog) << QStringLiteral("Retrying %1 MISSION_COUNT retry Count").arg(_planTypeString()) << _retryCount;
+                _writeMissionCount();
+            }
+        } else {
+            // Vehicle did not request all items from ground station
+            _sendError(ProtocolError, tr("Vehicle did not request all items from ground station: %1").arg(_ackTypeToStringShenHang(_expectedAckShenHang)));
+            _expectedAckShenHang = ACK_NONE;
+            _finishTransaction(false);
+        }
+        break;
+    case ACK_BANK_ERROR:
+        // MISSION_ACK expected
+        if (_retryCount > _maxRetryCount) {
+            _sendError(MaxRetryExceeded, tr("Mission remove all, maximum retries exceeded."));
+            _finishTransaction(false);
+        } else {
+            _retryCount++;
+            qCDebug(PlanManagerLog) << tr("Retrying %1 MISSION_CLEAR_ALL retry Count").arg(_planTypeString()) << _retryCount;
+            _removeAllWorker();
+        }
+        break;
+
+    default:
+        _sendError(AckTimeoutError, tr("Vehicle did not respond to mission item communication: %1").arg(_ackTypeToStringShenHang(_expectedAckShenHang)));
+        _expectedAckShenHang = ACK_NONE;
+        _finishTransaction(false);
+    }
+}
+
 void PlanManager::_startAckTimeout(AckType_t ack)
 {
     switch (ack) {
@@ -266,6 +343,28 @@ void PlanManager::_startAckTimeout(AckType_t ack)
     _ackTimeoutTimer->start();
 }
 
+void PlanManager::_startAckTimeoutShenHang(AckCommandBank ack)
+{
+    switch (ack) {
+    case ACK_QUERY_ALL:
+    case ACK_QUERY_SINGLE_BANK:
+    case ACK_SET_SINGLE_BANK:
+    case ACK_REFACTOR_INFO_SLOT:
+    case ACK_BANK_AUTO_SW:
+    case ACK_WAYPOINT_AUTO_SW:
+        _ackTimeoutTimer->setInterval(_retryTimeoutMilliseconds);
+        break;
+    case ACK_QUERY_SINGLE_INFO_SLOT:
+        _ackTimeoutTimer->setInterval(_ackTimeoutMilliseconds);
+        break;
+    case ACK_BANK_ERROR:
+    case ACK_NONE:
+        break;
+    }
+    _expectedAckShenHang = ack;
+    _ackTimeoutTimer->start();
+}
+
 /// Checks the received ack against the expected ack. If they match the ack timeout timer will be stopped.
 /// @return true: received ack matches expected ack
 bool PlanManager::_checkForExpectedAck(AckType_t receivedAck)
@@ -283,6 +382,17 @@ bool PlanManager::_checkForExpectedAck(AckType_t receivedAck)
             // Whatever it is we let the ack timeout handle any error output to the user.
             qCDebug(PlanManagerLog) << QString("Out of sequence ack %1 expected:received %2:%3").arg(_planTypeString().arg(_ackTypeToString(_expectedAck)).arg(_ackTypeToString(receivedAck)));
         }
+        return false;
+    }
+}
+
+bool PlanManager::_checkForExpectedAckShenHang(AckCommandBank receivedAck)
+{
+    if (receivedAck == _expectedAckShenHang) {
+        _expectedAckShenHang = AckCommandBank::ACK_NONE;
+        _ackTimeoutTimer->stop();
+        return true;
+    } else {
         return false;
     }
 }
@@ -722,6 +832,145 @@ void PlanManager::_mavlinkMessageReceived(const mavlink_message_t& message)
     }
 }
 
+void PlanManager::_shenHangMessageReceived(const ShenHangProtocolMessage& message)
+{
+    WaypointInfoSlot* waypointInfoSlot = nullptr;
+    SingleBankInfo singleBankInfo = {};
+    SingleBankCheckInfo refactorInfoSlot = {};
+    ErrorBankInfo errorBankInfo = {};
+    QList<uint16_t> infoSlotIndicesInBank;
+    _retryCountShenHang = 0;
+    if (message.tyMsg0 == MsgId::ACK_COMMAND_BANK)  {
+        switch (message.tyMsg1)
+        {
+        case ACK_QUERY_ALL:
+            _handleAllBankInfo(message);
+            break;
+        case ACK_QUERY_SINGLE_BANK:
+            memcpy(&singleBankInfo, message.payload, sizeof(singleBankInfo));
+            for (uint16_t i = 0; i < singleBankInfo.nInfoslot; i++) {
+                infoSlotIndicesInBank << i;
+            }
+            _mapInfoSlotIndicesToRead[singleBankInfo.idBank] = infoSlotIndicesInBank;
+            _bankIndicesToRead.removeOne(singleBankInfo.idBank);
+            if (_bankIndicesToRead.count() > 0)
+                _querySingleBankInfo(_bankIndicesToRead[0]);
+            else {  // 开始读infoslot
+                qDebug() << "!!! ACK_QUERY_SINGLE_BANK Read Completed!!! start to read insfo slot!!!";
+                _bankIndicesToRead.clear();     // 重新填充，用于逐个读取每个bank的infoslot
+                _bankIndicesToRead = _mapInfoSlotIndicesToRead.keys();
+                _infoSlotIndicesToRead.clear();
+                _infoSlotIndicesToRead = _mapInfoSlotIndicesToRead[_bankIndicesToRead[0]];
+                if (_infoSlotIndicesToRead.count() > 0) // 有infoslot就读，没有就读下一个bank信息
+                    _querySingleInfoSlot(_bankIndicesToRead[0], _infoSlotIndicesToRead[0]);
+            }
+
+            qDebug() << "ACK_QUERY_SINGLE_BANK singleBankInfo.idBank:" << singleBankInfo.idBank;
+            break;
+        case ACK_WAYPOINT_AUTO_SW:
+        case ACK_SET_SINGLE_BANK:
+        case ACK_BANK_AUTO_SW:
+            break;
+        case ACK_REFACTOR_INFO_SLOT:
+            memcpy(&refactorInfoSlot, message.payload, sizeof(refactorInfoSlot));
+            break;
+        case ACK_QUERY_SINGLE_INFO_SLOT:
+            break;
+        case ACK_BANK_ERROR:
+            memcpy(&errorBankInfo, message.payload, sizeof(errorBankInfo));
+            break;
+        default:
+            break;
+        }
+
+    } else if (message.tyMsg0 == MsgId::WAYPOINT_INFO_SLOT && message.tyMsg1 == ACK_QUERY_SINGLE_INFO_SLOT) {
+        waypointInfoSlot = new WaypointInfoSlot;
+        memcpy(waypointInfoSlot, message.payload, sizeof(WaypointInfoSlot));
+        _mapWaypointInfoSlot[waypointInfoSlot->idBank][waypointInfoSlot->idInfosl] = waypointInfoSlot;
+        qDebug() << "ACK_QUERY_SINGLE_INFO_SLOT "<< "idBank:" << waypointInfoSlot->idBank<< "waypointInfoSlot->idInfosl:" << waypointInfoSlot->idInfosl << "sizeof(waypointInfoSlot):" << sizeof(waypointInfoSlot)
+                 << QString("%1, %2, %3").arg(waypointInfoSlot->lat, 0, 'f', 7).arg(waypointInfoSlot->lon,  0, 'f', 7).arg(waypointInfoSlot->alt,  0, 'f', 3);
+        _infoSlotIndicesToRead.removeOne(waypointInfoSlot->idInfosl);
+        if (_infoSlotIndicesToRead.count() == 0) {
+            _bankIndicesToRead.removeOne(waypointInfoSlot->idBank);
+            if (_bankIndicesToRead.count() > 0)
+                _infoSlotIndicesToRead = _mapInfoSlotIndicesToRead[_bankIndicesToRead[0]];
+            else {
+                qDebug() << "ACK_QUERY_SINGLE_INFO_SLOT ALL RECEIVED!!!!";
+                return;
+            }
+        }
+        _querySingleInfoSlot(_bankIndicesToRead[0], _infoSlotIndicesToRead[0]);
+    }
+}
+
+void PlanManager::_handleAllBankInfo(const ShenHangProtocolMessage& message)
+{
+    TotalBankInfo totalBankInfo = {};
+    memcpy(&totalBankInfo, message.payload, sizeof(totalBankInfo));
+    emit totalBankInfoAvailbale(totalBankInfo);
+    qDebug() << "ACK_QUERY_ALL largeBankInfslCapacity:" <<  totalBankInfo.largeBankInfslCapacity
+             << "smallBankInfoslCapacity:" << totalBankInfo.smallBankInfoslCapacity
+             << "largeBankNumber:" << totalBankInfo.largeBankNumber
+             << "smallBankNumber:" << totalBankInfo.smallBankNumber
+             << "idTransientBank:" << totalBankInfo.idTransientBank;
+    for (uint16_t i = 0; i < totalBankInfo.largeBankNumber; i++) {
+        _bankIndicesToRead << i;
+    }
+
+
+    if (!_checkForExpectedAckShenHang(AckCommandBank::ACK_QUERY_ALL)) {
+        return;
+    }
+    _retryCount = 0;
+    _lastBankIdRequested = _bankIndicesToRead[0];
+    _querySingleBankInfo(_bankIndicesToRead[0]);
+}
+
+void PlanManager::_handleSingleBankInfo(const ShenHangProtocolMessage& message)
+{
+    SingleBankInfo singleBankInfo = {};
+    memcpy(&singleBankInfo, message.payload, sizeof (singleBankInfo));
+
+    if (_bankIndicesToRead.contains(_currentSingleBankInfo.idBank)) {
+        _bankIndicesToRead.removeOne(_currentSingleBankInfo.idBank);
+        for (uint16_t i = 0; i < singleBankInfo.nInfoslot; i++) {
+            _infoSlotIndicesToRead << i;
+        }
+        _infoSlotCountToRead = _infoSlotIndicesToRead.count();
+        _querySingleInfoSlot(singleBankInfo.idBank, _infoSlotIndicesToRead[0]);
+    }
+    _checkForExpectedAckShenHang(AckCommandBank::ACK_QUERY_SINGLE_BANK);
+}
+
+void PlanManager::_handleInfoSlot(const ShenHangProtocolMessage& message)
+{
+    WaypointInfoSlot* waypointInfoSlot = new WaypointInfoSlot;
+    memcpy(waypointInfoSlot, message.payload, sizeof(*waypointInfoSlot));
+    uint16_t idBank = waypointInfoSlot->idBank;
+    uint16_t seq = waypointInfoSlot->idInfosl;
+    if (_infoSlotIndicesToRead.contains(waypointInfoSlot->idInfosl)) {
+        _infoSlotIndicesToRead.removeOne(waypointInfoSlot->idInfosl);
+        _mapInfoSlots[idBank][seq] = waypointInfoSlot;
+    } else {
+        return;
+    }
+    emit progressPct((double)seq / (double)_infoSlotCountToRead);
+    _retryCountShenHang = 0;
+    if (_infoSlotIndicesToRead.count() > 0) {
+        _lastInfoSlotIdRequested = _infoSlotIndicesToRead[0];
+        _querySingleInfoSlot(_lastBankIdRequested, _infoSlotIndicesToRead[0]);
+    }
+    else {  // 已经读完当前航线中的航点，开始读下一个航线
+        _lastBankIdRequested = ++idBank;
+        _infoSlotCountToRead = 0;
+        // TODO: 怎么判断航线（bank）已经读完
+        _retryCount = 0;
+        _lastBankIdRequested = _bankIndicesToRead[0];
+        _querySingleBankInfo(_bankIndicesToRead[0]);// 测试假设有两条航线直接读第2条航线
+    }
+    _checkForExpectedAckShenHang(AckCommandBank::ACK_QUERY_SINGLE_INFO_SLOT);
+}
+
 void PlanManager::_sendError(ErrorCode_t errorCode, const QString& errorMsg)
 {
     qCDebug(PlanManagerLog) << QStringLiteral("Sending error - _planTypeString(%1) errorCode(%2) errorMsg(%4)").arg(_planTypeString()).arg(errorCode).arg(errorMsg);
@@ -746,6 +995,33 @@ QString PlanManager::_ackTypeToString(AckType_t ackType)
         qWarning(PlanManagerLog) << QStringLiteral("Fell off end of switch statement %1").arg(_planTypeString());
         return QString("QGC Internal Error");
     }
+}
+
+QString PlanManager::_ackTypeToStringShenHang(AckCommandBank ackType)
+{
+    switch (ackType) {
+    case ACK_NONE:
+        return QString("No Ack");
+    case ACK_QUERY_ALL:
+        return QString("ACK_QUERY_ALL");
+    case ACK_QUERY_SINGLE_BANK:
+        return QString("ACK_QUERY_SINGLE_BANK");
+    case ACK_SET_SINGLE_BANK:
+        return QString("ACK_SET_SINGLE_BANK");
+    case ACK_REFACTOR_INFO_SLOT:
+        return QString("ACK_REFACTOR_INFO_SLOT");
+    case ACK_QUERY_SINGLE_INFO_SLOT:
+        return QString("ACK_QUERY_SINGLE_INFO_SLOT");
+    case ACK_BANK_AUTO_SW:
+        return QString("ACK_BANK_AUTO_SW");
+    case ACK_WAYPOINT_AUTO_SW:
+        return QString("ACK_WAYPOINT_AUTO_SW");
+    case ACK_BANK_ERROR:
+        return QString("ACK_BANK_ERROR");
+//    default:
+//        return QString("");
+    }
+    return QString("");
 }
 
 QString PlanManager::_lastMissionReqestString(MAV_MISSION_RESULT result)
@@ -868,7 +1144,10 @@ void PlanManager::_finishTransaction(bool success, bool apmGuidedItemWrite)
 
     _itemIndicesToRead.clear();
     _itemIndicesToWrite.clear();
-
+    _infoSlotIndicesToWrite.clear();
+    _infoSlotIndicesToRead.clear();
+    _bankIndicesToWrite.clear();
+    _bankIndicesToRead.clear();
     // First thing we do is clear the transaction. This way inProgesss is off when we signal transaction complete.
     TransactionType_t currentTransactionType = _transactionInProgress;
     _setTransactionInProgress(TransactionNone);
@@ -998,9 +1277,52 @@ void PlanManager::_connectToMavlink(void)
     connect(_vehicle, &Vehicle::mavlinkMessageReceived, this, &PlanManager::_mavlinkMessageReceived);
 }
 
+void PlanManager::_connectToShenHangVehicle()
+{
+    connect(_vehicle, &Vehicle::shenHangMessageReceived, this, &PlanManager::_shenHangMessageReceived);
+}
+
 void PlanManager::_disconnectFromMavlink(void)
 {
     disconnect(_vehicle, &Vehicle::mavlinkMessageReceived, this, &PlanManager::_mavlinkMessageReceived);
+}
+
+void PlanManager::_disconnectFromShenHangVehicle()
+{
+    disconnect(_vehicle, &Vehicle::shenHangMessageReceived, this, &PlanManager::_shenHangMessageReceived);
+}
+
+void PlanManager::_handleShenHangBankMessage(const ShenHangProtocolMessage& msg)
+{
+    TotalBankInfo totalBankInfo = {};
+    SingleBankInfo singleBankInfo = {};
+    SingleBankCheckInfo refactorInfoSlot = {};
+    struct WaypointInfoSlot waypointInfoSlot = {};
+    ErrorBankInfo errorBankInfo = {};
+    switch (msg.tyMsg1)
+    {
+    case ACK_QUERY_ALL:
+        memcpy(&totalBankInfo, msg.payload, sizeof(totalBankInfo));
+        break;
+    case ACK_QUERY_SINGLE_BANK:
+    case ACK_SET_SINGLE_BANK:
+    case ACK_BANK_AUTO_SW:
+    case ACK_WAYPOINT_AUTO_SW:
+        memcpy(&singleBankInfo, msg.payload, sizeof(singleBankInfo));
+        break;
+    case REFACTOR_INFO_SLOT:
+        memcpy(&refactorInfoSlot, msg.payload, sizeof(refactorInfoSlot));
+        break;
+    case ACK_QUERY_SINGLE_INFO_SLOT:
+        memcpy(&waypointInfoSlot, msg.payload, sizeof(waypointInfoSlot));
+//        waypoints
+        break;
+    case ACK_BANK_ERROR:
+        memcpy(&errorBankInfo, msg.payload, sizeof(errorBankInfo));
+        break;
+    default:
+        break;
+    }
 }
 
 QString PlanManager::_planTypeString(void)
@@ -1017,6 +1339,48 @@ QString PlanManager::_planTypeString(void)
         return QStringLiteral("T:Unknown");
     }
 }
+
+void PlanManager::_queryAllBanks()
+{
+    qCDebug(PlanManagerLog) << QStringLiteral("_requestList %1 _planType:_retryCount").arg(_planTypeString()) << _planType << _retryCount;
+
+    _itemIndicesToRead.clear();
+    _clearMissionItems();
+
+    WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
+    if (!weakLink.expired()) {
+        SharedLinkInterfacePtr  sharedLink = weakLink.lock();
+        ShenHangProtocolMessage msg = {};
+        _vehicle->PackCommandBankQueryAll(msg);
+        _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
+    }        
+    _startAckTimeoutShenHang(ACK_QUERY_ALL);
+}
+
+void PlanManager::_querySingleBankInfo(uint16_t idBank)
+{
+    WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
+    if (!weakLink.expired()) {
+        SharedLinkInterfacePtr  sharedLink = weakLink.lock();
+        ShenHangProtocolMessage msg = {};
+        _vehicle->PackCommandBankQuerySingle(msg, idBank);
+        _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
+    }
+    _startAckTimeoutShenHang(ACK_QUERY_SINGLE_BANK);
+}
+
+void PlanManager::_querySingleInfoSlot(uint16_t idBank, uint16_t idInfoSlot)
+{
+    WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
+    if (!weakLink.expired()) {
+        SharedLinkInterfacePtr  sharedLink = weakLink.lock();
+        ShenHangProtocolMessage msg = {};
+        _vehicle->PackQuerySingleInfoSlot(msg, idBank, idInfoSlot);
+        _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
+    }
+    _startAckTimeoutShenHang(ACK_QUERY_SINGLE_INFO_SLOT);
+}
+
 
 void PlanManager::_setTransactionInProgress(TransactionType_t type)
 {

@@ -429,6 +429,7 @@ contains (DEFINES, QGC_ENABLE_PAIRING) {
 #
 
 HEADERS += \
+#    src/MissionManager/InfoSlotItem.h \
     src/QmlControls/QmlUnitsConversion.h \
     src/Vehicle/ShenHangVehicleData.h \
     src/Vehicle/VehicleEscStatusFactGroup.h \
@@ -445,6 +446,7 @@ contains (DEFINES, QGC_ENABLE_PAIRING) {
 }
 
 SOURCES += \
+#    src/MissionManager/InfoSlotItem.cc \
     src/Vehicle/VehicleEscStatusFactGroup.cc \
     src/api/QGCCorePlugin.cc \
     src/api/QGCOptions.cc \

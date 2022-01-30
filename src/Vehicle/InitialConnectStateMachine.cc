@@ -22,8 +22,8 @@ const StateMachine::StateFn InitialConnectStateMachine::_rgStates[] = {
 //    InitialConnectStateMachine::_stateRequestCapabilities,
 //    InitialConnectStateMachine::_stateRequestProtocolVersion,
 //    InitialConnectStateMachine::_stateRequestCompInfo,
-    InitialConnectStateMachine::_stateRequestParameters,
-//    InitialConnectStateMachine::_stateRequestMission,
+//    InitialConnectStateMachine::_stateRequestParameters,
+    InitialConnectStateMachine::_stateRequestMission,
 //    InitialConnectStateMachine::_stateRequestGeoFence,
 //    InitialConnectStateMachine::_stateRequestRallyPoints,
     InitialConnectStateMachine::_stateSignalInitialConnectComplete

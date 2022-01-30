@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -38,6 +38,7 @@ public:
 
 private slots:
     void _mavlinkMessageReceived(const mavlink_message_t& message);
+    void _shenHangMessageReceived(const ShenHangProtocolMessage& message);
 
 private:
     void _handleHighLatency(const mavlink_message_t& message);

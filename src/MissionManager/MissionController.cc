@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -74,6 +74,7 @@ MissionController::MissionController(PlanMasterController* masterController, QOb
     // The follow is used to compress multiple recalc calls in a row to into a single call.
     connect(this, &MissionController::_recalcMissionFlightStatusSignal, this, &MissionController::_recalcMissionFlightStatus,   Qt::QueuedConnection);
     connect(this, &MissionController::_recalcFlightPathSegmentsSignal,  this, &MissionController::_recalcFlightPathSegments,    Qt::QueuedConnection);
+//    connect(_missionManager, &MissionManager::totalBankInfoAvailbale, this, &MissionController::_totalBankInfoChangedFromMissionManager, Qt::QueuedConnection);
     qgcApp()->addCompressedSignal(QMetaMethod::fromSignal(&MissionController::_recalcMissionFlightStatusSignal));
     qgcApp()->addCompressedSignal(QMetaMethod::fromSignal(&MissionController::_recalcFlightPathSegmentsSignal));
     qgcApp()->addCompressedSignal(QMetaMethod::fromSignal(&MissionController::recalcTerrainProfile));
@@ -274,6 +275,39 @@ bool MissionController::_convertToMissionItems(QmlObjectListModel* visualMission
     }
 
     return endActionSet;
+}
+
+int MissionController::getIdTransientBank() const
+{
+    return idTransientBank;
+}
+
+int MissionController::getSmallBankNumber() const
+{
+    return smallBankNumber;
+}
+
+int MissionController::getLargeBankNumber() const
+{
+    return largeBankNumber;
+}
+
+int MissionController::getSmallBankInfoslCapacity() const
+{
+    return smallBankInfoslCapacity;
+}
+
+int MissionController::getLargeBankInfoslCapacity() const
+{
+    return largeBankInfoslCapacity;
+}
+
+void MissionController::setLargeBankInfoslCapacity(int newLargeBankInfoslCapacity)
+{
+    if (largeBankInfoslCapacity == newLargeBankInfoslCapacity)
+        return;
+    largeBankInfoslCapacity = newLargeBankInfoslCapacity;
+    emit largeBankInfoslCapacityChanged();
 }
 
 void MissionController::addMissionToKML(KMLPlanDomDocument& planKML)
@@ -1992,6 +2026,7 @@ void MissionController::_managerVehicleChanged(Vehicle* managerVehicle)
     connect(_missionManager, &MissionManager::lastCurrentIndexChanged,  this, &MissionController::resumeMissionIndexChanged);
     connect(_missionManager, &MissionManager::resumeMissionReady,       this, &MissionController::resumeMissionReady);
     connect(_missionManager, &MissionManager::resumeMissionUploadFail,  this, &MissionController::resumeMissionUploadFail);
+    connect(_missionManager, &MissionManager::totalBankInfoAvailbale, this, &MissionController::_totalBankInfoChangedFromMissionManager, Qt::QueuedConnection);
     connect(_managerVehicle, &Vehicle::defaultCruiseSpeedChanged,       this, &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
     connect(_managerVehicle, &Vehicle::defaultHoverSpeedChanged,        this, &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
     connect(_managerVehicle, &Vehicle::vehicleTypeChanged,              this, &MissionController::complexMissionItemNamesChanged);
@@ -2590,6 +2625,21 @@ void MissionController::_takeoffItemNotRequiredChanged(void)
 {
     // Force a recalc of allowed bits
     setCurrentPlanViewSeqNum(_currentPlanViewSeqNum, true /* force */);
+}
+
+void MissionController::_totalBankInfoChangedFromMissionManager(const TotalBankInfo& totalBankInfo)
+{
+    _totalBankInfo = totalBankInfo;
+    largeBankInfoslCapacity = _totalBankInfo.largeBankInfslCapacity;
+    smallBankInfoslCapacity = _totalBankInfo.smallBankInfoslCapacity;
+    largeBankNumber = _totalBankInfo.largeBankNumber;
+    smallBankNumber = _totalBankInfo.smallBankNumber;
+    idTransientBank = _totalBankInfo.idTransientBank;
+    emit largeBankInfoslCapacityChanged();
+    emit smallBankInfoslCapacityChanged();
+    emit largeBankNumberChanged();
+    emit smallBankNumberChanged();
+    emit idTransientBankChanged();
 }
 
 QString MissionController::surveyComplexItemName(void) const

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -21,6 +21,7 @@ MissionManager::MissionManager(Vehicle* vehicle)
     : PlanManager               (vehicle, MAV_MISSION_TYPE_MISSION)
     , _cachedLastCurrentIndex   (-1)
 {
+    connect(_vehicle, &Vehicle::mavlinkMessageReceived, this, &MissionManager::_mavlinkMessageReceived);
     connect(_vehicle, &Vehicle::mavlinkMessageReceived, this, &MissionManager::_mavlinkMessageReceived);
 }
 
@@ -237,6 +238,11 @@ void MissionManager::_mavlinkMessageReceived(const mavlink_message_t& message)
         _handleHeartbeat(message);
         break;
     }
+}
+
+void MissionManager::_shenHangMessageReceived(const ShenHangProtocolMessage& message)
+{
+
 }
 
 void MissionManager::_updateMissionIndex(int index)
