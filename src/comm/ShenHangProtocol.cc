@@ -85,7 +85,7 @@ ShenHangProtocol::ShenHangProtocol(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool(app, toolbox)
     , m_enable_version_check(true)
     , _shenHangProtocolMessage({})
-    , _shenHangProtocolMStatus(nullptr)
+    , _shenHangProtocolStatus(nullptr)
     , versionMismatchIgnore(false)
     , systemId(255)
     , _current_version(100)
@@ -101,7 +101,7 @@ ShenHangProtocol::ShenHangProtocol(QGCApplication* app, QGCToolbox* toolbox)
     memset(totalLossCounter,    0, sizeof(totalLossCounter));
     memset(runningLossPercent,  0, sizeof(runningLossPercent));
     memset(firstMessage,        1, sizeof(firstMessage));
-    memset(&_shenHangProtocolMStatus,  0, sizeof(_shenHangProtocolMStatus));
+    memset(&_shenHangProtocolStatus,  0, sizeof(_shenHangProtocolStatus));
     memset(&_shenHangProtocolMessage,  0, sizeof(_shenHangProtocolMessage));
 }
 
@@ -129,80 +129,51 @@ void ShenHangProtocol::Decode(LinkInterface* link, uint8_t channel, QByteArray b
     shenHangProtocolStatus = ShenHangProtocolGetChannelStatus(channel);
     memcpy(shenHangProtocolStatus->bufferReceived + shenHangProtocolStatus->receivedBufferLength, bytesReceived.data(), static_cast<size_t>(bytesReceived.length()));
     shenHangProtocolStatus->receivedBufferLength += bytesReceived.length();
-    if (shenHangProtocolStatus->receivedBufferLength < MIN_PROTOCOL_LEN)
-    {
+    if (shenHangProtocolStatus->receivedBufferLength < MIN_PROTOCOL_LEN) {
         return;
     }
+
     uint16_t i = 0;
     bool findHeader = false;
-    while (i < shenHangProtocolStatus->receivedBufferLength)
-    {
-        /// 1.找帧头
-        if (shenHangProtocolStatus->bufferReceived[i] == HEAD0)
-        {
-            if (i + MIN_PROTOCOL_LEN <= shenHangProtocolStatus->receivedBufferLength)
-            {
-                if (shenHangProtocolStatus->bufferReceived[i + 1] == HEAD1)
-                {
-                    findHeader = true;
-                }
-                else
-                    i++;
-            }
-            else    // 不足一包
-            {
-                memcpy(shenHangProtocolStatus->bufferReceived, shenHangProtocolStatus->bufferReceived + i,
-                       static_cast<size_t>(shenHangProtocolStatus->receivedBufferLength - i));
-                shenHangProtocolStatus->receivedBufferLength -= i;
-                return;
-            }
+    while (i < shenHangProtocolStatus->receivedBufferLength) {
+        if (!findHeader && (i + 1 <= shenHangProtocolStatus->receivedBufferLength)
+                && shenHangProtocolStatus->bufferReceived[i] == HEAD0
+                && shenHangProtocolStatus->bufferReceived[i + 1] == HEAD1) {     // 找到帧头
+            findHeader = true;
         }
-        else
-        {
+
+        if (!findHeader) {
+            if (i == shenHangProtocolStatus->receivedBufferLength - 1
+                    && shenHangProtocolStatus->bufferReceived[i] == HEAD0) { // 如果最后一个字节是帧头第一个字节，保存在缓冲区中
+                break;
+            }
             i++;
-        }
-        /// 2.拼一包数据
-        if (findHeader)
-        {
+            continue;
+        } else if (i + 2 <= shenHangProtocolStatus->receivedBufferLength) {/// 2.找到了帧头，读取第三个字节（消息类型）
             msg.tyMsg0 = shenHangProtocolStatus->bufferReceived[i + 2];
-            if (i + MIN_PROTOCOL_LEN + payloadLength.value(msg.tyMsg0) <= shenHangProtocolStatus->receivedBufferLength) // 足够一包数据
-            {
+            if (i + MIN_PROTOCOL_LEN + payloadLength.value(msg.tyMsg0) <= shenHangProtocolStatus->receivedBufferLength) {// 足够一包数据
+                findHeader = false; // 不论校验通过还是失败都要重新找帧头
                 msg.tyMsg1 = shenHangProtocolStatus->bufferReceived[i + 3];
                 memcpy(&msg.idSource, shenHangProtocolStatus->bufferReceived + i + 4, 2);
                 memcpy(&msg.idTarget, shenHangProtocolStatus->bufferReceived + i + 6, 2);
                 memcpy(msg.payload, shenHangProtocolStatus->bufferReceived + i + 8, payloadLength.value(msg.tyMsg0));
                 msg.ctr = shenHangProtocolStatus->bufferReceived[i + 8 + payloadLength.value(msg.tyMsg0)];
                 uint8_t CaculatedCrc = CaculateCrc8(shenHangProtocolStatus->bufferReceived + i, MIN_PROTOCOL_LEN - 1 + payloadLength.value(msg.tyMsg0));
-                if (CaculatedCrc == shenHangProtocolStatus->bufferReceived[i + 9 + payloadLength.value(msg.tyMsg0)])
-                {
+                if (CaculatedCrc == shenHangProtocolStatus->bufferReceived[i + 9 + payloadLength.value(msg.tyMsg0)]) {
                     HandleMessage(link, channel);
                     i += MIN_PROTOCOL_LEN + payloadLength.value(msg.tyMsg0);
-                    if (shenHangProtocolStatus->receivedBufferLength - i < MIN_PROTOCOL_LEN) {
-                        memcpy(shenHangProtocolStatus->bufferReceived, shenHangProtocolStatus->bufferReceived + i,
-                               static_cast<size_t>(shenHangProtocolStatus->receivedBufferLength - i));
-                        shenHangProtocolStatus->receivedBufferLength -= i;
-                    }
-//                    qCDebug(ShenHangProtocolLog) << "ShenHangProtocol::Decode() counter: " <<  msg.ctr
-//                                                 << "receivedBufferLength:" << shenHangProtocolStatus->receivedBufferLength;
-                    continue;
-                }
-                else
-                {
-                    findHeader = false;
+                } else {
                     i++;
-                    continue;
                 }
-            }
-            else        //不足一包
-            {
-                memcpy(shenHangProtocolStatus->bufferReceived, shenHangProtocolStatus->bufferReceived + i,
-                       static_cast<size_t>(shenHangProtocolStatus->receivedBufferLength - i));
-                shenHangProtocolStatus->receivedBufferLength -= i;
-                return;
+            } else {
+                break;
             }
         }
     }
-    return;
+    // 不足一包数据
+    memcpy(shenHangProtocolStatus->bufferReceived, shenHangProtocolStatus->bufferReceived + i,
+           static_cast<size_t>(shenHangProtocolStatus->receivedBufferLength - i));
+    shenHangProtocolStatus->receivedBufferLength -= i;
 }
 
 uint16_t ShenHangProtocol::Encode(ShenHangProtocolMessage msg, uint8_t* buf)
@@ -405,12 +376,12 @@ void ShenHangProtocol::receiveBytes(LinkInterface* link, QByteArray b)
     uint8_t shenHangProtocollinkChannel = link->shenHangProtocolChannel();
     qCDebug(ShenHangProtocolLog) << QString("receiveBytes from link channel:%1, size:%2").arg(shenHangProtocollinkChannel).arg(b.size());
     while (b.size() > 0) {
-        _shenHangProtocolMStatus = ShenHangProtocolGetChannelStatus(shenHangProtocollinkChannel);
-        int32_t lengthLeft = sizeof (_shenHangProtocolMStatus->bufferReceived) - _shenHangProtocolMStatus->receivedBufferLength;
+        _shenHangProtocolStatus = ShenHangProtocolGetChannelStatus(shenHangProtocollinkChannel);
+        int32_t lengthLeft = sizeof (_shenHangProtocolStatus->bufferReceived) - _shenHangProtocolStatus->receivedBufferLength;
         int32_t length = lengthLeft < b.size() ? lengthLeft : b.size();
         QByteArray bytes = b.left(length);
         b.remove(0, length);
-        Decode(link, shenHangProtocollinkChannel, bytes, _shenHangProtocolMessage, _shenHangProtocolMStatus);
+        Decode(link, shenHangProtocollinkChannel, bytes, _shenHangProtocolMessage, _shenHangProtocolStatus);
         {
 #if 0
             //-----------------------------------------------------------------

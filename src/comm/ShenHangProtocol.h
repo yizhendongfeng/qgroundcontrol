@@ -168,7 +168,7 @@ protected:
     float       runningLossPercent[MAVLINK_COMM_NUM_BUFFERS];   ///< Loss rate
 
     ShenHangProtocolMessage _shenHangProtocolMessage;
-    ShenHangProtocolStatus* _shenHangProtocolMStatus;
+    ShenHangProtocolStatus* _shenHangProtocolStatus;
 
     bool        versionMismatchIgnore;
     int         systemId;

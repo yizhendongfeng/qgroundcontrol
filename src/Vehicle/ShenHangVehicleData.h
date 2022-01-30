@@ -6,12 +6,13 @@
 
 /******************** 航线回复数据 ********************/
 struct TotalBankInfo {                  // 整体航路信息（ty_msg0=194,ty_msg1=0）
-    uint16_t largetBankInfslCapacity;   // 飞行器可存储的最大大航线中infoslot容量
+    uint16_t largeBankInfslCapacity;   // 飞行器可存储的最大大航线中infoslot容量
     uint16_t smallBankInfoslCapacity;   // 飞行器可存储的最大小航线中infoslot容量
     uint16_t largeBankNumber;           // 飞行器可存储的最大大航线条数
     uint16_t smallBankNumber;           // 飞行器可存储的最大小航线条数
     uint16_t idTransientBank;           // 过渡航线对应的编号
 };
+Q_DECLARE_METATYPE(TotalBankInfo)
 struct SingleBankInfo {                 // 单个bank信息（ty_msg0=194,ty_msg1=1，2，5，或6）
     uint16_t idBank;                    // 对应的bank编号
     uint16_t tyBank;                    // 对应的bank类型码
@@ -163,6 +164,7 @@ enum CommandBank {              // 航线相关命令（ty_msg0=130）
 };
 
 enum AckCommandBank {           // 航线相关命令（ty_msg0=194），该报文为查询整体航路信息命令（ty_msg0=130）的回复报文
+    ACK_NONE = -1,              // 未请求
     ACK_QUERY_ALL = 0,          // 查询整体航路信息（ty_msg0=194,ty_msg1=0）
     ACK_QUERY_SINGLE_BANK,      // 查询单个bank信息（ty_msg0=194,ty_msg1=1）
     ACK_SET_SINGLE_BANK,        // 设置单个bank（ty_msg0=194,ty_msg1=2）

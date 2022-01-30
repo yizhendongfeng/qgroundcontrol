@@ -808,6 +808,7 @@ void Vehicle::_shenHangMessageReceived(LinkInterface* link, ShenHangProtocolMess
     default:
         break;
     }
+    emit shenHangMessageReceived(message);
 }
 
 #if !defined(NO_ARDUPILOT_DIALECT)
@@ -2174,7 +2175,7 @@ void Vehicle::_parametersReady(bool parametersReady)
     if (parametersReady) {
         disconnect(_parameterManager, &ParameterManager::parametersReadyChanged, this, &Vehicle::_parametersReady);
         _setupAutoDisarmSignalling();
-//        _initialConnectStateMachine->advance();
+        _initialConnectStateMachine->advance();
     }
 }
 
@@ -4129,6 +4130,7 @@ void Vehicle::HandleWaypointInfo(ShenHangProtocolMessage& msg)
     WaypointInfoSlot waypointInfoSlot;
 //    if (msg.tyMsg1 == 0)
     memcpy(&waypointInfoSlot, msg.payload, sizeof(waypointInfoSlot));
+
 }
 
 void Vehicle::HandleGeneralStatus(ShenHangProtocolMessage& msg)
