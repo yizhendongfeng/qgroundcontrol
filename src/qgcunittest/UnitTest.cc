@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -114,7 +114,7 @@ void UnitTest::init(void)
     _expectMissedFileDialog = false;
     _expectMissedMessageBox = false;
     
-    MAVLinkProtocol::deleteTempLogFiles();
+//    MAVLinkProtocol::deleteTempLogFiles();
 }
 
 /// @brief Called after each test.

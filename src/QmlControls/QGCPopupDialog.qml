@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -17,7 +17,7 @@ Item {
     width:  childrenRect.width
     height: childrenRect.height
 
-    signal hideDialog
+    signal hideDialog(bool accepted)
 
     Keys.onReleased: {
         if (event.key === Qt.Key_Escape) {
@@ -32,14 +32,14 @@ Item {
     function accept() {
         if (acceptAllowed) {
             Qt.inputMethod.hide()
-            hideDialog()
+            hideDialog(true)
         }
     }
 
     function reject() {
         if (rejectAllowed) {
             Qt.inputMethod.hide()
-            hideDialog()
+            hideDialog(false)
         }
     }
 }

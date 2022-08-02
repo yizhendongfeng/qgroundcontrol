@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -16,7 +16,6 @@
 #include "QGCMapPolyline.h"
 #include "QGCMapPolygon.h"
 #include "CameraCalc.h"
-#include "TerrainQuery.h"
 
 Q_DECLARE_LOGGING_CATEGORY(TransectStyleComplexItemLog)
 
@@ -101,7 +100,6 @@ public:
     double              specifiedGimbalYaw          (void) final { return std::numeric_limits<double>::quiet_NaN(); }
     double              specifiedGimbalPitch        (void) final { return std::numeric_limits<double>::quiet_NaN(); }
     void                setMissionFlightStatus      (MissionController::MissionFlightStatus_t& missionFlightStatus) final;
-    ReadyForSaveState   readyForSaveState         (void) const override;
     QString             commandDescription          (void) const override { return tr("Transect"); }
     QString             commandName                 (void) const override { return tr("Transect"); }
     QString             abbreviation                (void) const override { return tr("T"); }
@@ -135,7 +133,6 @@ protected slots:
     void _setDirty                          (void);
     void _setIfDirty                        (bool dirty);
     void _updateCoordinateAltitudes         (void);
-    void _polyPathTerrainData               (bool success, const QList<TerrainPathQuery::PathHeightInfo_t>& rgPathHeightInfo);
     void _rebuildTransects                  (void);
 
 protected:
@@ -179,7 +176,6 @@ protected:
 
     QVariantList                                _visualTransectPoints;  ///< Used to draw the flight path visuals on the screen
     QList<QList<CoordInfo_t>>                   _transects;
-    QList<TerrainPathQuery::PathHeightInfo_t>   _rgPathHeightInfo;      ///< Path height for each segment includes turn segments
     QList<CoordInfo_t>                          _rgFlightPathCoordInfo; ///< Fully calculated flight path (including terrain if needed)
 
     bool            _ignoreRecalc =     false;
@@ -232,14 +228,11 @@ private:
     } BuildMissionItemsState_t;
 
     void    _queryTransectsPathHeightInfo   (void);
-    void    _adjustTransectsForTerrain      (void);
     bool    _buildRawFlightPath             (void);
     void    _adjustForMaxRates              (void);
     void    _adjustForTolerance             (void);
     double  _altitudeBetweenCoords          (const QGeoCoordinate& fromCoord, const QGeoCoordinate& toCoord, double percentTowardsTo);
-    int     _maxPathHeight                  (const TerrainPathQuery::PathHeightInfo_t& pathHeightInfo, int fromIndex, int toIndex, double& maxHeight);
     BuildMissionItemsState_t _buildMissionItemsState(void) const;
 
-    TerrainPolyPathQuery*       _currentTerrainFollowQuery =            nullptr;
     QTimer                      _terrainQueryTimer;
 };

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -19,8 +19,13 @@ QGCPositionManager::QGCPositionManager(QGCApplication* app, QGCToolbox* toolbox)
 
 QGCPositionManager::~QGCPositionManager()
 {
+    qDebug() << "delete _toolBox 2";
+    qDebug() << "delete _toolBox 2 _simulatedSource" << _simulatedSource << "_nmeaSource" << _nmeaSource;
     delete(_simulatedSource);
     delete(_nmeaSource);
+    _simulatedSource = nullptr;
+    _nmeaSource = nullptr;
+    qDebug() << "delete _toolBox 2 _simulatedSource" << _simulatedSource << "_nmeaSource" << _nmeaSource;
 }
 
 void QGCPositionManager::setToolbox(QGCToolbox *toolbox)

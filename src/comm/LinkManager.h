@@ -17,9 +17,7 @@
 
 #include "LinkConfiguration.h"
 #include "LinkInterface.h"
-#include "QGCLoggingCategory.h"
 #include "QGCToolbox.h"
-#include "MAVLinkProtocol.h"
 #include "ShenHangProtocol.h"
 #if !defined(__mobile__)
 #include "LogReplayLink.h"
@@ -174,7 +172,6 @@ private:
     uint32_t                            _shenHangProtocolChannelsUsedBitMask;
 
     AutoConnectSettings*                _autoConnectSettings;
-    MAVLinkProtocol*                    _mavlinkProtocol;
     ShenHangProtocol*                   _shenHangProtocol;
 
     QList<SharedLinkInterfacePtr>       _rgLinks;

@@ -44,15 +44,9 @@ public:
     virtual ~LinkInterface();
 
     Q_PROPERTY(bool isPX4Flow   READ isPX4Flow  CONSTANT)
-    Q_PROPERTY(bool isMockLink  READ isMockLink CONSTANT)
 
     // Property accessors
     bool isPX4Flow(void) const { return _isPX4Flow; }
-#ifdef UNITTEST_BUILD
-    bool isMockLink(void);
-#else
-    bool isMockLink(void) { return false; }
-#endif
 
     SharedLinkConfigurationPtr linkConfiguration(void) { return _config; }
 

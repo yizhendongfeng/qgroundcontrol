@@ -10,6 +10,7 @@ add_custom_target(PlanViewQml
 		GeoFenceEditor.qml
 		GeoFenceMapVisuals.qml
 		MissionItemEditor.qml
+		ShenHangMissionItemEditor.qml
 		MissionItemMapVisual.qml
 		MissionItemStatus.qml
 		MissionSettingsEditor.qml

@@ -19,7 +19,6 @@
 #include "AutoPilotPlugin.h"
 #include "GeoFenceManager.h"
 #include "RallyPointManager.h"
-#include "FollowMe.h"
 
 #include <QList>
 #include <QString>
@@ -313,21 +312,10 @@ public:
     /// Used to check if running firmware is latest stable version.
     virtual void checkIfIsLatestStable(Vehicle* vehicle);
 
-    /// Used to check if running current version is equal or higher than the one being compared.
-    /// returns 1 if current > compare, 0 if current == compare, -1 if current < compare
-    int versionCompare(Vehicle* vehicle, QString& compare);
-    int versionCompare(Vehicle* vehicle, int major, int minor, int patch);
-
     /// Allows the Firmware plugin to override the facts meta data.
     ///     @param vehicleType - Type of current vehicle
     ///     @param metaData - MetaData for fact
     virtual void adjustMetaData(MAV_TYPE /*vehicleType*/, FactMetaData* /*metaData*/) {}
-
-    /// Sends the appropriate mavlink message for follow me support
-    virtual void sendGCSMotionReport(Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities);
-
-    // FIXME: Hack workaround for non pluginize FollowMe support
-    static const QString px4FollowMeFlightMode;
 
 signals:
     void toolIndicatorsChanged(void);

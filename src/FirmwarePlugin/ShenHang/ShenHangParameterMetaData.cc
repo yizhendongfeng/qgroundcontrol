@@ -223,7 +223,7 @@ void ShenHangParameterMetaData::loadParameterFactMetaDataFile(const QString& met
                     if (metaData->convertAndValidateRaw(strMax, false, varMax, errorString)) {
                         metaData->setRawMax(varMax);
                     } else {
-                        qCWarning(ShenHangParameterMetaDataLog) << "Invalid default value, name:" << name << " type:" << type << " val_max:" << strMax << " error:" << errorString;
+                        qCWarning(ShenHangParameterMetaDataLog) << "Invalid default value, name:" << name << " type:" << type << "foundType:" << foundType << " val_max:" << strMax << " error:" << errorString;
                     }
                 }
                 if (xml.attributes().hasAttribute("val_Min") && !strMin.isEmpty()) {

@@ -119,7 +119,7 @@ const char* FactMetaData::_rgKnownTypeStrings[] = {
 const  FactMetaData::ValueType_t FactMetaData::_rgKnownValueTypes[] = {
     // 沈航数据类型标识
     valueTypeFloat,
-    valueTypeInt16,
+    valueTypeUint16,
     valueTypeUint8,
 
     valueTypeUint8,

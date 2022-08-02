@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -1106,7 +1106,7 @@ void CameraSectionTest::_testScanForMultipleItems(void)
             item2->missionItem() = cameraItem->missionItem();
             visualItems.append(item1);
             visualItems.append(item2);
-            qDebug() << commandTree->getUIInfo(_controllerVehicle, QGCMAVLink::VehicleClassGeneric, (MAV_CMD)item1->command())->rawName() << commandTree->getUIInfo(_controllerVehicle, QGCMAVLink::VehicleClassGeneric, (MAV_CMD)item2->command())->rawName();;
+//            qDebug() << commandTree->getUIInfo(_controllerVehicle, QGCMAVLink::VehicleClassGeneric, (MAV_CMD)item1->command())->rawName() << commandTree->getUIInfo(_controllerVehicle, QGCMAVLink::VehicleClassGeneric, (MAV_CMD)item2->command())->rawName();;
 
             scanIndex = 0;
             QCOMPARE(_cameraSection->scanForSection(&visualItems, scanIndex), true);

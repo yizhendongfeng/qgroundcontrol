@@ -157,10 +157,3 @@ void LinkInterface::_connectionRemoved(void)
     }
 }
 
-#ifdef UNITTEST_BUILD
-#include "MockLink.h"
-bool LinkInterface::isMockLink(void)
-{
-    return dynamic_cast<MockLink*>(this);
-}
-#endif

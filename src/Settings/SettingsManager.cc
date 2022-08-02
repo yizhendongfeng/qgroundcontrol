@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -28,10 +28,6 @@ SettingsManager::SettingsManager(QGCApplication* app, QGCToolbox* toolbox)
     , _brandImageSettings           (nullptr)
     , _offlineMapsSettings          (nullptr)
     , _firmwareUpgradeSettings      (nullptr)
-    , _adsbVehicleManagerSettings   (nullptr)
-#if !defined(NO_ARDUPILOT_DIALECT)
-    , _apmMavlinkStreamRateSettings (nullptr)
-#endif
 {
 
 }
@@ -53,10 +49,6 @@ void SettingsManager::setToolbox(QGCToolbox *toolbox)
     _brandImageSettings =           new BrandImageSettings          (this);
     _offlineMapsSettings =          new OfflineMapsSettings         (this);
     _firmwareUpgradeSettings =      new FirmwareUpgradeSettings     (this);
-    _adsbVehicleManagerSettings =   new ADSBVehicleManagerSettings  (this);
-#if !defined(NO_ARDUPILOT_DIALECT)
-    _apmMavlinkStreamRateSettings = new APMMavlinkStreamRateSettings(this);
-#endif
 #if defined(QGC_AIRMAP_ENABLED)
     _airMapSettings =               new AirMapSettings          (this);
 #endif

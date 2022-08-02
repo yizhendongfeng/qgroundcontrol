@@ -23,7 +23,7 @@ Rectangle {
     width:      _pipSize < 200 ? 200 : _pipSize
     height:     _pipSize * (9/16)
     z:          pipZOrder + 1
-    visible:    item2 && item2.pipState !== item2.pipState.window && show
+    visible:    true //item2 && item2.pipState !== item2.pipState.window && show
     color:      Qt.rgba(0,0,0,0.2)
 
     property var    item1:                  null    // Required
@@ -77,7 +77,8 @@ Rectangle {
             _pipOrWindowItem = null
         }
         _setPipIsExpanded(QGroundControl.loadBoolGlobalSetting(_pipExpandedSettingsKey, true))
-        console.log("_initForItems", item2.pipState.state, item2.z)
+        if (item2)
+            console.log("_initForItems", item2.pipState.state, item2.z)
     }
 
     function _swapPip() {
@@ -185,7 +186,7 @@ Rectangle {
     Connections {
         target: _root.parent
 
-        onWidthChanged: {
+        function onWidthChanged() {
             if (!_componentComplete) {
                 // Wait until first time setup is done
                 return
@@ -321,7 +322,6 @@ Rectangle {
                         property real leftInset: x + width
 
                     }
-
 
                     PhotoVideoControl {
                         id:                     photoVideoControl1

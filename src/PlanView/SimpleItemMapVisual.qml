@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -26,13 +26,13 @@ Item {
     property var vehicle    ///< Vehicle associated with this item
     property bool interactive: true
 
-    property var    _missionItem:       object
+    property var    _itemWaypoint:       object
     property var    _itemVisual
     property var    _dragArea
     property bool   _itemVisualShowing: false
     property bool   _dragAreaShowing:   false
 
-    signal clicked(int sequenceNumber)
+    signal clicked(int indexBank, int indexWaypiont)
 
     function hideItemVisuals() {
         if (_itemVisualShowing) {
@@ -64,7 +64,7 @@ Item {
     }
 
     function updateDragArea() {
-        if (_missionItem.isCurrentItem && map.planView && _missionItem.specifiesCoordinate) {
+        if (_itemWaypoint.isCurrentWaypoint && map.planView) {
             showDragArea()
         } else {
             hideDragArea()
@@ -83,10 +83,10 @@ Item {
 
 
     Connections {
-        target: _missionItem
+        target: _itemWaypoint
 
-        onIsCurrentItemChanged:         updateDragArea()
-        onSpecifiesCoordinateChanged:   updateDragArea()
+        function onIsCurrentWaypointChanged() { updateDragArea() }
+        function onCoordinateChanged()        { updateDragArea() }
     }
 
     // Control which is used to drag items
@@ -96,10 +96,12 @@ Item {
         MissionItemIndicatorDrag {
             mapControl:     _root.map
             itemIndicator:  _itemVisual
-            itemCoordinate: _missionItem.coordinate
+            itemCoordinate: _itemWaypoint.coordinate
             visible:        _root.interactive
 
-            onItemCoordinateChanged: _missionItem.coordinate = itemCoordinate
+            onItemCoordinateChanged:  {
+                _itemWaypoint.coordinate = itemCoordinate
+            }
         }
     }
 
@@ -107,12 +109,15 @@ Item {
         id: indicatorComponent
 
         MissionItemIndicator {
-            coordinate:     _missionItem.coordinate
-            visible:        _missionItem.specifiesCoordinate
+            coordinate:     _itemWaypoint.coordinate
+            visible:        true//_itemWaypoint.specifiesCoordinate
+            enabled:        _root.enabled
             z:              QGroundControl.zOrderMapItems
-            missionItem:    _missionItem
-            sequenceNumber: _missionItem.sequenceNumber
-            onClicked:      if(_root.interactive)  _root.clicked(_missionItem.sequenceNumber)
+            itemWaypoint:    _itemWaypoint
+            onClicked:      {
+                if(_root.interactive)
+                    _root.clicked(_itemWaypoint.indexBank, _itemWaypoint.indexWaypoint)
+            }
             opacity:        _root.opacity
         }
     }

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -60,7 +60,7 @@ void RallyPointManager::sendToVehicle(const QList<QGeoCoordinate>& rgPoints)
     }
 
     // Plan manager takes control of MissionItems, so no need to delete
-    writeMissionItems(rallyItems);
+//    writeMissionItems(rallyItems);
 }
 
 void RallyPointManager::removeAll(void)

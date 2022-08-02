@@ -12,18 +12,11 @@
 #define ShenHangAUTOPILOT_H
 
 #include "AutoPilotPlugin.h"
-#include "ShenHangAirframeLoader.h"
-#include "AirframeComponent.h"
-#include "ShenHangRadioComponent.h"
-#include "ESP8266Component.h"
-#include "FlightModesComponent.h"
-#include "SensorsComponent.h"
-#include "SafetyComponent.h"
-#include "CameraComponent.h"
-#include "PowerComponent.h"
-#include "MotorComponent.h"
-#include "ShenHangTuningComponent.h"
-#include "SyslinkComponent.h"
+//#include "ShenHangAirframeLoader.h"
+//#include "ShenHangAirframeComponent.h"
+//#include "ShenHangRadioComponent.h"
+//#include "ShenHangFlightModesComponent.h"
+//#include "ShenHangCameraComponent.h"
 #include "Vehicle.h"
 
 #include <QImage>
@@ -47,18 +40,11 @@ public:
 
 protected:
     bool                    _incorrectParameterVersion; ///< true: parameter version incorrect, setup not allowed
-    ShenHangAirframeLoader*      _airframeFacts;
-    AirframeComponent*      _airframeComponent;
-    ShenHangRadioComponent*      _radioComponent;
-    ESP8266Component*       _esp8266Component;
-    FlightModesComponent*   _flightModesComponent;
-    SensorsComponent*       _sensorsComponent;
-    SafetyComponent*        _safetyComponent;
-    CameraComponent*        _cameraComponent;
-    PowerComponent*         _powerComponent;
-    MotorComponent*         _motorComponent;
-    ShenHangTuningComponent*     _tuningComponent;
-    SyslinkComponent*       _syslinkComponent;
+//    ShenHangAirframeLoader*      _airframeFacts;
+//    ShenHangAirframeComponent*      _airframeComponent;
+//    ShenHangRadioComponent*      _radioComponent;
+//    ShenHangFlightModesComponent*   _flightModesComponent;
+//    ShenHangCameraComponent*        _cameraComponent;
 
 private:
     QVariantList            _components;

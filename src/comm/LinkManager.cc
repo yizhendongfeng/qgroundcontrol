@@ -29,12 +29,8 @@
 #endif
 
 #ifndef __mobile__
-#include "GPSManager.h"
+//#include "GPSManager.h"
 #include "PositionManager.h"
-#endif
-
-#ifdef QT_DEBUG
-#include "MockLink.h"
 #endif
 
 QGC_LOGGING_CATEGORY(LinkManagerLog, "LinkManagerLog")
@@ -59,7 +55,6 @@ LinkManager::LinkManager(QGCApplication* app, QGCToolbox* toolbox)
     , _mavlinkChannelsUsedBitMask(1)    // We never use channel 0 to avoid sequence numbering problems
     , _shenHangProtocolChannelsUsedBitMask(1)    // We never use channel 0 to avoid sequence numbering problems
     , _autoConnectSettings(nullptr)
-    , _mavlinkProtocol(nullptr)
     #ifndef __mobile__
     #ifndef NO_SERIAL_LINK
     , _nmeaPort(nullptr)
@@ -75,7 +70,10 @@ LinkManager::~LinkManager()
 {
 #ifndef __mobile__
 #ifndef NO_SERIAL_LINK
+    qDebug() << "delete _toolBox 1 _nmeaPort" << _nmeaPort;
     delete _nmeaPort;
+    _nmeaPort = nullptr;
+    qDebug() << "delete _toolBox 1 _nmeaPort" << _nmeaPort;
 #endif
 #endif
 }
@@ -85,7 +83,6 @@ void LinkManager::setToolbox(QGCToolbox *toolbox)
     QGCTool::setToolbox(toolbox);
 
     _autoConnectSettings = toolbox->settingsManager()->autoConnectSettings();
-    _mavlinkProtocol = _toolbox->mavlinkProtocol();
     _shenHangProtocol = _toolbox->shenHangProtocol();
 
     connect(&_portListTimer, &QTimer::timeout, this, &LinkManager::_updateAutoConnectLinks);
@@ -129,12 +126,9 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr& config, bool i
     case LinkConfiguration::TypeLogReplay:
         link = std::make_shared<LogReplayLink>(config);
         break;
-#ifdef QT_DEBUG
-    case LinkConfiguration::TypeMock:
-        link = std::make_shared<MockLink>(config);
-        break;
-#endif
     case LinkConfiguration::TypeLast:
+        break;
+    default:
         break;
     }
 
@@ -154,11 +148,7 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr& config, bool i
         connect(link.get(), &LinkInterface::communicationError,  _app,                &QGCApplication::criticalMessageBoxOnMainThread);
 //        connect(link.get(), &LinkInterface::bytesReceived,       _mavlinkProtocol,    &MAVLinkProtocol::receiveBytes);
         connect(link.get(), &LinkInterface::bytesReceived,       _shenHangProtocol,   &ShenHangProtocol::receiveBytes);
-        connect(link.get(), &LinkInterface::bytesSent,           _mavlinkProtocol,    &MAVLinkProtocol::logSentBytes);
         connect(link.get(), &LinkInterface::disconnected,        this,                &LinkManager::_linkDisconnected);
-
-        _mavlinkProtocol->resetMetadataForLink(link.get());
-        _mavlinkProtocol->setVersion(_mavlinkProtocol->getCurrentVersion());
 
         if (!link->_connect()) {
             return false;
@@ -203,7 +193,6 @@ void LinkManager::_linkDisconnected(void)
     disconnect(link, &LinkInterface::communicationError,  _app,                &QGCApplication::criticalMessageBoxOnMainThread);
 //    disconnect(link, &LinkInterface::bytesReceived,       _mavlinkProtocol,    &MAVLinkProtocol::receiveBytes);
     disconnect(link, &LinkInterface::bytesReceived,       _shenHangProtocol,   &ShenHangProtocol::receiveBytes);
-    disconnect(link, &LinkInterface::bytesSent,           _mavlinkProtocol,    &MAVLinkProtocol::logSentBytes);
     disconnect(link, &LinkInterface::disconnected,        this,                &LinkManager::_linkDisconnected);
 
     link->_freeMavlinkChannel();
@@ -319,12 +308,9 @@ void LinkManager::loadLinkConfigurationList()
                             case LinkConfiguration::TypeLogReplay:
                                 link = new LogReplayLinkConfiguration(name);
                                 break;
-#ifdef QT_DEBUG
-                            case LinkConfiguration::TypeMock:
-                                link = new MockConfiguration(name);
-                                break;
-#endif
                             case LinkConfiguration::TypeLast:
+                                break;
+                            default:
                                 break;
                             }
                             if(link) {
@@ -555,15 +541,6 @@ void LinkManager::_updateAutoConnectLinks(void)
                             pSerialConfig = new SerialConfiguration(tr("%1 on %2 (AutoConnect)").arg(boardName).arg(portInfo.portName().trimmed()));
                         }
                         break;
-#ifndef __mobile__
-                    case QGCSerialPortInfo::BoardTypeRTKGPS:
-                        if (_autoConnectSettings->autoConnectRTKGPS()->rawValue().toBool() && !_toolbox->gpsManager()->connected()) {
-                            qCDebug(LinkManagerLog) << "RTK GPS auto-connected" << portInfo.portName().trimmed();
-                            _autoConnectRTKPort = portInfo.systemLocation();
-                            _toolbox->gpsManager()->connectGPS(portInfo.systemLocation(), boardName);
-                        }
-                        break;
-#endif
                     default:
                         qWarning() << "Internal error";
                         continue;
@@ -581,15 +558,6 @@ void LinkManager::_updateAutoConnectLinks(void)
                 }
             }
     }
-
-#ifndef __mobile__
-    // Check for RTK GPS connection gone
-    if (!_autoConnectRTKPort.isEmpty() && !currentPorts.contains(_autoConnectRTKPort)) {
-        qCDebug(LinkManagerLog) << "RTK GPS disconnected" << _autoConnectRTKPort;
-        _toolbox->gpsManager()->disconnectGPS();
-        _autoConnectRTKPort.clear();
-    }
-#endif
 
 #endif // NO_SERIAL_LINK
 }

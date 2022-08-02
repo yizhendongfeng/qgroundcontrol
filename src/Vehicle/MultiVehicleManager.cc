@@ -9,10 +9,8 @@
 
 #include "MultiVehicleManager.h"
 #include "AutoPilotPlugin.h"
-#include "MAVLinkProtocol.h"
-#include "UAS.h"
+//#include "UAS.h"
 #include "QGCApplication.h"
-#include "FollowMe.h"
 #include "ParameterManager.h"
 #include "SettingsManager.h"
 #include "QGCCorePlugin.h"
@@ -36,8 +34,6 @@ MultiVehicleManager::MultiVehicleManager(QGCApplication* app, QGCToolbox* toolbo
     , _activeVehicle(nullptr)
     , _offlineEditingVehicle(nullptr)
     , _firmwarePluginManager(nullptr)
-    , _joystickManager(nullptr)
-    , _mavlinkProtocol(nullptr)
     , _gcsHeartbeatEnabled(true)
 {
     QSettings settings;
@@ -51,14 +47,11 @@ void MultiVehicleManager::setToolbox(QGCToolbox *toolbox)
     QGCTool::setToolbox(toolbox);
 
     _firmwarePluginManager =     _toolbox->firmwarePluginManager();
-    _joystickManager =           _toolbox->joystickManager();
-    _mavlinkProtocol =           _toolbox->mavlinkProtocol();
     _shenHangProtocol =          _toolbox->shenHangProtocol();
 
     QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
     qmlRegisterUncreatableType<MultiVehicleManager>("QGroundControl.MultiVehicleManager", 1, 0, "MultiVehicleManager", "Reference only");
 
-    connect(_mavlinkProtocol, &MAVLinkProtocol::vehicleHeartbeatInfo, this, &MultiVehicleManager::_vehicleHeartbeatInfo);
     connect(_shenHangProtocol, &ShenHangProtocol::shenHangVehicleTypeInfo, this, &MultiVehicleManager::_shenHangVehicleTypeInfo);
     connect(&_gcsHeartbeatTimer, &QTimer::timeout, this, &MultiVehicleManager::_sendGCSHeartbeat);
 
@@ -119,11 +112,11 @@ void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicle
                                       << vehicleFirmwareType
                                       << vehicleType;
 
-    if (vehicleId == _mavlinkProtocol->getSystemId()) {
-        _app->showAppMessage(tr("Warning: A vehicle is using the same system id as %1: %2").arg(qgcApp()->applicationName()).arg(vehicleId));
-    }
+//    if (vehicleId == _mavlinkProtocol->getSystemId()) {
+//        _app->showAppMessage(tr("Warning: A vehicle is using the same system id as %1: %2").arg(qgcApp()->applicationName()).arg(vehicleId));
+//    }
 
-    Vehicle* vehicle = new Vehicle(link, vehicleId, componentId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager, _joystickManager);
+    Vehicle* vehicle = new Vehicle(link, vehicleId, componentId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager);
     connect(vehicle,                        &Vehicle::requestProtocolVersion,           this, &MultiVehicleManager::_requestProtocolVersion);
     connect(vehicle->vehicleLinkManager(),  &VehicleLinkManager::allLinksRemoved,       this, &MultiVehicleManager::_deleteVehiclePhase1);
     connect(vehicle->parameterManager(),    &ParameterManager::parametersReadyChanged,  this, &MultiVehicleManager::_vehicleParametersReadyChanged);
@@ -185,7 +178,7 @@ void MultiVehicleManager::_shenHangVehicleTypeInfo(LinkInterface* link, int vehi
         _app->showAppMessage(tr("Warning: A vehicle is using the same system id as %1: %2").arg(qgcApp()->applicationName()).arg(vehicleId));
     }
 
-    Vehicle* vehicle = new Vehicle(link, vehicleId, componentId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager, _joystickManager);
+    Vehicle* vehicle = new Vehicle(link, vehicleId, componentId, (MAV_AUTOPILOT)vehicleFirmwareType, (MAV_TYPE)vehicleType, _firmwarePluginManager);
     connect(vehicle,                        &Vehicle::requestProtocolVersion,           this, &MultiVehicleManager::_requestProtocolVersion);
     connect(vehicle->vehicleLinkManager(),  &VehicleLinkManager::allLinksRemoved,       this, &MultiVehicleManager::_deleteVehiclePhase1);
     connect(vehicle->parameterManager(),    &ParameterManager::parametersReadyChanged,  this, &MultiVehicleManager::_vehicleParametersReadyChanged);
@@ -213,7 +206,6 @@ void MultiVehicleManager::_requestProtocolVersion(unsigned version)
     unsigned maxversion = 0;
 
     if (_vehicles.count() == 0) {
-        _mavlinkProtocol->setVersion(version);
         return;
     }
 
@@ -223,10 +215,6 @@ void MultiVehicleManager::_requestProtocolVersion(unsigned version)
         if (v && v->maxProtoVersion() > maxversion) {
             maxversion = v->maxProtoVersion();
         }
-    }
-
-    if (_mavlinkProtocol->getCurrentVersion() != maxversion) {
-        _mavlinkProtocol->setVersion(maxversion);
     }
 }
 
@@ -251,7 +239,7 @@ void MultiVehicleManager::_deleteVehiclePhase1(Vehicle* vehicle)
         qWarning() << "Vehicle not found in map!";
     }
 
-    vehicle->uas()->shutdownVehicle();
+//    vehicle->uas()->shutdownVehicle();
 
     // First we must signal that a vehicle is no longer available.
     _activeVehicleAvailable = false;
@@ -427,16 +415,16 @@ void MultiVehicleManager::_sendGCSHeartbeat(void)
         LinkInterface* link = sharedLinks[i].get();
         auto linkConfiguration = link->linkConfiguration();
         if (link->isConnected() && linkConfiguration && !linkConfiguration->isHighLatency()) {
-            mavlink_message_t message;
-            mavlink_msg_heartbeat_pack_chan(_mavlinkProtocol->getSystemId(),
-                                            _mavlinkProtocol->getComponentId(),
-                                            link->mavlinkChannel(),
-                                            &message,
-                                            MAV_TYPE_GCS,            // MAV_TYPE
-                                            MAV_AUTOPILOT_INVALID,   // MAV_AUTOPILOT
-                                            MAV_MODE_MANUAL_ARMED,   // MAV_MODE
-                                            0,                       // custom mode
-                                            MAV_STATE_ACTIVE);       // MAV_STATE
+//            mavlink_message_t message;
+//            mavlink_msg_heartbeat_pack_chan(_mavlinkProtocol->getSystemId(),
+//                                            _mavlinkProtocol->getComponentId(),
+//                                            link->mavlinkChannel(),
+//                                            &message,
+//                                            MAV_TYPE_GCS,            // MAV_TYPE
+//                                            MAV_AUTOPILOT_INVALID,   // MAV_AUTOPILOT
+//                                            MAV_MODE_MANUAL_ARMED,   // MAV_MODE
+//                                            0,                       // custom mode
+//                                            MAV_STATE_ACTIVE);       // MAV_STATE
 
 //            uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
 //            int len = mavlink_msg_to_send_buffer(buffer, &message);

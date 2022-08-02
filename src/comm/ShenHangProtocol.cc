@@ -21,11 +21,11 @@
 #include <QFileInfo>
 
 #include "ShenHangProtocol.h"
-#include "UASInterface.h"
-#include "UASInterface.h"
-#include "UAS.h"
+//#include "UASInterface.h"
+//#include "UASInterface.h"
+//#include "UAS.h"
 #include "LinkManager.h"
-#include "QGCMAVLink.h"
+//#include "QGCMAVLink.h"
 #include "QGC.h"
 #include "QGCApplication.h"
 #include "QGCLoggingCategory.h"
@@ -69,9 +69,6 @@ static const uint8_t tableCrc8[256] =
     0xBA, 0x2B, 0x59, 0xC8, 0xBD, 0x2C, 0x5E, 0xCF
 };
 
-
-Q_DECLARE_METATYPE(mavlink_message_t)
-
 QGC_LOGGING_CATEGORY(ShenHangProtocolLog, "ShenHangProtocolLog")
 
 const char* ShenHangProtocol::_tempLogFileTemplate   = "FlightDataXXXXXX";   ///< Template for temporary log file
@@ -107,6 +104,7 @@ ShenHangProtocol::ShenHangProtocol(QGCApplication* app, QGCToolbox* toolbox)
 
 ShenHangProtocol::~ShenHangProtocol()
 {
+    qDebug() << "delete _toolBox 12 ~ShenHangProtocol()";
     storeSettings();
     _closeLogFile();
 }
@@ -523,7 +521,7 @@ void ShenHangProtocol::_startLogging(void)
                 return;
             }
 
-            qCDebug(MAVLinkProtocolLog) << "Temp log" << _tempLogFile.fileName();
+            qCDebug(ShenHangProtocolLog) << "Temp log" << _tempLogFile.fileName();
             emit checkTelemetrySavePath();
 
             _logSuspendError = false;
@@ -547,27 +545,6 @@ void ShenHangProtocol::_stopLogging(void)
     _vehicleWasArmed = false;
 }
 
-/// @brief Checks the temp directory for log files which may have been left there.
-///         This could happen if QGC crashes without the temp log file being saved.
-///         Give the user an option to save these orphaned files.
-void ShenHangProtocol::checkForLostLogFiles(void)
-{
-    QDir tempDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
-
-    QString filter(QString("*.%1").arg(_logFileExtension));
-    QFileInfoList fileInfoList = tempDir.entryInfoList(QStringList(filter), QDir::Files);
-    //qDebug() << "Orphaned log file count" << fileInfoList.count();
-
-    for(const QFileInfo& fileInfo: fileInfoList) {
-        //qDebug() << "Orphaned log file" << fileInfo.filePath();
-        if (fileInfo.size() == 0) {
-            // Delete all zero length files
-            QFile::remove(fileInfo.filePath());
-            continue;
-        }
-        emit saveTelemetryLog(fileInfo.filePath());
-    }
-}
 
 void ShenHangProtocol::suspendLogForReplay(bool suspend)
 {

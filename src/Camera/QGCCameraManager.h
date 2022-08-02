@@ -1,4 +1,4 @@
-/*!
+﻿/*!
  * @file
  *   @brief Camera Controller
  *   @author Gus Grubba <gus@auterion.com>
@@ -60,7 +60,6 @@ signals:
 protected slots:
     virtual void    _vehicleReady           (bool ready);
     virtual void    _mavlinkMessageReceived (const mavlink_message_t& message);
-    virtual void    _activeJoystickChanged  (Joystick* joystick);
     virtual void    _stepZoom               (int direction);
     virtual void    _startZoom              (int direction);
     virtual void    _stopZoom               ();

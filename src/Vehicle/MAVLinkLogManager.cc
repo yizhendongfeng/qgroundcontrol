@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -329,6 +329,7 @@ MAVLinkLogManager::MAVLinkLogManager(QGCApplication* app, QGCToolbox* toolbox)
 //-----------------------------------------------------------------------------
 MAVLinkLogManager::~MAVLinkLogManager()
 {
+    qDebug() << "delete _toolBox 9 ~MAVLinkLogManager()";
     _logFiles.clear();
 }
 

@@ -1,4 +1,4 @@
-pragma Singleton
+﻿pragma Singleton
 
 import QtQuick          2.12
 import QtQuick.Controls 1.2
@@ -112,7 +112,7 @@ Item {
     */
     Connections {
         target: QGroundControl.settingsManager.appSettings.appFontPointSize
-        onValueChanged: {
+        function onValueChanged() {
             _setBasePointSize(QGroundControl.settingsManager.appSettings.appFontPointSize.value)
         }
     }

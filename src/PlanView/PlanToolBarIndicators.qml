@@ -28,7 +28,7 @@ Item {
     property var    _controllerDirty:           _controllerValid ? _planMasterController.dirty : false
     property var    _controllerSyncInProgress:  _controllerValid ? _planMasterController.syncInProgress : false
 
-    property bool   _currentMissionItemValid:   _currentMissionItem && _currentMissionItem !== undefined && _currentMissionItem !== null
+    property bool   _currentMissionItemValid:   false   //_currentMissionItem && _currentMissionItem !== undefined && _currentMissionItem !== null
     property bool   _curreItemIsFlyThrough:     _currentMissionItemValid && _currentMissionItem.specifiesCoordinate && !_currentMissionItem.isStandaloneCoordinate
     property bool   _currentItemIsVTOLTakeoff:  _currentMissionItemValid && _currentMissionItem.command == 84
     property bool   _missionValid:              missionItems !== undefined
@@ -82,7 +82,7 @@ Item {
     // Progress bar
     Connections {
         target: _controllerValid ? _planMasterController.missionController : null
-        onProgressPctChanged: {
+        function onProgressPctChanged() {
             if (_controllerProgressPct === 1) {
                 missionStats.visible = false
                 uploadCompleteText.visible = true
@@ -249,9 +249,9 @@ Item {
                 font.pointSize:     ScreenTools.smallFontPointSize
             }
 
-            QGCLabel { text: qsTr("largeBankInfoslCapacity:"); font.pointSize: _dataFontSize; }
+            QGCLabel { text: qsTr("largeBankInfoSlotCapacity:"); font.pointSize: _dataFontSize; }
             QGCLabel {
-                text:                   _missionController.largeBankInfoslCapacity
+                text:                   _missionController.largeBankInfoSlotCapacity
                 font.pointSize:         _dataFontSize
                 Layout.minimumWidth:    _mediumValueWidth
             }
@@ -272,9 +272,9 @@ Item {
                 Layout.minimumWidth:    _smallValueWidth
             }
 
-            QGCLabel { text: qsTr("smallBankInfoslCapacity:"); font.pointSize: _dataFontSize; }
+            QGCLabel { text: qsTr("smallBankInfoSlotCapacity:"); font.pointSize: _dataFontSize; }
             QGCLabel {
-                text:                   _missionController.smallBankInfoslCapacity
+                text:                   _missionController.smallBankInfoSlotCapacity
                 font.pointSize:         _dataFontSize
                 Layout.minimumWidth:    _smallValueWidth
             }
@@ -344,7 +344,7 @@ Item {
 
         Connections {
             target:                 QGroundControl.multiVehicleManager
-            onActiveVehicleChanged: largeProgressBar._userHide = false
+            function onActiveVehicleChanged() { largeProgressBar._userHide = false }
         }
 
         Rectangle {

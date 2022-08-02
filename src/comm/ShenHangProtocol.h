@@ -45,7 +45,7 @@ struct ShenHangProtocolStatus {
     uint8_t currentSentSequence;       ///< Sequence number of last packet sent
     uint16_t packetReceivedSuccessCount;///< Received packets
     uint16_t packetReceivedDropCount;   ///< Number of packet drops
-    uint8_t bufferReceived[256];        /// 接收数据缓冲区
+    uint8_t bufferReceived[512];        /// 接收数据缓冲区
     int32_t receivedBufferLength;
 };
 
@@ -83,7 +83,7 @@ public:
         return &shenHangProtocolStatusBuffer[chan];
     }
 
-    uint8_t CaculateCrc8(uint8_t buf[], uint16_t len);
+    static uint8_t CaculateCrc8(uint8_t buf[], uint16_t len);
     /**
      * @brief Decode 从接收的数据中解析消息
      * @param bufferRsv
@@ -152,12 +152,9 @@ public slots:
     void loadSettings();
     /** @brief Store protocol settings */
     void storeSettings();
-    
+
     /// @brief Deletes any log files which are in the temp directory
     static void deleteTempLogFiles(void);
-    
-    /// Checks for lost log files
-    void checkForLostLogFiles(void);
 
 protected:
     bool        m_enable_version_check;                         ///< Enable checking of version match of MAV and QGC

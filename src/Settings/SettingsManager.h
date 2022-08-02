@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -11,7 +11,6 @@
 #define SettingsManager_H
 
 #include "QGCLoggingCategory.h"
-#include "Joystick.h"
 #include "MultiVehicleManager.h"
 #include "QGCToolbox.h"
 #include "AppSettings.h"
@@ -24,9 +23,7 @@
 #include "PlanViewSettings.h"
 #include "BrandImageSettings.h"
 #include "OfflineMapsSettings.h"
-#include "APMMavlinkStreamRateSettings.h"
 #include "FirmwareUpgradeSettings.h"
-#include "ADSBVehicleManagerSettings.h"
 #if defined(QGC_AIRMAP_ENABLED)
 #include "AirMapSettings.h"
 #endif
@@ -54,10 +51,7 @@ public:
     Q_PROPERTY(QObject* brandImageSettings              READ brandImageSettings             CONSTANT)
     Q_PROPERTY(QObject* offlineMapsSettings             READ offlineMapsSettings            CONSTANT)
     Q_PROPERTY(QObject* firmwareUpgradeSettings         READ firmwareUpgradeSettings        CONSTANT)
-    Q_PROPERTY(QObject* adsbVehicleManagerSettings      READ adsbVehicleManagerSettings     CONSTANT)
-#if !defined(NO_ARDUPILOT_DIALECT)
-    Q_PROPERTY(QObject* apmMavlinkStreamRateSettings    READ apmMavlinkStreamRateSettings   CONSTANT)
-#endif
+
     // Override from QGCTool
     virtual void setToolbox(QGCToolbox *toolbox);
 
@@ -75,10 +69,6 @@ public:
     BrandImageSettings*             brandImageSettings          (void) { return _brandImageSettings; }
     OfflineMapsSettings*            offlineMapsSettings         (void) { return _offlineMapsSettings; }
     FirmwareUpgradeSettings*        firmwareUpgradeSettings     (void) { return _firmwareUpgradeSettings; }
-    ADSBVehicleManagerSettings*     adsbVehicleManagerSettings  (void) { return _adsbVehicleManagerSettings; }
-#if !defined(NO_ARDUPILOT_DIALECT)
-    APMMavlinkStreamRateSettings*   apmMavlinkStreamRateSettings(void) { return _apmMavlinkStreamRateSettings; }
-#endif
 private:
 #if defined(QGC_AIRMAP_ENABLED)
     AirMapSettings*         _airMapSettings;
@@ -94,10 +84,6 @@ private:
     BrandImageSettings*             _brandImageSettings;
     OfflineMapsSettings*            _offlineMapsSettings;
     FirmwareUpgradeSettings*        _firmwareUpgradeSettings;
-    ADSBVehicleManagerSettings*     _adsbVehicleManagerSettings;
-#if !defined(NO_ARDUPILOT_DIALECT)
-    APMMavlinkStreamRateSettings*   _apmMavlinkStreamRateSettings;
-#endif
 };
 
 #endif

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -268,16 +268,16 @@ Item {
 
     Connections {
         target:                     missionController
-        onResumeMissionUploadFail:  confirmAction(actionResumeMissionUploadFail)
+        function onResumeMissionUploadFail() { confirmAction(actionResumeMissionUploadFail) }
     }
 
     Connections {
         target:                             mainWindow
-        onArmVehicleRequest:                armVehicleRequest()
-        onForceArmVehicleRequest:           forceArmVehicleRequest()
-        onDisarmVehicleRequest:             disarmVehicleRequest()
-        onVtolTransitionToFwdFlightRequest: vtolTransitionToFwdFlightRequest()
-        onVtolTransitionToMRFlightRequest:  vtolTransitionToMRFlightRequest()
+        function onArmVehicleRequest()                  { armVehicleRequest() }
+        function onForceArmVehicleRequest()             { forceArmVehicleRequest() }
+        function onDisarmVehicleRequest()               { disarmVehicleRequest() }
+        function onVtolTransitionToFwdFlightRequest()   { vtolTransitionToFwdFlightRequest() }
+        function onVtolTransitionToMRFlightRequest()    { vtolTransitionToMRFlightRequest() }
     }
 
     function armVehicleRequest() {

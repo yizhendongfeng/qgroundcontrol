@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -97,7 +97,7 @@ Drawer {
 
     Connections {
         target: _dialogComponentLoader.item
-        onHideDialog: {
+        function onHideDialog() {
             Qt.inputMethod.hide()
             close()
         }

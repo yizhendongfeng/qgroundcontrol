@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -146,13 +146,6 @@ Rectangle {
                         }
                     }
 
-                    QGCCheckBox {
-                        text:       qsTr("Only accept MAVs with same protocol version")
-                        checked:    QGroundControl.isVersionCheckEnabled
-                        onClicked: {
-                            QGroundControl.isVersionCheckEnabled = checked
-                        }
-                    }
 
                     FactCheckBox {
                         id:         mavlinkForwardingChecked

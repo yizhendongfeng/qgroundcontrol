@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -43,11 +43,11 @@ Item {
 
     Connections {
         target:                 window
-        onXChanged:             if(_enabled) saveSettingsTimer.restart()
-        onYChanged:             if(_enabled) saveSettingsTimer.restart()
-        onWidthChanged:         if(_enabled) saveSettingsTimer.restart()
-        onHeightChanged:        if(_enabled) saveSettingsTimer.restart()
-        onVisibilityChanged:    if(_enabled) saveSettingsTimer.restart()
+        function onXChanged()           { if(_enabled) saveSettingsTimer.restart() }
+        function onYChanged()           { if(_enabled) saveSettingsTimer.restart() }
+        function onWidthChanged()       { if(_enabled) saveSettingsTimer.restart() }
+        function onHeightChanged()      { if(_enabled) saveSettingsTimer.restart() }
+        function onVisibilityChanged()  { if(_enabled) saveSettingsTimer.restart() }
     }
 
     Timer {

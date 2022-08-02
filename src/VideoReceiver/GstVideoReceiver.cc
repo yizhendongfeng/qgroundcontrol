@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -69,6 +69,7 @@ GstVideoReceiver::~GstVideoReceiver(void)
 void
 GstVideoReceiver::start(const QString& uri, unsigned timeout, int buffer)
 {
+    qCDebug(VideoReceiverLog) << "GstVideoReceiver::start" << uri;
     if (_needDispatch()) {
         QString cachedUri = uri;
         _slotHandler.dispatch([this, cachedUri, timeout, buffer]() {

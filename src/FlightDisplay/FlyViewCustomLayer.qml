@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -18,8 +18,6 @@ import QtQuick.Window           2.2
 import QtQml.Models             2.1
 
 import QGroundControl               1.0
-import QGroundControl.Airspace      1.0
-import QGroundControl.Airmap        1.0
 import QGroundControl.Controllers   1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.FactSystem    1.0

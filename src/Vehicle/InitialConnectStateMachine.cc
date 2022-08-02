@@ -19,13 +19,9 @@
 QGC_LOGGING_CATEGORY(InitialConnectStateMachineLog, "InitialConnectStateMachineLog")
 
 const StateMachine::StateFn InitialConnectStateMachine::_rgStates[] = {
-//    InitialConnectStateMachine::_stateRequestCapabilities,
-//    InitialConnectStateMachine::_stateRequestProtocolVersion,
-//    InitialConnectStateMachine::_stateRequestCompInfo,
-//    InitialConnectStateMachine::_stateRequestParameters,
-    InitialConnectStateMachine::_stateRequestMission,
+    InitialConnectStateMachine::_stateRequestParameters,
+//    InitialConnectStateMachine::_stateRequestMission,
 //    InitialConnectStateMachine::_stateRequestGeoFence,
-//    InitialConnectStateMachine::_stateRequestRallyPoints,
     InitialConnectStateMachine::_stateSignalInitialConnectComplete
 };
 
@@ -67,12 +63,12 @@ void InitialConnectStateMachine::_stateRequestCapabilities(StateMachine* stateMa
             connectMachine->advance();
         } else {
             qCDebug(InitialConnectStateMachineLog) << "Requesting capabilities";
-            vehicle->_waitForMavlinkMessage(_waitForAutopilotVersionResultHandler, connectMachine, MAVLINK_MSG_ID_AUTOPILOT_VERSION, 1000);
-            vehicle->sendMavCommandWithHandler(_capabilitiesCmdResultHandler,
-                                               connectMachine,
-                                               MAV_COMP_ID_AUTOPILOT1,
-                                               MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES,
-                                               1);                                      // Request firmware version
+//            vehicle->_waitForMavlinkMessage(_waitForAutopilotVersionResultHandler, connectMachine, MAVLINK_MSG_ID_AUTOPILOT_VERSION, 1000);
+//            vehicle->sendMavCommandWithHandler(_capabilitiesCmdResultHandler,
+//                                               connectMachine,
+//                                               MAV_COMP_ID_AUTOPILOT1,
+//                                               MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES,
+//                                               1);                                      // Request firmware version
         }
     }
 }
@@ -97,7 +93,7 @@ void InitialConnectStateMachine::_capabilitiesCmdResultHandler(void* resultHandl
 
         qCDebug(InitialConnectStateMachineLog) << "Setting no capabilities";
         vehicle->_setCapabilities(0);
-        vehicle->_waitForMavlinkMessageClear();
+//        vehicle->_waitForMavlinkMessageClear();
         connectMachine->advance();
     }
 }
@@ -128,7 +124,7 @@ void InitialConnectStateMachine::_waitForAutopilotVersionResultHandler(void* res
             minorVersion = (autopilotVersion.flight_sw_version >> (8*2)) & 0xFF;
             patchVersion = (autopilotVersion.flight_sw_version >> (8*1)) & 0xFF;
             versionType = (FIRMWARE_VERSION_TYPE)((autopilotVersion.flight_sw_version >> (8*0)) & 0xFF);
-            vehicle->setFirmwareVersion(majorVersion, minorVersion, patchVersion, versionType);
+//            vehicle->setFirmwareVersion(majorVersion, minorVersion, patchVersion, versionType);
         }
 
         if (vehicle->px4Firmware()) {
@@ -137,7 +133,7 @@ void InitialConnectStateMachine::_waitForAutopilotVersionResultHandler(void* res
             majorVersion = autopilotVersion.flight_custom_version[2];
             minorVersion = autopilotVersion.flight_custom_version[1];
             patchVersion = autopilotVersion.flight_custom_version[0];
-            vehicle->setFirmwareCustomVersion(majorVersion, minorVersion, patchVersion);
+//            vehicle->setFirmwareCustomVersion(majorVersion, minorVersion, patchVersion);
 
             // PX4 Firmware stores the first 16 characters of the git hash as binary, with the individual bytes in reverse order
             vehicle->_gitHash = "";
@@ -177,12 +173,12 @@ void InitialConnectStateMachine::_stateRequestProtocolVersion(StateMachine* stat
             connectMachine->advance();
         } else {
             qCDebug(InitialConnectStateMachineLog) << "_stateRequestProtocolVersion Requesting protocol version";
-            vehicle->_waitForMavlinkMessage(_waitForProtocolVersionResultHandler, connectMachine, MAVLINK_MSG_ID_PROTOCOL_VERSION, 1000);
-            vehicle->sendMavCommandWithHandler(_protocolVersionCmdResultHandler,
-                                               connectMachine,
-                                               MAV_COMP_ID_AUTOPILOT1,
-                                               MAV_CMD_REQUEST_PROTOCOL_VERSION,
-                                               1);                                      // Request protocol version
+//            vehicle->_waitForMavlinkMessage(_waitForProtocolVersionResultHandler, connectMachine, MAVLINK_MSG_ID_PROTOCOL_VERSION, 1000);
+//            vehicle->sendMavCommandWithHandler(_protocolVersionCmdResultHandler,
+//                                               connectMachine,
+//                                               MAV_COMP_ID_AUTOPILOT1,
+//                                               MAV_CMD_REQUEST_PROTOCOL_VERSION,
+//                                               1);                                      // Request protocol version
         }
     }
 }
@@ -209,7 +205,7 @@ void InitialConnectStateMachine::_protocolVersionCmdResultHandler(void* resultHa
         // _mavlinkProtocolRequestMaxProtoVersion stays at 0 to indicate unknown
         vehicle->_mavlinkProtocolRequestComplete = true;
         vehicle->_setMaxProtoVersionFromBothSources();
-        vehicle->_waitForMavlinkMessageClear();
+//        vehicle->_waitForMavlinkMessageClear();
     }
     connectMachine->advance();
 }
@@ -304,30 +300,6 @@ void InitialConnectStateMachine::_stateRequestGeoFence(StateMachine* stateMachin
             } else {
                 qCDebug(InitialConnectStateMachineLog) << "_stateRequestGeoFence: skipped due to no support";
                 vehicle->_firstGeoFenceLoadComplete();
-            }
-        }
-    }
-}
-
-void InitialConnectStateMachine::_stateRequestRallyPoints(StateMachine* stateMachine)
-{
-    InitialConnectStateMachine* connectMachine  = static_cast<InitialConnectStateMachine*>(stateMachine);
-    Vehicle*                    vehicle         = connectMachine->_vehicle;
-    SharedLinkInterfacePtr      sharedLink      = vehicle->vehicleLinkManager()->primaryLink().lock();
-
-    if (!sharedLink) {
-        qCDebug(InitialConnectStateMachineLog) << "_stateRequestRallyPoints: Skipping first rally point load request due to no primary link";
-        connectMachine->advance();
-    } else {
-        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isPX4Flow() || sharedLink->isLogReplay()) {
-            qCDebug(InitialConnectStateMachineLog) << "_stateRequestRallyPoints: Skipping first rally point load request due to link type";
-            vehicle->_firstRallyPointLoadComplete();
-        } else {
-            if (vehicle->_rallyPointManager->supported()) {
-                vehicle->_rallyPointManager->loadFromVehicle();
-            } else {
-                qCDebug(InitialConnectStateMachineLog) << "_stateRequestRallyPoints: skipping due to no support";
-                vehicle->_firstRallyPointLoadComplete();
             }
         }
     }

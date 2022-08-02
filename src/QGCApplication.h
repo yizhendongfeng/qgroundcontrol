@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -26,9 +26,7 @@
 #include "FlightMapSettings.h"
 #include "FirmwarePluginManager.h"
 #include "MultiVehicleManager.h"
-#include "JoystickManager.h"
 #include "AudioOutput.h"
-#include "UASMessageHandler.h"
 #include "FactSystem.h"
 #include "GPSRTKFactGroup.h"
 

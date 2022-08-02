@@ -39,6 +39,7 @@ QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app, QGCToolbox
 
 QGroundControlQmlGlobal::~QGroundControlQmlGlobal()
 {
+    qDebug() << "delete _toolBox 7 ~QGroundControlQmlGlobal()";
 }
 
 void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
@@ -49,15 +50,11 @@ void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)
     _multiVehicleManager    = toolbox->multiVehicleManager();
     _mapEngineManager       = toolbox->mapEngineManager();
     _qgcPositionManager     = toolbox->qgcPositionManager();
-    _missionCommandTree     = toolbox->missionCommandTree();
     _videoManager           = toolbox->videoManager();
-    _mavlinkLogManager      = toolbox->mavlinkLogManager();
     _corePlugin             = toolbox->corePlugin();
     _firmwarePluginManager  = toolbox->firmwarePluginManager();
     _settingsManager        = toolbox->settingsManager();
     _gpsRtkFactGroup        = qgcApp()->gpsRtkFactGroup();
-    _airspaceManager        = toolbox->airspaceManager();
-    _adsbVehicleManager     = toolbox->adsbVehicleManager();
     _globalPalette          = new QGCPalette(this);
 #if defined(QGC_ENABLE_PAIRING)
     _pairingManager         = toolbox->pairingManager();
@@ -98,87 +95,10 @@ bool QGroundControlQmlGlobal::loadBoolGlobalSetting (const QString& key, bool de
     return settings.value(key, defaultValue).toBool();
 }
 
-void QGroundControlQmlGlobal::startPX4MockLink(bool sendStatusText)
+void QGroundControlQmlGlobal::setShenHangSystemID(int id)
 {
-#ifdef QT_DEBUG
-    MockLink::startPX4MockLink(sendStatusText);
-#else
-    Q_UNUSED(sendStatusText);
-#endif
-}
-
-void QGroundControlQmlGlobal::startGenericMockLink(bool sendStatusText)
-{
-#ifdef QT_DEBUG
-    MockLink::startGenericMockLink(sendStatusText);
-#else
-    Q_UNUSED(sendStatusText);
-#endif
-}
-
-void QGroundControlQmlGlobal::startAPMArduCopterMockLink(bool sendStatusText)
-{
-#ifdef QT_DEBUG
-    MockLink::startAPMArduCopterMockLink(sendStatusText);
-#else
-    Q_UNUSED(sendStatusText);
-#endif
-}
-
-void QGroundControlQmlGlobal::startAPMArduPlaneMockLink(bool sendStatusText)
-{
-#ifdef QT_DEBUG
-    MockLink::startAPMArduPlaneMockLink(sendStatusText);
-#else
-    Q_UNUSED(sendStatusText);
-#endif
-}
-
-void QGroundControlQmlGlobal::startAPMArduSubMockLink(bool sendStatusText)
-{
-#ifdef QT_DEBUG
-    MockLink::startAPMArduSubMockLink(sendStatusText);
-#else
-    Q_UNUSED(sendStatusText);
-#endif
-}
-
-void QGroundControlQmlGlobal::startAPMArduRoverMockLink(bool sendStatusText)
-{
-#ifdef QT_DEBUG
-    MockLink::startAPMArduRoverMockLink(sendStatusText);
-#else
-    Q_UNUSED(sendStatusText);
-#endif
-}
-
-void QGroundControlQmlGlobal::stopOneMockLink(void)
-{
-#ifdef QT_DEBUG
-    QList<SharedLinkInterfacePtr> sharedLinks = _toolbox->linkManager()->links();
-
-    for (int i=0; i<sharedLinks.count(); i++) {
-        LinkInterface* link = sharedLinks[i].get();
-        MockLink* mockLink = qobject_cast<MockLink*>(link);
-        if (mockLink) {
-            mockLink->disconnect();
-            return;
-        }
-    }
-#endif
-}
-
-void QGroundControlQmlGlobal::setIsVersionCheckEnabled(bool enable)
-{
-    qgcApp()->toolbox()->mavlinkProtocol()->enableVersionCheck(enable);
-    emit isVersionCheckEnabledChanged(enable);
-}
-
-void QGroundControlQmlGlobal::setMavlinkSystemID(int id)
-{
-    qgcApp()->toolbox()->mavlinkProtocol()->setSystemId(id);
     qgcApp()->toolbox()->shenHangProtocol()->setSystemId(id);
-    emit mavlinkSystemIDChanged(id);
+    emit shenHangSystemIDChanged(id);
 }
 
 bool QGroundControlQmlGlobal::singleFirmwareSupport(void)

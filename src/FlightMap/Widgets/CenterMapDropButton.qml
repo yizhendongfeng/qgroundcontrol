@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -98,12 +98,12 @@ DropButton {
         if (homePosition.isValid) {
             coordList.push(homePosition)
         }
-        for (var i=1; i<missionController.visualItems.count; i++) {
-            var missionItem = missionController.visualItems.get(i)
-            if (missionItem.specifiesCoordinate && !missionItem.isStandaloneCoordinate) {
-                coordList.push(missionItem.coordinate)
-            }
-        }
+//        for (var i=1; i<missionController.visualItems.count; i++) {
+//            var missionItem = missionController.visualItems.get(i)
+//            if (missionItem.specifiesCoordinate && !missionItem.isStandaloneCoordinate) {
+//                coordList.push(missionItem.coordinate)
+//            }
+//        }
     }
 
     function fitMapViewportToMissionItems() {

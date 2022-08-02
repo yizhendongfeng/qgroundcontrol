@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -130,10 +130,10 @@ Item {
     }
 
     Connections {
-        target:             mapControl
-        onWidthChanged:     scaleTimer.restart()
-        onHeightChanged:    scaleTimer.restart()
-        onZoomLevelChanged: scaleTimer.restart()
+        target:  mapControl
+        function onWidthChanged()       { scaleTimer.restart() }
+        function onHeightChanged()      { scaleTimer.restart() }
+        function onZoomLevelChanged()   { scaleTimer.restart() }
     }
 
     Timer {

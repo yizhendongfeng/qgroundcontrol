@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -18,7 +18,7 @@
 //#include "MessageBoxTest.h"
 #include "MissionItemTest.h"
 #include "SimpleMissionItemTest.h"
-#include "SurveyComplexItemTest.h"
+//#include "SurveyComplexItemTest.h"
 #include "MissionControllerTest.h"
 #include "MissionManagerTest.h"
 //#include "RadioConfigTest.h"
@@ -39,51 +39,51 @@
 #include "AudioOutputTest.h"
 #include "StructureScanComplexItemTest.h"
 #include "QGCMapPolylineTest.h"
-#include "CorridorScanComplexItemTest.h"
-#include "TransectStyleComplexItemTest.h"
-#include "CameraCalcTest.h"
-#include "FWLandingPatternTest.h"
+//#include "CorridorScanComplexItemTest.h"
+//#include "TransectStyleComplexItemTest.h"
+//#include "CameraCalcTest.h"
+//#include "FWLandingPatternTest.h"
 #include "RequestMessageTest.h"
-#include "FTPManagerTest.h"
+//#include "FTPManagerTest.h"
 #include "MissionCommandTreeEditorTest.h"
 #include "VehicleLinkManagerTest.h"
 #include "LandingComplexItemTest.h"
 
-UT_REGISTER_TEST(FactSystemTestGeneric)
-UT_REGISTER_TEST(FactSystemTestPX4)
+//UT_REGISTER_TEST(FactSystemTestGeneric)
+//UT_REGISTER_TEST(FactSystemTestPX4)
 //UT_REGISTER_TEST(FileDialogTest)
-UT_REGISTER_TEST(GeoTest)
-UT_REGISTER_TEST(VehicleLinkManagerTest)
+//UT_REGISTER_TEST(GeoTest)
+//UT_REGISTER_TEST(VehicleLinkManagerTest)
 //UT_REGISTER_TEST(MessageBoxTest)
-UT_REGISTER_TEST(SendMavCommandWithSignallingTest)
-UT_REGISTER_TEST(SendMavCommandWithHandlerTest)
-UT_REGISTER_TEST(RequestMessageTest)
-UT_REGISTER_TEST(FTPManagerTest)
-UT_REGISTER_TEST(MissionItemTest)
-UT_REGISTER_TEST(SimpleMissionItemTest)
-UT_REGISTER_TEST(MissionControllerTest)
-UT_REGISTER_TEST(MissionManagerTest)
+//UT_REGISTER_TEST(SendMavCommandWithSignallingTest)
+//UT_REGISTER_TEST(SendMavCommandWithHandlerTest)
+//UT_REGISTER_TEST(RequestMessageTest)
+//UT_REGISTER_TEST(FTPManagerTest)
+//UT_REGISTER_TEST(MissionItemTest)
+//UT_REGISTER_TEST(SimpleMissionItemTest)
+//UT_REGISTER_TEST(MissionControllerTest)
+//UT_REGISTER_TEST(MissionManagerTest)
 //UT_REGISTER_TEST(RadioConfigTest)
 //UT_REGISTER_TEST(FileManagerTest)
-UT_REGISTER_TEST(ParameterManagerTest)
-UT_REGISTER_TEST(MissionCommandTreeTest)
+//UT_REGISTER_TEST(ParameterManagerTest)
+//UT_REGISTER_TEST(MissionCommandTreeTest)
 //UT_REGISTER_TEST(LogDownloadTest)
-UT_REGISTER_TEST(SurveyComplexItemTest)
-UT_REGISTER_TEST(CameraSectionTest)
-UT_REGISTER_TEST(SpeedSectionTest)
-UT_REGISTER_TEST(PlanMasterControllerTest)
-UT_REGISTER_TEST(MissionSettingsTest)
-UT_REGISTER_TEST(QGCMapPolygonTest)
-UT_REGISTER_TEST(AudioOutputTest)
-UT_REGISTER_TEST(StructureScanComplexItemTest)
-UT_REGISTER_TEST(CorridorScanComplexItemTest)
-UT_REGISTER_TEST(TransectStyleComplexItemTest)
-UT_REGISTER_TEST(QGCMapPolylineTest)
-UT_REGISTER_TEST(CameraCalcTest)
-UT_REGISTER_TEST(FWLandingPatternTest)
-UT_REGISTER_TEST(LandingComplexItemTest)
+//UT_REGISTER_TEST(SurveyComplexItemTest)
+//UT_REGISTER_TEST(CameraSectionTest)
+//UT_REGISTER_TEST(SpeedSectionTest)
+//UT_REGISTER_TEST(PlanMasterControllerTest)
+//UT_REGISTER_TEST(MissionSettingsTest)
+//UT_REGISTER_TEST(QGCMapPolygonTest)
+//UT_REGISTER_TEST(AudioOutputTest)
+//UT_REGISTER_TEST(StructureScanComplexItemTest)
+//UT_REGISTER_TEST(CorridorScanComplexItemTest)
+//UT_REGISTER_TEST(TransectStyleComplexItemTest)
+//UT_REGISTER_TEST(QGCMapPolylineTest)
+//UT_REGISTER_TEST(CameraCalcTest)
+//UT_REGISTER_TEST(FWLandingPatternTest)
+//UT_REGISTER_TEST(LandingComplexItemTest)
 
-UT_REGISTER_TEST_STANDALONE(MissionCommandTreeEditorTest)
+//UT_REGISTER_TEST_STANDALONE(MissionCommandTreeEditorTest)
 
 // List of unit test which are currently disabled.
 // If disabling a new test, include reason in comment.

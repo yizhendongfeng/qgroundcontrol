@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -26,8 +26,6 @@ static FirmwarePluginFactoryRegister* _instance = nullptr;
 const QString guided_mode_not_supported_by_vehicle = QObject::tr("Guided mode not supported by Vehicle.");
 
 QVariantList FirmwarePlugin::_cameraList;
-
-const QString FirmwarePlugin::px4FollowMeFlightMode(QObject::tr("Follow Me"));
 
 FirmwarePluginFactory::FirmwarePluginFactory(void)
 {
@@ -978,79 +976,9 @@ void FirmwarePlugin::_versionFileDownloadFinished(QString& remoteFile, QString& 
     }
 
     qCDebug(FirmwarePluginLog) << "Latest stable version = "  << version;
-
-    int currType = vehicle->firmwareVersionType();
-
-    // Check if lower version than stable or same version but different type
-    if (currType == FIRMWARE_VERSION_TYPE_OFFICIAL && vehicle->versionCompare(version) < 0) {
-        QString currentVersionNumber = QString("%1.%2.%3").arg(vehicle->firmwareMajorVersion())
-                .arg(vehicle->firmwareMinorVersion())
-                .arg(vehicle->firmwarePatchVersion());
-        qgcApp()->showAppMessage(tr("Vehicle is not running latest stable firmware! Running %1, latest stable is %2.").arg(currentVersionNumber, version));
-    }
-}
-
-int FirmwarePlugin::versionCompare(Vehicle* vehicle, int major, int minor, int patch)
-{
-    int currMajor = vehicle->firmwareMajorVersion();
-    int currMinor = vehicle->firmwareMinorVersion();
-    int currPatch = vehicle->firmwarePatchVersion();
-
-    if (currMajor == major && currMinor == minor && currPatch == patch) {
-        return 0;
-    }
-
-    if (currMajor > major
-       || (currMajor == major && currMinor > minor)
-       || (currMajor == major && currMinor == minor && currPatch > patch))
-    {
-        return 1;
-    }
-    return -1;
-}
-
-int FirmwarePlugin::versionCompare(Vehicle* vehicle, QString& compare)
-{
-    QStringList versionNumbers = compare.split(".");
-    if(versionNumbers.size() != 3) {
-        qCWarning(FirmwarePluginLog) << "Error parsing version number: wrong format";
-        return -1;
-    }
-    int major = versionNumbers[0].toInt();
-    int minor = versionNumbers[1].toInt();
-    int patch = versionNumbers[2].toInt();
-    return versionCompare(vehicle, major, minor, patch);
 }
 
 QString FirmwarePlugin::gotoFlightMode(void) const
 {
     return QString();
-}
-
-void FirmwarePlugin::sendGCSMotionReport(Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimationCapabilities)
-{
-    WeakLinkInterfacePtr weakLink = vehicle->vehicleLinkManager()->primaryLink();
-    if (!weakLink.expired()) {
-        MAVLinkProtocol*        mavlinkProtocol = qgcApp()->toolbox()->mavlinkProtocol();
-        mavlink_follow_target_t follow_target   = {};
-        SharedLinkInterfacePtr  sharedLink      = weakLink.lock();
-
-        follow_target.timestamp =           qgcApp()->msecsSinceBoot();
-        follow_target.est_capabilities =    estimationCapabilities;
-        follow_target.position_cov[0] =     static_cast<float>(motionReport.pos_std_dev[0]);
-        follow_target.position_cov[2] =     static_cast<float>(motionReport.pos_std_dev[2]);
-        follow_target.alt =                 static_cast<float>(motionReport.altMetersAMSL);
-        follow_target.lat =                 motionReport.lat_int;
-        follow_target.lon =                 motionReport.lon_int;
-        follow_target.vel[0] =              static_cast<float>(motionReport.vxMetersPerSec);
-        follow_target.vel[1] =              static_cast<float>(motionReport.vyMetersPerSec);
-
-        mavlink_message_t message;
-        mavlink_msg_follow_target_encode_chan(static_cast<uint8_t>(mavlinkProtocol->getSystemId()),
-                                              static_cast<uint8_t>(mavlinkProtocol->getComponentId()),
-                                              sharedLink->mavlinkChannel(),
-                                              &message,
-                                              &follow_target);
-        vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), message);
-    }
 }

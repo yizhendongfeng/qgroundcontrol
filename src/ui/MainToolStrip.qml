@@ -95,10 +95,7 @@ ToolStripColumn {
     }
     model: toolStripActionList.model
 
-
-
     //- ToolStrip DropPanel Components
-
     Component {
         id: centerMapDropPanel
 

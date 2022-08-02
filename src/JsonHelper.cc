@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -247,7 +247,7 @@ QStringList JsonHelper::_addDefaultLocKeys(QJsonObject& jsonObject)
     QString translateKeys;
     QString fileType = jsonObject[jsonFileTypeKey].toString();
     if (!fileType.isEmpty()) {
-        if (fileType == MissionCommandList::qgcFileType) {
+        if (fileType == "MavCmdInfo") {//MissionCommandList::qgcFileType
             if (jsonObject.contains(_translateKeysKey)) {
                 translateKeys = jsonObject[_translateKeysKey].toString();
             } else {

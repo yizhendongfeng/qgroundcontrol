@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -30,7 +30,7 @@ QGCImageProvider::QGCImageProvider(QGCApplication *app, QGCToolbox* toolbox)
 
 QGCImageProvider::~QGCImageProvider()
 {
-
+    qDebug() << "delete _toolBox 7 ~QGCImageProvider()";
 }
 
 void QGCImageProvider::setToolbox(QGCToolbox *toolbox)

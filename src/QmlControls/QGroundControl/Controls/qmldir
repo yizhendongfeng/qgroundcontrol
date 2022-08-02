@@ -37,6 +37,7 @@ MainWindowSavedState                    1.0 MainWindowSavedState.qml
 MAVLinkMessageButton                    1.0 MAVLinkMessageButton.qml
 MissionCommandDialog                    1.0 MissionCommandDialog.qml
 MissionItemEditor                       1.0 MissionItemEditor.qml
+ShenHangMissionItemEditor               1.0 ShenHangMissionItemEditor.qml
 MissionItemIndexLabel                   1.0 MissionItemIndexLabel.qml
 MissionItemMapVisual                    1.0 MissionItemMapVisual.qml
 MissionItemStatus                       1.0 MissionItemStatus.qml

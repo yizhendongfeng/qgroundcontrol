@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -34,7 +34,7 @@ QGCComboBox {
 
     Connections {
         target:         QGroundControl.multiVehicleManager.vehicles
-        onCountChanged:  _updateVehicleModel()
+        function onCountChanged() { _updateVehicleModel() }
     }
 
     Component.onCompleted:      _updateVehicleModel()

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -291,9 +291,9 @@ QGCCachedTileSet::_networkReplyFinished()
             qCDebug(QGCCachedTileSetLog) << "Tile fetched" << hash;
             QByteArray image = reply->readAll();
             QString type = getQGCMapEngine()->hashToType(hash);
-            if (type == "Airmap Elevation" ) {
-                image = TerrainTile::serializeFromAirMapJson(image);
-            }
+//            if (type == "Airmap Elevation" ) {
+//                image = TerrainTile::serializeFromAirMapJson(image);
+//            }
             QString format = getQGCMapEngine()->urlFactory()->getImageFormat(type, image);
             if(!format.isEmpty()) {
                 //-- Cache tile

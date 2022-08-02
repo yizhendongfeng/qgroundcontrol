@@ -9,19 +9,13 @@
 
 
 #include "ShenHangAutoPilotPlugin.h"
-#include "ShenHangAirframeLoader.h"
-#include "ShenHangAdvancedFlightModesController.h"
-#include "AirframeComponentController.h"
-#include "UAS.h"
+//#include "ShenHangAirframeLoader.h"
+//#include "ShenHangAdvancedFlightModesController.h"
+//#include "ShenHangAirframeComponentController.h"
 #include "FirmwarePlugin/ShenHang/ShenHangParameterMetaData.h"  // FIXME: Hack
 #include "FirmwarePlugin/ShenHang/ShenHangFirmwarePlugin.h"  // FIXME: Hack
 #include "QGCApplication.h"
-#include "FlightModesComponent.h"
-#include "ShenHangRadioComponent.h"
-#include "ShenHangTuningComponent.h"
-#include "PowerComponent.h"
-#include "SafetyComponent.h"
-#include "SensorsComponent.h"
+//#include "ShenHangFlightModesComponent.h"
 
 /// @file
 ///     @brief This is the AutoPilotPlugin implementatin for the MAV_AUTOPILOT_ShenHang type.
@@ -30,31 +24,24 @@
 ShenHangAutoPilotPlugin::ShenHangAutoPilotPlugin(Vehicle* vehicle, QObject* parent)
     : AutoPilotPlugin(vehicle, parent)
     , _incorrectParameterVersion(false)
-    , _airframeComponent(nullptr)
-    , _radioComponent(nullptr)
-    , _esp8266Component(nullptr)
-    , _flightModesComponent(nullptr)
-    , _sensorsComponent(nullptr)
-    , _safetyComponent(nullptr)
-    , _powerComponent(nullptr)
-    , _motorComponent(nullptr)
-    , _tuningComponent(nullptr)
-    , _syslinkComponent(nullptr)
+//    , _airframeComponent(nullptr)
+//    , _radioComponent(nullptr)
+//    , _flightModesComponent(nullptr)
 {
     if (!vehicle) {
         qWarning() << "Internal error";
         return;
     }
 
-    _airframeFacts = new ShenHangAirframeLoader(this, _vehicle->uas(), this);
-    Q_CHECK_PTR(_airframeFacts);
+//    _airframeFacts = new ShenHangAirframeLoader(this, this);
+//    Q_CHECK_PTR(_airframeFacts);
 
-    ShenHangAirframeLoader::loadAirframeMetaData();
+//    ShenHangAirframeLoader::loadAirframeMetaData();
 }
 
 ShenHangAutoPilotPlugin::~ShenHangAutoPilotPlugin()
 {
-    delete _airframeFacts;
+//    delete _airframeFacts;
 }
 
 const QVariantList& ShenHangAutoPilotPlugin::vehicleComponents(void)
@@ -95,27 +82,15 @@ const QVariantList& ShenHangAutoPilotPlugin::vehicleComponents(void)
 //                _components.append(QVariant::fromValue((VehicleComponent*)_tuningComponent));
 
                 //-- Is there support for cameras?
-                if(_vehicle->parameterManager()->parameterExists(_vehicle->id(), "TRIG_MODE")) {
-                    _cameraComponent = new CameraComponent(_vehicle, this);
-                    _cameraComponent->setupTriggerSignals();
-                    _components.append(QVariant::fromValue((VehicleComponent*)_cameraComponent));
-                }
-
-                //-- Is there an ESP8266 Connected?
-                if(_vehicle->parameterManager()->parameterExists(MAV_COMP_ID_UDP_BRIDGE, "SW_VER")) {
-                    _esp8266Component = new ESP8266Component(_vehicle, this);
-                    _esp8266Component->setupTriggerSignals();
-                    _components.append(QVariant::fromValue((VehicleComponent*)_esp8266Component));
-                }
+//                if(_vehicle->parameterManager()->parameterExists(_vehicle->id(), "TRIG_MODE")) {
+//                    _cameraComponent = new ShenHangCameraComponent(_vehicle, this);
+//                    _cameraComponent->setupTriggerSignals();
+//                    _components.append(QVariant::fromValue((VehicleComponent*)_cameraComponent));
+//                }
             } else {
                 qWarning() << "Call to vehicleCompenents prior to parametersReady";
             }
 
-            if(_vehicle->parameterManager()->parameterExists(_vehicle->id(), "SLNK_RADIO_CHAN")) {
-                _syslinkComponent = new SyslinkComponent(_vehicle, this);
-                _syslinkComponent->setupTriggerSignals();
-                _components.append(QVariant::fromValue((VehicleComponent*)_syslinkComponent));
-            }
         } else {
             qWarning() << "Internal error";
         }
@@ -138,40 +113,26 @@ void ShenHangAutoPilotPlugin::parametersReadyPreChecks(void)
 
 QString ShenHangAutoPilotPlugin::prerequisiteSetup(VehicleComponent* component) const
 {
-    bool requiresAirframeCheck = false;
+//    bool requiresAirframeCheck = false;
 
-    if (qobject_cast<const FlightModesComponent*>(component)) {
-        if (_vehicle->parameterManager()->getParameter(-1, "COM_RC_IN_MODE")->rawValue().toInt() == 1) {
-            // No RC input
-            return QString();
-        } else {
-            if (_airframeComponent && !_airframeComponent->setupComplete()) {
-                return _airframeComponent->name();
-            } else if (_radioComponent && !_radioComponent->setupComplete()) {
-                return _radioComponent->name();
-            } else if (_sensorsComponent && !_sensorsComponent->setupComplete()) {
-                return _sensorsComponent->name();
-            }
-        }
-    } else if (qobject_cast<const ShenHangRadioComponent*>(component)) {
-        if (_vehicle->parameterManager()->getParameter(-1, "COM_RC_IN_MODE")->rawValue().toInt() != 1) {
-            requiresAirframeCheck = true;
-        }
-    } else if (qobject_cast<const ShenHangTuningComponent*>(component)) {
-        requiresAirframeCheck = true;
-    } else if (qobject_cast<const PowerComponent*>(component)) {
-        requiresAirframeCheck = true;
-    } else if (qobject_cast<const SafetyComponent*>(component)) {
-        requiresAirframeCheck = true;
-    } else if (qobject_cast<const SensorsComponent*>(component)) {
-        requiresAirframeCheck = true;
-    }
+//    if (qobject_cast<const ShenHangFlightModesComponent*>(component)) {
+//        if (_vehicle->parameterManager()->getParameter(-1, "COM_RC_IN_MODE")->rawValue().toInt() == 1) {
+//            // No RC input
+//            return QString();
+//        } else {
+//            if (_airframeComponent && !_airframeComponent->setupComplete()) {
+//                return _airframeComponent->name();
+//            } else if (_radioComponent && !_radioComponent->setupComplete()) {
+//                return _radioComponent->name();
+//            }
+//        }
+//    }
 
-    if (requiresAirframeCheck) {
-        if (_airframeComponent && !_airframeComponent->setupComplete()) {
-            return _airframeComponent->name();
-        }
-    }
+//    if (requiresAirframeCheck) {
+//        if (_airframeComponent && !_airframeComponent->setupComplete()) {
+//            return _airframeComponent->name();
+//        }
+//    }
 
     return QString();
 }

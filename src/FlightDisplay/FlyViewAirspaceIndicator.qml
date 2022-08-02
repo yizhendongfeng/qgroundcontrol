@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -11,7 +11,6 @@ import QtQuick                  2.12
 import QtQuick.Controls         2.4
 
 import QGroundControl               1.0
-import QGroundControl.Airspace      1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.Palette       1.0
 import QGroundControl.ScreenTools   1.0

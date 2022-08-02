@@ -1,4 +1,4 @@
-import QtQuick          2.3
+﻿import QtQuick          2.3
 import QtQuick.Controls 1.2
 
 import QGroundControl.ScreenTools 1.0
@@ -40,7 +40,7 @@ Canvas {
     property real   _labelMargin:       2
     property real   _labelRadius:       _indicatorRadius + _labelMargin
     property string _label:             label.length > 1 ? label : ""
-    property string _index:             index === 0 || index === -1 ? label.charAt(0) : (showSequenceNumbers ? index : "")
+    property string _index:             index//index === 0 || index === -1 ? label.charAt(0) : (showSequenceNumbers ? index : "")
 
     onColorChanged:         requestPaint()
     onShowGimbalYawChanged: requestPaint()

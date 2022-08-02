@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -14,7 +14,6 @@
 #include "FirmwarePluginManager.h"
 #include "QGCApplication.h"
 #include "JsonHelper.h"
-#include "TerrainQuery.h"
 #include "TakeoffMissionItem.h"
 #include "PlanMasterController.h"
 #include "QGC.h"

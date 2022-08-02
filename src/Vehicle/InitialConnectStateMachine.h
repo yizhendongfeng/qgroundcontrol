@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -36,7 +36,6 @@ private:
     static void _stateRequestParameters                 (StateMachine* stateMachine);
     static void _stateRequestMission                    (StateMachine* stateMachine);
     static void _stateRequestGeoFence                   (StateMachine* stateMachine);
-    static void _stateRequestRallyPoints                (StateMachine* stateMachine);
     static void _stateSignalInitialConnectComplete      (StateMachine* stateMachine);
 
     static void _capabilitiesCmdResultHandler           (void* resultHandlerData, int compId, MAV_RESULT result, Vehicle::MavCmdResultFailureCode_t failureCode);

@@ -69,6 +69,7 @@ MAVLinkProtocol::MAVLinkProtocol(QGCApplication* app, QGCToolbox* toolbox)
 
 MAVLinkProtocol::~MAVLinkProtocol()
 {
+    qDebug() << "delete _toolBox 11 ~MAVLinkProtocol()";
     storeSettings();
     _closeLogFile();
 }

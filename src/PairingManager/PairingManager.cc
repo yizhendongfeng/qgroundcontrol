@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  *   (c) 2019 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -54,6 +54,7 @@ PairingManager::PairingManager(QGCApplication* app, QGCToolbox* toolbox)
 //-----------------------------------------------------------------------------
 PairingManager::~PairingManager()
 {
+    qDebug() << "delete _toolBox 6 ~PairingManager()";
 }
 
 //-----------------------------------------------------------------------------

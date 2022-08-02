@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -27,7 +27,7 @@ Rectangle {
     signal setCurrentSeqNum(int seqNum)
 
     property real _margins:             ScreenTools.defaultFontPixelWidth / 2
-    property var  _visualItems:         missionController.visualItems
+    property var  _visualItems:         null//missionController.visualItems
     property real _altRange:            _maxAMSLAltitude - _minAMSLAltitude
     property real _indicatorSpacing:    5
     property real _minAMSLAltitude:     isNaN(terrainProfile.minAMSLAlt) ? 0 : terrainProfile.minAMSLAlt
@@ -117,7 +117,7 @@ Rectangle {
                 missionController:  root.missionController
 
                 Repeater {
-                    model: missionController.visualItems
+                    model: 0 //missionController.visualItems
 
                     Item {
                         id:             topLevelItem

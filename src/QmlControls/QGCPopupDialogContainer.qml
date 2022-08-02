@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -158,7 +158,7 @@ Popup {
 
     Connections {
         target:         dialogComponentLoader.item
-        onHideDialog:   close()
+        function onHideDialog() { close() }
     }
 
     Rectangle {

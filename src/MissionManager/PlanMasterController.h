@@ -13,7 +13,6 @@
 
 #include "MissionController.h"
 #include "GeoFenceController.h"
-#include "RallyPointController.h"
 #include "Vehicle.h"
 #include "MultiVehicleManager.h"
 #include "QGCLoggingCategory.h"
@@ -40,7 +39,6 @@ public:
     Q_PROPERTY(Vehicle*                 managerVehicle          READ managerVehicle                         NOTIFY managerVehicleChanged)   ///< Either active vehicle or _controllerVehicle if no active vehicle
     Q_PROPERTY(MissionController*       missionController       READ missionController                      CONSTANT)
     Q_PROPERTY(GeoFenceController*      geoFenceController      READ geoFenceController                     CONSTANT)
-    Q_PROPERTY(RallyPointController*    rallyPointController    READ rallyPointController                   CONSTANT)
     Q_PROPERTY(bool                     offline                 READ offline                                NOTIFY offlineChanged)          ///< true: controller is not connected to an active vehicle
     Q_PROPERTY(bool                     containsItems           READ containsItems                          NOTIFY containsItemsChanged)    ///< true: Elemement is non-empty
     Q_PROPERTY(bool                     syncInProgress          READ syncInProgress                         NOTIFY syncInProgressChanged)   ///< true: Information is currently being saved/sent, false: no active save/send in progress
@@ -59,11 +57,6 @@ public:
     ///     @param deleteWhenSendCmplete The PlanMasterController object should be deleted after the first send is completed.
     Q_INVOKABLE void startStaticActiveVehicle(Vehicle* vehicle, bool deleteWhenSendCompleted = false);
 
-    /// Determines if the plan has all information needed to be saved or sent to the vehicle.
-    /// IMPORTANT NOTE: The return value is a VisualMissionItem::ReadForSaveState value. It is an int here to work around
-    /// a nightmare of circular header dependency problems.
-    Q_INVOKABLE int readyForSaveState(void) const { return _missionController.readyForSaveState(); }
-
     /// Replaces any current plan with the plan from the manager vehicle even if offline.
     Q_INVOKABLE void showPlanFromManagerVehicle(void);
 
@@ -77,7 +70,6 @@ public:
     Q_INVOKABLE void loadFromFile(const QString& filename);
     Q_INVOKABLE void saveToCurrent();
     Q_INVOKABLE void saveToFile(const QString& filename);
-    Q_INVOKABLE void saveToKml(const QString& filename);
     Q_INVOKABLE void removeAll(void);                       ///< Removes all from controller only, synce required to remove from vehicle
     Q_INVOKABLE void removeAllFromVehicle(void);            ///< Removes all from vehicle and controller
     Q_INVOKABLE bool removeSelectedFiles(QString fileName);
@@ -85,7 +77,6 @@ public:
 
     MissionController*      missionController(void)     { return &_missionController; }
     GeoFenceController*     geoFenceController(void)    { return &_geoFenceController; }
-    RallyPointController*   rallyPointController(void)  { return &_rallyPointController; }
 
     bool        offline         (void) const { return _offline; }
     bool        containsItems   (void) const;
@@ -146,7 +137,6 @@ private:
     bool                    _offline =                  true;
     MissionController       _missionController;
     GeoFenceController      _geoFenceController;
-    RallyPointController    _rallyPointController;
     bool                    _loadGeoFence =             false;
     bool                    _loadRallyPoints =          false;
     bool                    _sendGeoFence =             false;

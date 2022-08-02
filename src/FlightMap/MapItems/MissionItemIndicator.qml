@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -19,9 +19,7 @@ import QGroundControl.Vehicle       1.0
 MapQuickItem {
     id: _item
 
-    property var missionItem
-    property int sequenceNumber
-
+    property var itemWaypoint
     signal clicked
 
     anchorPoint.x:  sourceItem.anchorPointX
@@ -30,16 +28,16 @@ MapQuickItem {
     sourceItem:
         MissionItemIndexLabel {
             id:                 _label
-            checked:            _isCurrentItem
-            label:              missionItem.abbreviation
-            index:              missionItem.abbreviation.charAt(0) > 'A' && missionItem.abbreviation.charAt(0) < 'z' ? -1 : missionItem.sequenceNumber
-            gimbalYaw:          missionItem.missionGimbalYaw
-            vehicleYaw:         missionItem.missionVehicleYaw
-            showGimbalYaw:      !isNaN(missionItem.missionGimbalYaw)
+            checked:            _isCurrentWaypoint && _modePlanEdit
+//            label:              itemWaypoint.abbreviation
+            index:              itemWaypoint.indexWaypoint//itemWaypoint.abbreviation.charAt(0) > 'A' && itemWaypoint.abbreviation.charAt(0) < 'z' ? -1 : itemWaypoint.sequenceNumber
+//            gimbalYaw:          itemWaypoint.missionGimbalYaw
+//            vehicleYaw:         itemWaypoint.missionVehicleYaw
+//            showGimbalYaw:      !isNaN(itemWaypoint.missionGimbalYaw)
             highlightSelected:  true
             onClicked:          _item.clicked()
             opacity:            _item.opacity
 
-            property bool _isCurrentItem:   missionItem ? missionItem.isCurrentItem || missionItem.hasCurrentChildItem : false
+            property bool _isCurrentWaypoint:   itemWaypoint ? itemWaypoint.isCurrentWaypoint : false
         }
 }

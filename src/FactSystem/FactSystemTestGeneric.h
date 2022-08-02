@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -15,7 +15,6 @@
 #define FactSystemTestGeneric_H
 
 #include "FactSystemTestBase.h"
-#include "UASInterface.h"
 #include "AutoPilotPlugin.h"
 
 // Unit Test for Fact System on PX4 autopilot

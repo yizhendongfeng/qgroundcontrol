@@ -21,10 +21,8 @@
 #include "QGCLoggingCategory.h"
 
 class FirmwarePluginManager;
-class FollowMe;
-class JoystickManager;
 class QGCApplication;
-class MAVLinkProtocol;
+class ShenHangProtocol;
 
 Q_DECLARE_LOGGING_CATEGORY(MultiVehicleManagerLog)
 
@@ -50,7 +48,6 @@ public:
 
     Q_INVOKABLE Vehicle* getVehicleById(int vehicleId);
 
-    UAS* activeUas(void) { return _activeVehicle ? _activeVehicle->uas() : nullptr; }
 
     // Property accessors
 
@@ -112,8 +109,6 @@ private:
     QmlObjectListModel  _vehicles;
 
     FirmwarePluginManager*      _firmwarePluginManager;
-    JoystickManager*            _joystickManager;
-    MAVLinkProtocol*            _mavlinkProtocol;
     ShenHangProtocol*           _shenHangProtocol;
     QGeoCoordinate              _lastKnownLocation;
 

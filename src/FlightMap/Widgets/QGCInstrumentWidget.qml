@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -57,7 +57,7 @@ ColumnLayout {
         }
     }
 
-    TerrainProgress {
-        Layout.fillWidth: true
-    }
+//    TerrainProgress {
+//        Layout.fillWidth: true
+//    }
 }

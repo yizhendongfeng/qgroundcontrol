@@ -1,4 +1,4 @@
-/*!
+﻿/*!
  * @file
  *   @brief Camera Controller
  *   @author Gus Grubba <gus@auterion.com>
@@ -37,7 +37,6 @@ QGCCameraParamIO::QGCCameraParamIO(QGCCameraControl *control, Fact* fact, Vehicl
     connect(&_paramWriteTimer,   &QTimer::timeout, this, &QGCCameraParamIO::_paramWriteTimeout);
     connect(_fact, &Fact::rawValueChanged, this, &QGCCameraParamIO::_factChanged);
     connect(_fact, &Fact::_containerRawValueChanged, this, &QGCCameraParamIO::_containerRawValueChanged);
-    _pMavlink = qgcApp()->toolbox()->mavlinkProtocol();
     //-- TODO: Even though we don't use anything larger than 32-bit, this should
     //   probably be updated.
     switch (_fact->type()) {
@@ -138,7 +137,7 @@ QGCCameraParamIO::_sendParameter()
         mavlink_param_ext_set_t p;
         memset(&p, 0, sizeof(mavlink_param_ext_set_t));
         param_ext_union_t   union_value;
-        mavlink_message_t   msg;
+//        mavlink_message_t   msg;
         FactMetaData::ValueType_t factType = _fact->type();
         p.param_type = _mavParamType;
         switch (factType) {
@@ -185,17 +184,17 @@ QGCCameraParamIO::_sendParameter()
             union_value.param_int32 = static_cast<int32_t>(_fact->rawValue().toInt());
             break;
         }
-        memcpy(&p.param_value[0], &union_value.bytes[0], MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN);
-        p.target_system     = static_cast<uint8_t>(_vehicle->id());
-        p.target_component  = static_cast<uint8_t>(_control->compID());
-        strncpy(p.param_id, _fact->name().toStdString().c_str(), MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_ID_LEN);
-        mavlink_msg_param_ext_set_encode_chan(
-                    static_cast<uint8_t>(_pMavlink->getSystemId()),
-                    static_cast<uint8_t>(_pMavlink->getComponentId()),
-                    sharedLink->mavlinkChannel(),
-                    &msg,
-                    &p);
-        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
+//        memcpy(&p.param_value[0], &union_value.bytes[0], MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN);
+//        p.target_system     = static_cast<uint8_t>(_vehicle->id());
+//        p.target_component  = static_cast<uint8_t>(_control->compID());
+//        strncpy(p.param_id, _fact->name().toStdString().c_str(), MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_ID_LEN);
+//        mavlink_msg_param_ext_set_encode_chan(
+//                    static_cast<uint8_t>(_pMavlink->getSystemId()),
+//                    static_cast<uint8_t>(_pMavlink->getComponentId()),
+//                    sharedLink->mavlinkChannel(),
+//                    &msg,
+//                    &p);
+//        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
     }
     _paramWriteTimer.start();
 }
@@ -363,18 +362,18 @@ QGCCameraParamIO::paramRequest(bool reset)
         char param_id[MAVLINK_MSG_PARAM_EXT_REQUEST_READ_FIELD_PARAM_ID_LEN + 1];
         memset(param_id, 0, sizeof(param_id));
         strncpy(param_id, _fact->name().toStdString().c_str(), MAVLINK_MSG_PARAM_EXT_REQUEST_READ_FIELD_PARAM_ID_LEN);
-        mavlink_message_t msg;
-        mavlink_msg_param_ext_request_read_pack_chan(
-                    static_cast<uint8_t>(_pMavlink->getSystemId()),
-                    static_cast<uint8_t>(_pMavlink->getComponentId()),
-                    sharedLink->mavlinkChannel(),
-                    &msg,
-                    static_cast<uint8_t>(_vehicle->id()),
-                    static_cast<uint8_t>(_control->compID()),
-                    param_id,
-                    -1,
-                    0);                                                 // trimmed messages = false
-        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
+//        mavlink_message_t msg;
+//        mavlink_msg_param_ext_request_read_pack_chan(
+//                    static_cast<uint8_t>(_pMavlink->getSystemId()),
+//                    static_cast<uint8_t>(_pMavlink->getComponentId()),
+//                    sharedLink->mavlinkChannel(),
+//                    &msg,
+//                    static_cast<uint8_t>(_vehicle->id()),
+//                    static_cast<uint8_t>(_control->compID()),
+//                    param_id,
+//                    -1,
+//                    0);                                                 // trimmed messages = false
+//        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
     }
     _paramRequestTimer.start();
 }

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -65,6 +65,7 @@ VideoManager::VideoManager(QGCApplication* app, QGCToolbox* toolbox)
 //-----------------------------------------------------------------------------
 VideoManager::~VideoManager()
 {
+    qCDebug(VideoManagerLog) << "delete _toolBox 10 ~VideoManager()";
     for (int i = 0; i < 2; i++) {
         if (_videoReceiver[i] != nullptr) {
             delete _videoReceiver[i];
@@ -119,10 +120,12 @@ VideoManager::setToolbox(QGCToolbox *toolbox)
 
     connect(_videoReceiver[0], &VideoReceiver::streamingChanged, this, [this](bool active){
         _streaming = active;
+        qCDebug(VideoManagerLog) << "_streaming" << _streaming;
         emit streamingChanged();
     });
 
     connect(_videoReceiver[0], &VideoReceiver::onStartComplete, this, [this](VideoReceiver::STATUS status) {
+        qCDebug(VideoManagerLog) << "_videoReceiver[0] VideoReceiver::onStartComplete status" << status;
         if (status == VideoReceiver::STATUS_OK) {
             _videoStarted[0] = true;
             if (_videoSink[0] != nullptr) {
@@ -312,12 +315,15 @@ VideoManager::startRecording(const QString& videoFile)
             + ".";
     QString videoFile2 = _videoFile + "2." + ext;
     _videoFile += ext;
+    qCDebug(VideoManagerLog) << "startRecording _videoReceiver[0]" << _videoReceiver[0] << _videoStarted[0];
 
     if (_videoReceiver[0] && _videoStarted[0]) {
         _videoReceiver[0]->startRecording(_videoFile, fileFormat);
+        qCDebug(VideoManagerLog) << "_videoReceiver[0]" <<  _videoFile + fileFormat;
     }
     if (_videoReceiver[1] && _videoStarted[1]) {
         _videoReceiver[1]->startRecording(videoFile2, fileFormat);
+        qCDebug(VideoManagerLog) << "_videoReceiver[1]" <<  videoFile2 + fileFormat;
     }
 
 #else
@@ -576,7 +582,7 @@ VideoManager::_initVideo()
     }
 
     QQuickItem* widget = root->findChild<QQuickItem*>("videoContent");
-
+    qCDebug(VideoManagerLog) << "VideoManager::_initVideo() widget" << widget << "_videoReceiver[0]" << _videoReceiver[0];
     if (widget != nullptr && _videoReceiver[0] != nullptr) {
         _videoSink[0] = qgcApp()->toolbox()->corePlugin()->createVideoSink(this, widget);
         if (_videoSink[0] != nullptr) {

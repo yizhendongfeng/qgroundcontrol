@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -13,7 +13,6 @@
 #include <QGeoCoordinate>
 #include <QTimer>
 
-#include "TerrainQuery.h"
 #include "QGCLoggingCategory.h"
 
 Q_DECLARE_LOGGING_CATEGORY(FlightPathSegmentLog)
@@ -78,8 +77,6 @@ signals:
     void terrainCollisionChanged    (bool terrainCollision);
 
 private slots:
-    void _sendTerrainPathQuery      (void);
-    void _terrainDataReceived       (bool success, const TerrainPathQuery::PathHeightInfo_t& pathHeightInfo);
     void _updateTotalDistance       (void);
     void _updateTerrainCollision    (void);
 
@@ -92,7 +89,6 @@ private:
     bool                _terrainCollision =             false;
     bool                _specialVisual =                false;
     QTimer              _delayedTerrainPathQueryTimer;
-    TerrainPathQuery*   _currentTerrainPathQuery =      nullptr;
     QVariantList        _amslTerrainHeights;
     double              _distanceBetween =              0;
     double              _finalDistanceBetween =         0;

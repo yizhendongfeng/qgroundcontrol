@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -97,17 +97,27 @@ Item {
     }
 
     function addMissionItemCoordsForFit(coordList) {
-        for (var i = 1; i < _missionController.visualItems.count; i++) {
-            var missionItem = _missionController.visualItems.get(i)
-            if (missionItem.specifiesCoordinate && !missionItem.isStandaloneCoordinate) {
-                if(missionItem.boundingCube.isValid()) {
-                    coordList.push(missionItem.boundingCube.pointNW)
-                    coordList.push(missionItem.boundingCube.pointSE)
-                } else {
-                    coordList.push(missionItem.coordinate)
-                }
-            }
-        }
+//        for (var i = 1; i < _missionController.visualItems.count; i++) {
+//            var missionItem = _missionController.visualItems.get(i)
+//            if (missionItem.specifiesCoordinate && !missionItem.isStandaloneCoordinate) {
+//                if(missionItem.boundingCube.isValid()) {
+//                    coordList.push(missionItem.boundingCube.pointNW)
+//                    coordList.push(missionItem.boundingCube.pointSE)
+//                } else {
+//                    coordList.push(missionItem.coordinate)
+//                }
+//            }
+//        }
+//        console.log("_missionController.itemsBank.count:", _missionController.itemsBank.count)
+
+//        if (_missionController.itemsBank <= 0)
+//            return
+//        for (var i = 0; i < _missionController.itemsBank.count; i++) {
+//            var itemBank = _missionController.itemsBank.get(i)
+//            for (var j = 0; j < itemBank.itemsWaypoint.count; j++) {
+//                coordList.push(itemBank.itemsWaypoint.get(j).coordinate)
+//            }
+//        }
     }
 
     function fitMapViewportToMissionItems() {

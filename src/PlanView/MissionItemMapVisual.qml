@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -23,19 +23,18 @@ Item {
 
     property var map        ///< Map control to place item in
     property var vehicle    ///< Vehicle associated with this item
-    property var interactive: true    ///< Vehicle associated with this item
+    property bool interactive: true    ///< Vehicle associated with this item
 
-    signal clicked(int sequenceNumber)
+    signal clicked(int indexBank, int indexWaypoint)
 
     property var _visualItem
-
     Component.onCompleted: {
         if (object.mapVisualQML) {
             var component = Qt.createComponent(object.mapVisualQML)
             if (component.status === Component.Error) {
                 console.log("Error loading Qml: ", object.mapVisualQML, component.errorString())
             }
-            _visualItem = component.createObject(map, { "map": _root.map, vehicle: _root.vehicle, 'opacity': Qt.binding(function() { return _root.opacity }), 'interactive': Qt.binding(function() { return _root.interactive }) })
+            _visualItem = component.createObject(map, { "map": _root.map, vehicle: _root.vehicle, 'opacity': Qt.binding(function() { return _root.opacity }), 'interactive': Qt.binding(function() { return _root.interactive }), 'enabled': Qt.binding(function() { return _root.enabled }) })
             _visualItem.clicked.connect(_root.clicked)
         }
     }

@@ -12,7 +12,7 @@ Rectangle {
     anchors.left:  parent.left
     anchors.top: parent.top
     color: qgcPal.windowShade
-    property var borderColor: qgcPal.colorGrey
+    property color _splitLineColor: "#707070"
     DeadMouseArea {
         anchors.fill: parent
     }
@@ -20,7 +20,7 @@ Rectangle {
     Rectangle {
         id: leftBorder
         width: 1
-        color: borderColor
+        color: _splitLineColor
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.left: parent.left
@@ -28,7 +28,7 @@ Rectangle {
     Rectangle {
         id: topBorder
         height: 1
-        color: borderColor
+        color: _splitLineColor
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right

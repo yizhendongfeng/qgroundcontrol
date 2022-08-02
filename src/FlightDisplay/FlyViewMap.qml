@@ -14,7 +14,6 @@ import QtPositioning                5.3
 import QtQuick.Dialogs              1.2
 
 import QGroundControl               1.0
-import QGroundControl.Airspace      1.0
 import QGroundControl.Controllers   1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.FlightDisplay 1.0
@@ -110,10 +109,10 @@ FlightMap {
     Connections {
         target: gesture
 
-        onPanStarted:       _disableVehicleTracking = true
-        onFlickStarted:     _disableVehicleTracking = true
-        onPanFinished:      panRecenterTimer.restart()
-        onFlickFinished:    panRecenterTimer.restart()
+        function onPanStarted()     { _disableVehicleTracking = true }
+        function onFlickStarted()   { _disableVehicleTracking = true }
+        function onPanFinished()    { panRecenterTimer.restart() }
+        function onFlickFinished()  { panRecenterTimer.restart() }
     }
 
     function pointInRect(point, rect) {
@@ -209,12 +208,12 @@ FlightMap {
     Connections {
         target:                 _missionController
         ignoreUnknownSignals:   true
-        onNewItemsFromVehicle: {
-            var visualItems = _missionController.visualItems
-            if (visualItems && visualItems.count !== 1) {
-                mapFitFunctions.fitMapViewportToMissionItems()
-                firstVehiclePositionReceived = true
-            }
+        function onNewItemsFromVehicle() {
+//            var itemsBank = _missionController.itemsBank
+//            if (itemsBank && itemsBank.count !== 0) {
+//                mapFitFunctions.fitMapViewportToMissionItems()
+//                firstVehiclePositionReceived = true
+//            }
         }
     }
 
@@ -235,14 +234,16 @@ FlightMap {
 
         Connections {
             target:                 QGroundControl.multiVehicleManager
-            onActiveVehicleChanged: trajectoryPolyline.path = _activeVehicle ? _activeVehicle.trajectoryPoints.list() : []
+            function onActiveVehicleChanged(activeVehicle) {
+                trajectoryPolyline.path = _activeVehicle ? _activeVehicle.trajectoryPoints.list() : []
+            }
         }
 
         Connections {
             target:                 _activeVehicle ? _activeVehicle.trajectoryPoints : null
-            onPointAdded:           trajectoryPolyline.addCoordinate(coordinate)
-            onUpdateLastPoint:      trajectoryPolyline.replaceCoordinate(trajectoryPolyline.pathLength() - 1, coordinate)
-            onPointsCleared:        trajectoryPolyline.path = []
+            function onPointAdded()         { trajectoryPolyline.addCoordinate(coordinate) }
+            function onUpdateLastPoint()    { trajectoryPolyline.replaceCoordinate(trajectoryPolyline.pathLength() - 1, coordinate) }
+            function onPointsCleared()      { trajectoryPolyline.path = [] }
         }
     }
 
@@ -258,28 +259,15 @@ FlightMap {
         }
     }
     // Add distance sensor view
-    MapItemView{
-        model: QGroundControl.multiVehicleManager.vehicles
-        delegate: ProximityRadarMapView {
-            vehicle:        object
-            coordinate:     object.coordinate
-            map:            _root
-            z:              QGroundControl.zOrderVehicles
-        }
-    }
-    // Add ADSB vehicles to the map
-    MapItemView {
-        model: QGroundControl.adsbVehicleManager.adsbVehicles
-        delegate: VehicleMapItem {
-            coordinate:     object.coordinate
-            altitude:       object.altitude
-            callsign:       object.callsign
-            heading:        object.heading
-            alert:          object.alert
-            map:            _root
-            z:              QGroundControl.zOrderVehicles
-        }
-    }
+//    MapItemView{
+//        model: QGroundControl.multiVehicleManager.vehicles
+//        delegate: ProximityRadarMapView {
+//            vehicle:        object
+//            coordinate:     object.coordinate
+//            map:            _root
+//            z:              QGroundControl.zOrderVehicles
+//        }
+//    }
 
     // Add the items associated with each vehicles flight plan to the map
     Repeater {
@@ -325,24 +313,6 @@ FlightMap {
         homePosition:           _activeVehicle && _activeVehicle.homePosition.isValid ? _activeVehicle.homePosition :  QtPositioning.coordinate()
     }
 
-    // Rally points on map
-    MapItemView {
-        model: _rallyPointController.points
-
-        delegate: MapQuickItem {
-            id:             itemIndicator
-            anchorPoint.x:  sourceItem.anchorPointX
-            anchorPoint.y:  sourceItem.anchorPointY
-            coordinate:     object.coordinate
-            z:              QGroundControl.zOrderMapItems
-
-            sourceItem: MissionItemIndexLabel {
-                id:         itemIndexLabel
-                label:      qsTr("R", "rally point map item label")
-            }
-        }
-    }
-
     // Camera trigger points
     MapItemView {
         model: _activeVehicle ? _activeVehicle.cameraTriggerPoints : 0
@@ -377,7 +347,7 @@ FlightMap {
 
         Connections {
             target: QGroundControl.multiVehicleManager
-            onActiveVehicleChanged: {
+            function onActiveVehicleChanged(activeVehicle) {
                 if (!activeVehicle) {
                     gotoLocationItem.visible = false
                 }
@@ -415,7 +385,7 @@ FlightMap {
 
         Connections {
             target: QGroundControl.multiVehicleManager
-            onActiveVehicleChanged: {
+            function onActiveVehicleChanged(activeVehicle) {
                 if (!activeVehicle) {
                     orbitMapCircle.visible = false
                 }

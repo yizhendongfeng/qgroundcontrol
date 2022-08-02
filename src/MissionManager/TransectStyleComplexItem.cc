@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -393,7 +393,6 @@ void TransectStyleComplexItem::_rebuildTransects(void)
     }
 
     _transects.clear();
-    _rgPathHeightInfo.clear();
     _rgFlightPathCoordInfo.clear();
 
     _rebuildTransectsPhase1();
@@ -532,24 +531,11 @@ void TransectStyleComplexItem::_updateFlightPathSegmentsDontCallDirectly(void)
     _masterController->missionController()->recalcTerrainProfile();
 }
 
-void TransectStyleComplexItem::_queryTransectsPathHeightInfo(void)
-{
-    _rgPathHeightInfo.clear();
-    emit readyForSaveStateChanged();
-
-    if (_transects.count()) {
-        // We don't actually send the query until this timer times out. This way we only send
-        // the latest request if we get a bunch in a row.
-        _terrainQueryTimer.start();
-    }
-}
-
 void TransectStyleComplexItem::_reallyQueryTransectsPathHeightInfo(void)
 {
     // Clear any previous query
     if (_currentTerrainFollowQuery) {
         // We are already waiting on another query. We don't care about those results any more.
-        disconnect(_currentTerrainFollowQuery, &TerrainPolyPathQuery::terrainDataReceived, this, &TransectStyleComplexItem::_polyPathTerrainData);
         _currentTerrainFollowQuery = nullptr;
     }
 
@@ -563,29 +549,8 @@ void TransectStyleComplexItem::_reallyQueryTransectsPathHeightInfo(void)
 
     if (transectPoints.count() > 1) {
         _currentTerrainFollowQuery = new TerrainPolyPathQuery(true /* autoDelete */);
-        connect(_currentTerrainFollowQuery, &TerrainPolyPathQuery::terrainDataReceived, this, &TransectStyleComplexItem::_polyPathTerrainData);
-        _currentTerrainFollowQuery->requestData(transectPoints);
+_currentTerrainFollowQuery->requestData(transectPoints);
     }
-}
-
-void TransectStyleComplexItem::_polyPathTerrainData(bool success, const QList<TerrainPathQuery::PathHeightInfo_t>& rgPathHeightInfo)
-{
-    _rgPathHeightInfo.clear();
-    emit readyForSaveStateChanged();
-
-    if (success) {
-        // Now that we have terrain data we can adjust
-        _rgPathHeightInfo = rgPathHeightInfo;
-        _adjustTransectsForTerrain();
-        emit readyForSaveStateChanged();
-    }
-
-
-    QObject* object = qobject_cast<QObject*>(sender());
-    if (object) {
-        object->deleteLater();
-    }
-    _currentTerrainFollowQuery = nullptr;
 }
 
 TransectStyleComplexItem::ReadyForSaveState TransectStyleComplexItem::readyForSaveState(void) const

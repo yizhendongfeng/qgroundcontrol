@@ -63,14 +63,6 @@ public:
             delete pMAVLink;
         if(pConsole)
             delete pConsole;
-#if defined(QT_DEBUG)
-        if(pMockLink)
-            delete pMockLink;
-        if(pDebug)
-            delete pDebug;
-        if(pQmlTest)
-            delete pQmlTest;
-#endif
         if(defaultOptions)
             delete defaultOptions;
     }
@@ -91,7 +83,6 @@ public:
     QmlComponentInfo* pConsole                  = nullptr;
     QmlComponentInfo* pHelp                     = nullptr;
 #if defined(QT_DEBUG)
-    QmlComponentInfo* pMockLink                 = nullptr;
     QmlComponentInfo* pDebug                    = nullptr;
     QmlComponentInfo* pQmlTest                  = nullptr;
 #endif
@@ -105,9 +96,13 @@ public:
 
 QGCCorePlugin::~QGCCorePlugin()
 {
+    qDebug() << "delete _toolBox 3 QGCCorePlugin _p" << _p;
+
     if(_p) {
         delete _p;
     }
+    _p = nullptr;
+    qDebug() << "delete _toolBox 3 QGCCorePlugin _p" << _p;
 }
 
 QGCCorePlugin::QGCCorePlugin(QGCApplication *app, QGCToolbox* toolbox)
@@ -143,24 +138,24 @@ QVariantList &QGCCorePlugin::settingsPages()
 //                                                QUrl::fromUserInput("qrc:/qml/OfflineMap.qml"),
 //                                                QUrl::fromUserInput("qrc:/res/waves.svg"));
 //        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pOfflineMaps)));
-#if defined(QGC_GST_TAISYNC_ENABLED)
-        _p->pTaisync = new QmlComponentInfo(tr("Taisync"),
-                                            QUrl::fromUserInput("qrc:/qml/TaisyncSettings.qml"),
-                                            QUrl::fromUserInput(""));
-        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pTaisync)));
-#endif
-#if defined(QGC_GST_MICROHARD_ENABLED)
-        _p->pMicrohard = new QmlComponentInfo(tr("Microhard"),
-                                              QUrl::fromUserInput("qrc:/qml/MicrohardSettings.qml"),
-                                              QUrl::fromUserInput(""));
-        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pMicrohard)));
-#endif
-#if defined(QGC_AIRMAP_ENABLED)
-        _p->pAirmap = new QmlComponentInfo(tr("AirMap"),
-                                           QUrl::fromUserInput("qrc:/qml/AirmapSettings.qml"),
-                                           QUrl::fromUserInput(""));
-        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pAirmap)));
-#endif
+//#if defined(QGC_GST_TAISYNC_ENABLED)
+//        _p->pTaisync = new QmlComponentInfo(tr("Taisync"),
+//                                            QUrl::fromUserInput("qrc:/qml/TaisyncSettings.qml"),
+//                                            QUrl::fromUserInput(""));
+//        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pTaisync)));
+//#endif
+//#if defined(QGC_GST_MICROHARD_ENABLED)
+//        _p->pMicrohard = new QmlComponentInfo(tr("Microhard"),
+//                                              QUrl::fromUserInput("qrc:/qml/MicrohardSettings.qml"),
+//                                              QUrl::fromUserInput(""));
+//        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pMicrohard)));
+//#endif
+//#if defined(QGC_AIRMAP_ENABLED)
+//        _p->pAirmap = new QmlComponentInfo(tr("AirMap"),
+//                                           QUrl::fromUserInput("qrc:/qml/AirmapSettings.qml"),
+//                                           QUrl::fromUserInput(""));
+//        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pAirmap)));
+//#endif
 //        _p->pMAVLink = new QmlComponentInfo(tr("MAVLink"),
 //                                            QUrl::fromUserInput("qrc:/qml/MavlinkSettings.qml"),
 //                                            QUrl::fromUserInput("qrc:/res/waves.svg"));
@@ -171,18 +166,6 @@ QVariantList &QGCCorePlugin::settingsPages()
 //        _p->pHelp = new QmlComponentInfo(tr("Help"),
 //                                         QUrl::fromUserInput("qrc:/qml/HelpSettings.qml"));
 //        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pHelp)));
-#if defined(QT_DEBUG)
-        //-- These are always present on Debug builds
-//        _p->pMockLink = new QmlComponentInfo(tr("Mock Link"),
-//                                             QUrl::fromUserInput("qrc:/qml/MockLink.qml"));
-//        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pMockLink)));
-//        _p->pDebug = new QmlComponentInfo(tr("Debug"),
-//                                          QUrl::fromUserInput("qrc:/qml/DebugWindow.qml"));
-//        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pDebug)));
-//        _p->pQmlTest = new QmlComponentInfo(tr("Palette Test"),
-//                                            QUrl::fromUserInput("qrc:/qml/QmlTest.qml"));
-//        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pQmlTest)));
-#endif
     }
     return _p->settingsList;
 }
@@ -190,7 +173,7 @@ QVariantList &QGCCorePlugin::settingsPages()
 QVariantList& QGCCorePlugin::analyzePages()
 {
     if (!_p->analyzeList.count()) {
-        _p->analyzeList.append(QVariant::fromValue(new QmlComponentInfo(tr("Log Download"),     QUrl::fromUserInput("qrc:/qml/LogDownloadPage.qml"),        QUrl::fromUserInput("qrc:/qmlimages/LogDownloadIcon"))));
+//        _p->analyzeList.append(QVariant::fromValue(new QmlComponentInfo(tr("Log Download"),     QUrl::fromUserInput("qrc:/qml/LogDownloadPage.qml"),        QUrl::fromUserInput("qrc:/qmlimages/LogDownloadIcon"))));
 #if !defined(__mobile__)
         _p->analyzeList.append(QVariant::fromValue(new QmlComponentInfo(tr("GeoTag Images"),    QUrl::fromUserInput("qrc:/qml/GeoTagPage.qml"),             QUrl::fromUserInput("qrc:/qmlimages/GeoTagIcon"))));
 #endif
@@ -371,7 +354,6 @@ QQmlApplicationEngine* QGCCorePlugin::createQmlApplicationEngine(QObject* parent
 {
     QQmlApplicationEngine* qmlEngine = new QQmlApplicationEngine(parent);
     qmlEngine->addImportPath("qrc:/qml");
-    qmlEngine->rootContext()->setContextProperty("joystickManager", qgcApp()->toolbox()->joystickManager());
     qmlEngine->rootContext()->setContextProperty("debugMessageModel", AppMessages::getModel());
     return qmlEngine;
 }

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -24,16 +24,16 @@ Row {
     property var  _activeVehicle:           QGroundControl.multiVehicleManager.activeVehicle
     property real _toolIndicatorMargins:    ScreenTools.defaultFontPixelHeight * 0.66
 
-    Repeater {
-        id:     appRepeater
-        model:  QGroundControl.corePlugin.toolBarIndicators
-        Loader {
-            anchors.top:        parent.top
-            anchors.bottom:     parent.bottom
-            source:             modelData
-            visible:            item.showIndicator
-        }
-    }
+//    Repeater {
+//        id:     appRepeater
+//        model:  QGroundControl.corePlugin.toolBarIndicators
+//        Loader {
+//            anchors.top:        parent.top
+//            anchors.bottom:     parent.bottom
+//            source:             modelData
+//            visible:            item.showIndicator
+//        }
+//    }
 
     Repeater {
         model: _activeVehicle ? _activeVehicle.toolIndicators : []

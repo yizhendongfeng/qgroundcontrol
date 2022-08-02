@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -20,6 +20,7 @@
 #include "QGroundControlQmlGlobal.h"
 #include "SettingsManager.h"
 #include "PlanMasterController.h"
+#include "ItemInfoSlot.h"
 
 FactMetaData* SimpleMissionItem::_altitudeMetaData =        nullptr;
 FactMetaData* SimpleMissionItem::_commandMetaData =         nullptr;

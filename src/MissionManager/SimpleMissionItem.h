@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -17,6 +17,8 @@
 #include "CameraSection.h"
 #include "SpeedSection.h"
 #include "QGroundControlQmlGlobal.h"
+
+class ItemInfoSlot;
 
 /// A SimpleMissionItem is used to represent a single MissionItem to the ui.
 class SimpleMissionItem : public VisualMissionItem
@@ -162,6 +164,7 @@ private:
     void _rebuildNaNFacts       (void);
     void _rebuildComboBoxFacts  (void);
 
+    QList<ItemInfoSlot> _itemInfoSlots;
     MissionItem     _missionItem;
     bool            _rawEdit =                  false;
     bool            _dirty =                    false;

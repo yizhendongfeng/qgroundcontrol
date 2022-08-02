@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -79,7 +79,7 @@ Item {
 
                 Connections {
                     target: QGroundControl.videoManager
-                    onImageFileChanged: {
+                    function onImageFileChanged() {
                         videoContent.grabToImage(function(result) {
                             if (!result.saveToFile(QGroundControl.videoManager.imageFile)) {
                                 console.error('Error capturing video frame');

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -109,12 +109,12 @@ Map {
 
     Connections {
         target:             QGroundControl.settingsManager.flightMapSettings.mapType
-        onRawValueChanged:  updateActiveMapType()
+        function onRawValueChanged() { updateActiveMapType() }
     }
 
     Connections {
         target:             QGroundControl.settingsManager.flightMapSettings.mapProvider
-        onRawValueChanged:  updateActiveMapType()
+        function onRawValueChanged() { updateActiveMapType() }
     }
 
     /// Ground Station location

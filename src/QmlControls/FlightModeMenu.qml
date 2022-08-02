@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -58,7 +58,7 @@ QGCLabel {
 
     Connections {
         target:                 QGroundControl.multiVehicleManager
-        onActiveVehicleChanged: _root.updateFlightModesMenu()
+        function onActiveVehicleChanged(activeVehicle) { _root.updateFlightModesMenu() }
     }
 
     MouseArea {

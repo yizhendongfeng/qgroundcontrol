@@ -14,7 +14,6 @@
 #include <QTimer>
 
 #include "MissionItem.h"
-#include "QGCMAVLink.h"
 #include "QGCLoggingCategory.h"
 #include "LinkInterface.h"
 #include "ShenHangProtocol.h"
@@ -35,8 +34,8 @@ public:
     ~PlanManager();
 
     bool inProgress(void) const;
-    const QList<MissionItem*>& missionItems(void) { return _missionItems; }
-
+    QMap<uint16_t, QMap<uint16_t, WaypointInfoSlot*>>& mapInfoSlotsInBanks(void) { return _mapInfoSlotsInBanksToWrite; }
+    QMap<uint16_t, SingleBankInfo*>& mapSingleBankInfo(void) {return _mapBankInfosToWrite;}
     /// Current mission item as reported by MISSION_CURRENT
     int currentIndex(void) const { return _currentMissionIndex; }
 
@@ -50,8 +49,10 @@ public:
     /// Writes the specified set of mission items to the vehicle
     /// IMPORTANT NOTE: PlanManager will take control of the MissionItem objects with the missionItems list. It will free them when done.
     ///     @param missionItems Items to send to vehicle
+    ///     @param bankInfos 航线信息
+    ///     @param infoSlotsInBanks 每个bank中的infoslot
     ///     Signals sendComplete when done
-    void writeMissionItems(const QList<MissionItem*>& missionItems);
+    void writeInfoSlots(const QMap<uint16_t, SingleBankInfo *> &bankInfos, const QMap<uint16_t, QMap<uint16_t, WaypointInfoSlot *> > &infoSlotsInBanks);
 
     /// Removes all mission items from vehicle
     ///     Signals removeAllComplete when done
@@ -77,9 +78,60 @@ public:
     static const int _retryTimeoutMilliseconds = 250;
     static const int _maxRetryCount = 5;
 
+    /******************** 航线相关命令（ty_msg0=130） ********************/
+    /**
+     * @brief packCommandBankQueryAll 查询整体航路信息（ty_msg0=130,ty_msg1=0）
+     * @param msg
+     */
+    void packCommandBankQueryAll(ShenHangProtocolMessage& msg);
+
+    /**
+     * @brief packCommandBankQuerySingle 查询单个bank信息（ty_msg0=130,ty_msg1=1）
+     * @param msg
+     * @param idBank
+     */
+    void packCommandBankQuerySingle(ShenHangProtocolMessage& msg, uint16_t idBank);
+
+    /**
+     * @brief packCommandBankSetSingle 设置单个bank（ty_msg0=130,ty_msg1=2）
+     * @param msg 传出参数
+     * @param idBank 对应需要设置的bank编号
+     * @param idBankSuc 对应接续航线bank编号
+     * @param idBankIwpSuc 对应接续航线中航点编号
+     * @param actBankEnd 设置航线完成动作，暂未定义，保留
+     * @param flagBankVerified 设置航线校验位，0：校验未通过，1：校验通过
+     * @param flagBankLock 设置航线锁定位，0：解除锁定，1：设置锁定
+     */
+    void packCommandBankSetSingle(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t idBankSuc, uint16_t idBankIwpSuc, uint16_t actBankEnd, uint8_t flagBankVerified, uint8_t flagBankLock);
+
+    /**
+     * @brief packRefactorInfoSlot 重构infoslot表单（ty_msg0=130,ty_msg1=3）
+     * @param msg 传出参数
+     * @param idBank 对应需要重构的bank编号
+     * @param nWp 对应bank内的航路点数目
+     * @param nInfoSlot 对应bank内的infoslot数目
+     */
+    void packRefactorInfoSlot(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t nWp, uint16_t nInfoSlot);
+
+    /**
+     * @brief packQuerySingleInfoSlot 查询单个infoslot（ty_msg0=130,ty_msg1=4）
+     * @param msg 传出参数
+     * @param idBank 对应要查询的infoslot所在的bank编号
+     * @param idInfoSlot 对应需要查询的infoslot编号
+     */
+    void packQuerySingleInfoSlot(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t idInfoSlot);
+
+    /**
+     * @brief packSetSingleInfoSlot 打包发送航路点信息
+     * @param msg 传出参数
+     * @param infoSlot
+     */
+    void packSetSingleInfoSlot(ShenHangProtocolMessage& msg, WaypointInfoSlot *infoSlot);
+
+    void packSetSingleBank(ShenHangProtocolMessage& msg, SetSingleBank setSingleBank);
 
 signals:
-    void totalBankInfoAvailbale(const TotalBankInfo& totalBankInfo);  //已获取整体航线信息
+    void totalBankInfoAvailbale     (const TotalBankInfo& totalBankInfo);  //已获取整体航线信息
     void newMissionItemsAvailable   (bool removeAllRequested);
     void inProgressChanged          (bool inProgress);
     void error                      (int errorCode, const QString& errorMsg);
@@ -92,17 +144,15 @@ signals:
     void resumeMissionUploadFail    (void);
 
 private slots:
-    void _mavlinkMessageReceived(const mavlink_message_t& message);
     void _shenHangMessageReceived(const ShenHangProtocolMessage& message);
     void _ackTimeout(void);
-    void _ackTimeoutShenHang(void);
 
 protected:
     typedef enum {
         AckNone,            ///< State machine is idle
         AckMissionCount,    ///< MISSION_COUNT message expected
         AckMissionItem,     ///< MISSION_ITEM expected
-        AckMissionRequest,  ///< MISSION_REQUEST is expected, or MISSION_ACK to end sequence
+        AckMissionQuery,    ///< MISSION_Query is expected, or MISSION_ACK to end sequence
         AckMissionClearAll, ///< MISSION_CLEAR_ALL sent, MISSION_ACK is expected
         AckGuidedItem,      ///< MISSION_ACK expected in response to ArduPilot guided mode single item send
     } AckType_t;
@@ -122,63 +172,50 @@ protected:
         TransactionRemoveAll
     } TransactionType_t;
 
-    void _startAckTimeout(AckType_t ack);
-    void _startAckTimeoutShenHang(AckCommandBank ack);
-    bool _checkForExpectedAck(AckType_t receivedAck);
-    bool _checkForExpectedAckShenHang(AckCommandBank receivedAck);
+    void _startAckTimeout(AckCommandBank ack);
+    bool _checkForExpectedAck(AckCommandBank receivedAck);
     void _readTransactionComplete(void);
-    void _handleMissionCount(const mavlink_message_t& message);
-    void _handleMissionItem(const mavlink_message_t& message, bool missionItemInt);
-    void _handleMissionRequest(const mavlink_message_t& message, bool missionItemInt);
-    void _handleMissionAck(const mavlink_message_t& message);
-    void _requestNextMissionItem(void);
     void _clearMissionItems(void);
     void _sendError(ErrorCode_t errorCode, const QString& errorMsg);
-    QString _ackTypeToString(AckType_t ackType);
-    QString _ackTypeToStringShenHang(AckCommandBank ackType);
+    QString _ackTypeToString(AckCommandBank ackType);
     QString _missionResultToString(MAV_MISSION_RESULT result);
     void _finishTransaction(bool success, bool apmGuidedItemWrite = false);
-    void _requestList(void);
-    void _writeMissionCount(void);
-    void _writeMissionItemsWorker(void);
-    void _clearAndDeleteMissionItems(void);
-    void _clearAndDeleteWriteMissionItems(void);
-    QString _lastMissionReqestString(MAV_MISSION_RESULT result);
+    void _writeInfoSlotsWorker(void);
+    void _clearAndDeleteReadInfoSlots(void);
+    void _clearAndDeleteWriteInfoSlots(void);
     void _removeAllWorker(void);
-    void _connectToMavlink(void);
-    void _disconnectFromMavlink(void);
 
     /******************** 沈航航线数据处理 ********************/
     void _connectToShenHangVehicle(void);
     void _disconnectFromShenHangVehicle(void);
     void _handleShenHangBankMessage(const ShenHangProtocolMessage& msg);
     void _handleAllBankInfo(const ShenHangProtocolMessage& message);
+    void _handleAckCommandBank(const ShenHangProtocolMessage& message);
+    void _handleAckInfoSlot(const ShenHangProtocolMessage& message);
     void _handleSingleBankInfo(const ShenHangProtocolMessage& message);
-    void _handleInfoSlot(const ShenHangProtocolMessage& message);
+//    void _handleInfoSlot(const ShenHangProtocolMessage& message);
+
 
     QString _planTypeString(void);
     void _queryAllBanks(void);
     void _querySingleBankInfo(uint16_t idBank);
+    void _setSingleBankInfo(SetSingleBank setSingleBank);
+    void _refactorInfoSlots(uint16_t idBank, uint16_t nWp, uint16_t nInfoSlot);
     void _querySingleInfoSlot(uint16_t idBank, uint16_t idInfoSlot);
-
+    void _setSingleInfoSlot(WaypointInfoSlot* infoSlot);
 protected:
     Vehicle*            _vehicle =              nullptr;
-    MissionCommandTree* _missionCommandTree =   nullptr;
     MAV_MISSION_TYPE    _planType;
 
     QTimer*             _ackTimeoutTimer =      nullptr;
     AckType_t           _expectedAck;
-    int                 _retryCount;
+    int                 _retryCount = 0;
 
     TransactionType_t   _transactionInProgress;
     bool                _resumeMission;
-    QList<int>          _itemIndicesToWrite;    ///< List of mission items which still need to be written to vehicle
-    QList<int>          _itemIndicesToRead;     ///< List of mission items which still need to be requested from vehicle
     int                 _lastMissionRequest;    ///< Index of item last requested by MISSION_REQUEST
     int                 _missionItemCountToRead;///< Count of all mission items to read
 
-    QList<MissionItem*> _missionItems;          ///< Set of mission items on vehicle
-    QList<MissionItem*> _writeMissionItems;     ///< Set of mission items currently being written to vehicle
     int                 _currentMissionIndex;
     int                 _lastCurrentIndex;
 
@@ -187,21 +224,25 @@ protected:
     AckCommandBank          _expectedAckShenHang;
     MISSION_TYPE_SHENHANG   _planTypeShenHang;
     SingleBankInfo          _currentSingleBankInfo = {};
-    QList<uint16_t>         _infoSlotIndicesToWrite;
+
+    uint16_t                _lastBankIdRead = 0;
+    uint16_t                _lastInfoSlotIdRead = 0;
+    uint16_t                _infoSlotCountToRead;
+    QList<uint16_t>         _bankIndicesToRead;
     QList<uint16_t>         _infoSlotIndicesToRead;
     QMap<uint16_t, QList<uint16_t>> _mapInfoSlotIndicesToRead;
-    QList<uint16_t>         _bankIndicesToRead;
-    QMap<uint16_t, QMap<uint16_t, WaypointInfoSlot*>> _mapWaypointInfoSlot;
-    QList<uint16_t>         _bankIndicesToWrite;
-    uint16_t                _currentBankIndexToRead;    // 读取infoslot时，在map中的bank索引
-    uint16_t                _infoSlotCountToRead;
-    uint16_t                _bankCountToWrite = 2;
-    uint16_t                _infoSlotCountToWrite;
+    QMap<uint16_t, SingleBankInfo*> _mapBankInfosRead;
+    QMap<uint16_t, QMap<uint16_t, WaypointInfoSlot*>> _mapInfoSlotsInBanksRead; // <idBank, <idInfoSlot, WaypointInfoSlot*>> 已读取的infoSlot
 
-//    QMap<uint16_t, SingleBankInfo> _mapBankInfo;
-    QMap<uint16_t, QMap<uint16_t, WaypointInfoSlot*>> _mapInfoSlots;  // <idBank, <idInfoslot, waypointInfoslot>>>
-    uint16_t                _lastBankIdRequested;
-    uint16_t                _lastInfoSlotIdRequested;
+    uint16_t                _lastBankIdWrite = 0;
+    uint16_t                _lastInfoSlotIdWrite = 0;
+    uint16_t                _infoSlotCountToWrite;
+    QList<uint16_t>         _bankIndicesToWrite;
+    QList<uint16_t>         _infoSlotIndicesToWrite;
+    QMap<uint16_t, SingleBankInfo*> _mapBankInfosToWrite;
+    QMap<uint16_t, QMap<uint16_t, WaypointInfoSlot*>> _mapInfoSlotsInBanksToWrite; // <idBank, <idInfoSlot, WaypointInfoSlot*>>
+    bool                    _bankRefactored = false;    // bank是否已经重构过；true: 重构过之后再设置bank，等接收到bank的信息才算完成一个航线的传输; false: 接收到的bank信息为解锁
+
 private:
     void _setTransactionInProgress(TransactionType_t type);
 };

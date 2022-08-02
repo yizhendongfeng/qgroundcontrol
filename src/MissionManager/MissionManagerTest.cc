@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -58,7 +58,7 @@ void MissionManagerTest::_writeItems(MockLinkMissionItemHandler::FailureMode_t f
     }
     
     // Send the items to the vehicle
-    _missionManager->writeMissionItems(missionItems);
+//    _missionManager->writeMissionItems(missionItems);
     
     // writeMissionItems should emit these signals before returning:
     //      inProgressChanged

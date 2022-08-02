@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -11,7 +11,7 @@
 #define SettingsGroup_H
 
 #include "QGCLoggingCategory.h"
-#include "Joystick.h"
+//#include "Joystick.h"
 #include "MultiVehicleManager.h"
 #include "QGCToolbox.h"
 

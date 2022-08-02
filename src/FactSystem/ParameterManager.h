@@ -169,7 +169,6 @@ private:
     void    _tryCacheHashLoad                   (int vehicleId, int componentId, QVariant hash_value);
     void    _loadMetaData                       (void);
     void    _clearMetaData                      (void);
-    QString _remapParamNameToVersion            (const QString& paramName);
     void    _loadOfflineEditingParams           (void);
     QString _logVehiclePrefix                   (int componentId);
     void    _setLoadProgress                    (double loadProgress);

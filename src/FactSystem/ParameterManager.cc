@@ -11,9 +11,7 @@
 #include "QGCApplication.h"
 #include "QGCLoggingCategory.h"
 #include "QGCApplication.h"
-#include "UASMessageHandler.h"
 #include "FirmwarePlugin.h"
-#include "UAS.h"
 #include "JsonHelper.h"
 #include "ComponentInformationManager.h"
 #include "CompInfoParam.h"
@@ -93,8 +91,6 @@ ParameterManager::ParameterManager(Vehicle* vehicle)
         _loadOfflineEditingParams();
         return;
     }
-
-    _mavlink = qgcApp()->toolbox()->mavlinkProtocol();
 
     _initialRequestTimeoutTimer.setSingleShot(true);
     _initialRequestTimeoutTimer.setInterval(5000);
@@ -330,37 +326,16 @@ void ParameterManager::shenHangMessageReceived(ShenHangProtocolMessage message)
     }
 }
 
-
-
 /// Called whenever a parameter is updated or first seen.
 void ParameterManager::_handleParamValue(uint8_t componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t mavParamType, QVariant parameterValue)
 {
 
-    qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId) <<
-                                            "_parameterUpdate" <<
-                                            "addrOffset:" << addrOffset <<
-                                            "mavType:" << mavParamType <<
-                                            "value:" << parameterValue <<
-                                            ")";
-
-#if 0
-    if (!_initialLoadComplete && !_indexBatchQueueActive) {
-        // Handy for testing retry logic
-        static int counter = 0;
-        if (counter++ & 0x8) {
-            qCDebug(ParameterManagerLog) << "Artificial discard" << counter;
-            return;
-        }
-    }
-#endif
-
-#if 0
-    // Use this to test missing default component id
-    if (componentId == 50) {
-        return;
-    }
-#endif
-
+    qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId)
+                                         <<  "_handleParamValue"
+                                         <<   "groupId:" << groupId
+                                         <<   "addrOffset:" << addrOffset
+                                         <<   "mavType:" << mavParamType
+                                         <<   "value:" << parameterValue << ")";
     _initialRequestTimeoutTimer.stop();
     _waitingParamTimeoutTimer.stop();
 
@@ -391,17 +366,17 @@ void ParameterManager::_handleParamValue(uint8_t componentId, uint8_t groupId, u
     if (_waitingReadParamIndexMap[componentId].contains(groupId)) {
         if (_waitingReadParamIndexMap[componentId][groupId].contains(addrOffset)) {
             _waitingReadParamIndexMap[componentId][groupId].remove(addrOffset);
-            if (_waitingReadParamIndexMap[componentId][groupId].size() == 0) {
-                _waitingReadParamIndexMap[componentId].remove(groupId);
-            }
-            if (_indexBatchQueue.contains(groupId) && _indexBatchQueue[groupId].contains(addrOffset)) {
-                _indexBatchQueue[groupId].removeOne(addrOffset);
-                if (_indexBatchQueue[groupId].size() == 0) {
-                    _indexBatchQueue.remove(groupId);
-                }
-            }
-            _fillIndexBatchQueue(false /* waitingParamTimeout */);
         }
+        if (_waitingReadParamIndexMap[componentId][groupId].size() == 0) {
+            _waitingReadParamIndexMap[componentId].remove(groupId);
+        }
+        if (_indexBatchQueue.contains(groupId) && _indexBatchQueue[groupId].contains(addrOffset)) {
+            _indexBatchQueue[groupId].removeOne(addrOffset);
+            if (_indexBatchQueue[groupId].size() == 0) {
+                _indexBatchQueue.remove(groupId);
+            }
+        }
+        _fillIndexBatchQueue(false /* waitingParamTimeout */);
     }
 
     if (_waitingWriteParamIndexMap[componentId].contains(groupId) &&
@@ -494,7 +469,7 @@ void ParameterManager::_handleParamValue(uint8_t componentId, uint8_t groupId, u
 
     _checkInitialLoadComplete();
 
-    qCDebug(ShenHangProtocolLog) << "_initialLoadComplete:" << _initialLoadComplete << "waitingReadParamIndexCount:" << waitingReadParamIndexCount;
+    qCDebug(ParameterManagerVerbose1Log) << "_initialLoadComplete:" << _initialLoadComplete << "waitingReadParamIndexCount:" << waitingReadParamIndexCount;
     qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId) << "_parameterUpdate complete";
 }
 
@@ -579,7 +554,6 @@ void ParameterManager::refreshGroupParameters(uint8_t componentId, uint8_t group
     }
 //    if (_waitingReadParamIndexMap[MAV_COMP_ID_AUTOPILOT1].keys().count() > 0)
 //        _waitingParamTimeoutTimer.start();
-
     _waitingForDefaultComponent = true;
     ShenHangProtocolMessage msg;
     SharedLinkInterfacePtr  sharedLink = weakLink.lock();
@@ -664,7 +638,7 @@ bool ParameterManager::parameterExists(int componentId, const QString& paramName
 
     componentId = _actualComponentId(componentId);
     if (_mapCompId2FactMap.contains(componentId)) {
-        ret = _mapCompId2FactMap[componentId].contains(_remapParamNameToVersion(paramName));
+        ret = _mapCompId2FactMap[componentId].contains(paramName);
     }
 
     return ret;
@@ -674,13 +648,12 @@ Fact* ParameterManager::getParameter(int componentId, const QString& paramName)
 {
     componentId = _actualComponentId(componentId);
 
-    QString mappedParamName = _remapParamNameToVersion(paramName);
-    if (!_mapCompId2FactMap.contains(componentId) || !_mapCompId2FactMap[componentId].contains(mappedParamName)) {
-        qgcApp()->reportMissingParameter(componentId, mappedParamName);
+    if (!_mapCompId2FactMap.contains(componentId) || !_mapCompId2FactMap[componentId].contains(paramName)) {
+        qgcApp()->reportMissingParameter(componentId, paramName);
         return &_defaultFact;
     }
 
-    return _mapCompId2FactMap[componentId][mappedParamName];
+    return _mapCompId2FactMap[componentId][paramName];
 }
 
 Fact* ParameterManager::getParameter(int componentId, const uint8_t& groupId, const uint16_t& addrOffset)
@@ -738,8 +711,8 @@ bool ParameterManager::_fillIndexBatchQueue(bool waitingParamTimeout)
 
     for(int componentId: _waitingReadParamIndexMap.keys()) {
         if (_waitingReadParamIndexMap[componentId].count()) {
-            qCDebug(ParameterManagerLog) << _logVehiclePrefix(componentId) << "_waitingReadParamIndexMap count" << _waitingReadParamIndexMap[componentId].count();
-            qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId) << "_waitingReadParamIndexMap" << _waitingReadParamIndexMap[componentId];
+            qCDebug(ParameterManagerVerbose1Log) << _logVehiclePrefix(componentId) << "_waitingReadParamIndexMap count" << _waitingReadParamIndexMap[componentId].count();
+            qCDebug(ParameterManagerLog) << _logVehiclePrefix(componentId) << "_waitingReadParamIndexMap" << _waitingReadParamIndexMap[componentId];
         }
 
         for(uint8_t groupId: _waitingReadParamIndexMap[componentId].keys()) {
@@ -1372,54 +1345,6 @@ void ParameterManager::_groupCommandTimeout()
     }
 }
 
-/// Remap a parameter from one firmware version to another
-QString ParameterManager::_remapParamNameToVersion(const QString& paramName)
-{
-    QString mappedParamName;
-
-    if (!paramName.startsWith(QStringLiteral("r."))) {
-        // No version mapping wanted
-        return paramName;
-    }
-
-    int majorVersion = _vehicle->firmwareMajorVersion();
-    int minorVersion = _vehicle->firmwareMinorVersion();
-
-    qCDebug(ParameterManagerLog) << "_remapParamNameToVersion" << paramName << majorVersion << minorVersion;
-
-    mappedParamName = paramName.right(paramName.count() - 2);
-
-    if (majorVersion == Vehicle::versionNotSetValue) {
-        // Vehicle version unknown
-        return mappedParamName;
-    }
-
-    const FirmwarePlugin::remapParamNameMajorVersionMap_t& majorVersionRemap = _vehicle->firmwarePlugin()->paramNameRemapMajorVersionMap();
-
-    if (!majorVersionRemap.contains(majorVersion)) {
-        // No mapping for this major version
-        qCDebug(ParameterManagerLog) << "_remapParamNameToVersion: no major version mapping";
-        return mappedParamName;
-    }
-
-    const FirmwarePlugin::remapParamNameMinorVersionRemapMap_t& remapMinorVersion = majorVersionRemap[majorVersion];
-
-    // We must map backwards from the highest known minor version to one above the vehicle's minor version
-
-    for (int currentMinorVersion=_vehicle->firmwarePlugin()->remapParamNameHigestMinorVersionNumber(majorVersion); currentMinorVersion>minorVersion; currentMinorVersion--) {
-        if (remapMinorVersion.contains(currentMinorVersion)) {
-            const FirmwarePlugin::remapParamNameMap_t& remap = remapMinorVersion[currentMinorVersion];
-
-            if (remap.contains(mappedParamName)) {
-                QString toParamName = remap[mappedParamName];
-                qCDebug(ParameterManagerLog) << "_remapParamNameToVersion: remapped currentMinor:from:to"<< currentMinorVersion << mappedParamName << toParamName;
-                mappedParamName = toParamName;
-            }
-        }
-    }
-
-    return mappedParamName;
-}
 
 /// The offline editing vehicle can have custom loaded params bolted into it.
 void ParameterManager::_loadOfflineEditingParams(void)
@@ -1496,11 +1421,7 @@ void ParameterManager::_loadOfflineEditingParams(void)
 
 void ParameterManager::resetAllParametersToDefaults()
 {
-    _vehicle->sendMavCommand(MAV_COMP_ID_AUTOPILOT1,
-                             MAV_CMD_PREFLIGHT_STORAGE,
-                             true,  // showError
-                             2,     // Reset params to default
-                             -1);   // Don't do anything with mission storage
+
 }
 
 void ParameterManager::resetAllToVehicleConfiguration()

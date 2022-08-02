@@ -11,12 +11,10 @@
 #include "ShenHangParameterMetaData.h"
 #include "QGCApplication.h"
 #include "ShenHangAutoPilotPlugin.h"
-#include "ShenHangAdvancedFlightModesController.h"
-#include "ShenHangSimpleFlightModesController.h"
-#include "AirframeComponentController.h"
-#include "SensorsComponentController.h"
-#include "PowerComponentController.h"
-#include "RadioComponentController.h"
+//#include "ShenHangAdvancedFlightModesController.h"
+//#include "ShenHangSimpleFlightModesController.h"
+//#include "ShenHangAirframeComponentController.h"
+//#include "ShenHangRadioComponentController.h"
 #include "QGCCameraManager.h"
 #include "QGCFileDownload.h"
 #include "SettingsManager.h"
@@ -49,16 +47,12 @@ ShenHangFirmwarePlugin::ShenHangFirmwarePlugin()
     , _landingFlightMode    (tr("Land"))
     , _preclandFlightMode   (tr("Precision Land"))
     , _rtgsFlightMode       (tr("Return to Groundstation"))
-    , _followMeFlightMode   (tr("Follow Me"))
     , _simpleFlightMode     (tr("Simple"))
     , _orbitFlightMode      (tr("Orbit"))
 {
-    qmlRegisterType<ShenHangAdvancedFlightModesController>   ("QGroundControl.Controllers", 1, 0, "ShenHangAdvancedFlightModesController");
-    qmlRegisterType<ShenHangSimpleFlightModesController>     ("QGroundControl.Controllers", 1, 0, "ShenHangSimpleFlightModesController");
-    qmlRegisterType<AirframeComponentController>        ("QGroundControl.Controllers", 1, 0, "AirframeComponentController");
-    qmlRegisterType<SensorsComponentController>         ("QGroundControl.Controllers", 1, 0, "SensorsComponentController");
-    qmlRegisterType<PowerComponentController>           ("QGroundControl.Controllers", 1, 0, "PowerComponentController");
-    qmlRegisterType<RadioComponentController>           ("QGroundControl.Controllers", 1, 0, "RadioComponentController");
+//    qmlRegisterType<ShenHangAdvancedFlightModesController>   ("QGroundControl.Controllers", 1, 0, "ShenHangAdvancedFlightModesController");
+//    qmlRegisterType<ShenHangSimpleFlightModesController>     ("QGroundControl.Controllers", 1, 0, "ShenHangSimpleFlightModesController");
+//    qmlRegisterType<ShenHangAirframeComponentController>        ("QGroundControl.Controllers", 1, 0, "AirframeComponentController");
 
     struct Modes2Name {
         uint8_t     main_mode;
@@ -104,7 +98,6 @@ ShenHangFirmwarePlugin::ShenHangFirmwarePlugin()
         &_holdFlightMode,
         &_missionFlightMode,
         &_rtlFlightMode,
-        &_followMeFlightMode,
         &_landingFlightMode,
         &_preclandFlightMode,
         &_readyFlightMode,
@@ -357,16 +350,7 @@ QObject* ShenHangFirmwarePlugin::_loadParameterMetaData(const QString& metaDataF
 
 void ShenHangFirmwarePlugin::pauseVehicle(Vehicle* vehicle)
 {
-    vehicle->sendMavCommand(vehicle->defaultComponentId(),
-                            MAV_CMD_DO_REPOSITION,
-                            true,   // show error if failed
-                            -1.0f,
-                            MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
-                            0.0f,
-                            NAN,
-                            NAN,
-                            NAN,
-                            NAN);
+
 }
 
 void ShenHangFirmwarePlugin::guidedModeRTL(Vehicle* vehicle, bool smartRTL)
@@ -428,14 +412,14 @@ void ShenHangFirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double takeoffA
     qDebug() << takeoffAltRel << takeoffAltRelFromVehicle << takeoffAltAMSL << vehicleAltitudeAMSL;
 
     connect(vehicle, &Vehicle::mavCommandResult, this, &ShenHangFirmwarePlugin::_mavCommandResult);
-    vehicle->sendMavCommand(
-        vehicle->defaultComponentId(),
-        MAV_CMD_NAV_TAKEOFF,
-        true,                                   // show error is fails
-        -1,                                     // No pitch requested
-        0, 0,                                   // param 2-4 unused
-        NAN, NAN, NAN,                          // No yaw, lat, lon
-        static_cast<float>(takeoffAltAMSL));    // AMSL altitude
+//    vehicle->sendMavCommand(
+//        vehicle->defaultComponentId(),
+//        MAV_CMD_NAV_TAKEOFF,
+//        true,                                   // show error is fails
+//        -1,                                     // No pitch requested
+//        0, 0,                                   // param 2-4 unused
+//        NAN, NAN, NAN,                          // No yaw, lat, lon
+//        static_cast<float>(takeoffAltAMSL));    // AMSL altitude
 }
 
 void ShenHangFirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoordinate& gotoCoord)
@@ -445,30 +429,30 @@ void ShenHangFirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeo
         return;
     }
 
-    if (vehicle->capabilityBits() & MAV_PROTOCOL_CAPABILITY_COMMAND_INT) {
-        vehicle->sendMavCommandInt(vehicle->defaultComponentId(),
-                                   MAV_CMD_DO_REPOSITION,
-                                   MAV_FRAME_GLOBAL,
-                                   true,   // show error is fails
-                                   -1.0f,
-                                   MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
-                                   0.0f,
-                                   NAN,
-                                   gotoCoord.latitude(),
-                                   gotoCoord.longitude(),
-                                   vehicle->altitudeAMSL()->rawValue().toFloat());
-    } else {
-        vehicle->sendMavCommand(vehicle->defaultComponentId(),
-                                MAV_CMD_DO_REPOSITION,
-                                true,   // show error is fails
-                                -1.0f,
-                                MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
-                                0.0f,
-                                NAN,
-                                static_cast<float>(gotoCoord.latitude()),
-                                static_cast<float>(gotoCoord.longitude()),
-                                vehicle->altitudeAMSL()->rawValue().toFloat());
-    }
+//    if (vehicle->capabilityBits() & MAV_PROTOCOL_CAPABILITY_COMMAND_INT) {
+//        vehicle->sendMavCommandInt(vehicle->defaultComponentId(),
+//                                   MAV_CMD_DO_REPOSITION,
+//                                   MAV_FRAME_GLOBAL,
+//                                   true,   // show error is fails
+//                                   -1.0f,
+//                                   MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
+//                                   0.0f,
+//                                   NAN,
+//                                   gotoCoord.latitude(),
+//                                   gotoCoord.longitude(),
+//                                   vehicle->altitudeAMSL()->rawValue().toFloat());
+//    } else {
+//        vehicle->sendMavCommand(vehicle->defaultComponentId(),
+//                                MAV_CMD_DO_REPOSITION,
+//                                true,   // show error is fails
+//                                -1.0f,
+//                                MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
+//                                0.0f,
+//                                NAN,
+//                                static_cast<float>(gotoCoord.latitude()),
+//                                static_cast<float>(gotoCoord.longitude()),
+//                                vehicle->altitudeAMSL()->rawValue().toFloat());
+//    }
 }
 
 typedef struct {
@@ -477,40 +461,21 @@ typedef struct {
     double              newAMSLAlt;
 } PauseVehicleThenChangeAltData_t;
 
-static void _pauseVehicleThenChangeAltResultHandler(void* resultHandlerData, int /*compId*/, MAV_RESULT commandResult, Vehicle::MavCmdResultFailureCode_t failureCode)
-{
-    if (commandResult != MAV_RESULT_ACCEPTED) {
-        switch (failureCode) {
-        case Vehicle::MavCmdResultCommandResultOnly:
-            qDebug() << QStringLiteral("MAV_CMD_DO_REPOSITION error(%1)").arg(commandResult);
-            break;
-        case Vehicle::MavCmdResultFailureNoResponseToCommand:
-            qDebug() << "MAV_CMD_DO_REPOSITION no response from vehicle";
-            break;
-        case Vehicle::MavCmdResultFailureDuplicateCommand:
-            qDebug() << "Internal Error: MAV_CMD_DO_REPOSITION could not be sent due to duplicate command";
-            break;
-        }
-    }
-
-    PauseVehicleThenChangeAltData_t* pData = static_cast<PauseVehicleThenChangeAltData_t*>(resultHandlerData);
-    pData->plugin->_changeAltAfterPause(resultHandlerData, commandResult == MAV_RESULT_ACCEPTED /* pauseSucceeded */);
-}
 
 void ShenHangFirmwarePlugin::_changeAltAfterPause(void* resultHandlerData, bool pauseSucceeded)
 {
     PauseVehicleThenChangeAltData_t* pData = static_cast<PauseVehicleThenChangeAltData_t*>(resultHandlerData);
 
     if (pauseSucceeded) {
-        pData->vehicle->sendMavCommand(
-                    pData->vehicle->defaultComponentId(),
-                    MAV_CMD_DO_REPOSITION,
-                    true,                                   // show error is fails
-                    -1.0f,                                  // Don't change groundspeed
-                    MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
-                    0.0f,                                   // Reserved
-                    qQNaN(), qQNaN(), qQNaN(),              // No change to yaw, lat, lon
-                    static_cast<float>(pData->newAMSLAlt));
+//        pData->vehicle->sendMavCommand(
+//                    pData->vehicle->defaultComponentId(),
+//                    MAV_CMD_DO_REPOSITION,
+//                    true,                                   // show error is fails
+//                    -1.0f,                                  // Don't change groundspeed
+//                    MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
+//                    0.0f,                                   // Reserved
+//                    qQNaN(), qQNaN(), qQNaN(),              // No change to yaw, lat, lon
+//                    static_cast<float>(pData->newAMSLAlt));
     } else {
         qgcApp()->showAppMessage(tr("Unable to pause vehicle."));
     }
@@ -538,15 +503,15 @@ void ShenHangFirmwarePlugin::guidedModeChangeAltitude(Vehicle* vehicle, double a
     resultData->newAMSLAlt  = vehicle->homePosition().altitude() + newAltRel;
 
     if (pauseVehicle) {
-        vehicle->sendMavCommandWithHandler(
-                    _pauseVehicleThenChangeAltResultHandler,
-                    resultData,
-                    vehicle->defaultComponentId(),
-                    MAV_CMD_DO_REPOSITION,
-                    -1.0f,                                  // Don't change groundspeed
-                    MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
-                    0.0f,                                   // Reserved
-                    qQNaN(), qQNaN(), qQNaN(), qQNaN());    // No change to yaw, lat, lon, alt
+//        vehicle->sendMavCommandWithHandler(
+//                    _pauseVehicleThenChangeAltResultHandler,
+//                    resultData,
+//                    vehicle->defaultComponentId(),
+//                    MAV_CMD_DO_REPOSITION,
+//                    -1.0f,                                  // Don't change groundspeed
+//                    MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,
+//                    0.0f,                                   // Reserved
+//                    qQNaN(), qQNaN(), qQNaN(), qQNaN());    // No change to yaw, lat, lon, alt
     } else {
         _changeAltAfterPause(resultData, true /* pauseSucceeded */);
     }

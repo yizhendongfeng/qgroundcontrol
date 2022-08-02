@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -51,6 +51,7 @@ QGCMapEngineManager::QGCMapEngineManager(QGCApplication* app, QGCToolbox* toolbo
 //-----------------------------------------------------------------------------
 QGCMapEngineManager::~QGCMapEngineManager()
 {
+    qDebug() << "delete _toolBox 8 ~QGCMapEngineManager()";
     _tileSets.clear();
 }
 

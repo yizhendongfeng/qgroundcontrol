@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -38,23 +38,23 @@ void TerrainProfile::componentComplete(void)
 
 void TerrainProfile::setMissionController(MissionController* missionController)
 {
-    if (missionController != _missionController) {
-        _missionController =    missionController;
-        _visualItems =          _missionController->visualItems();
+//    if (missionController != _missionController) {
+//        _missionController =    missionController;
+//        _visualItems =          _missionController->visualItems();
 
-        emit missionControllerChanged();
+//        emit missionControllerChanged();
 
-        connect(_missionController, &MissionController::visualItemsChanged,         this, &TerrainProfile::_newVisualItems);
+//        connect(_missionController, &MissionController::visualItemsChanged,         this, &TerrainProfile::_newVisualItems);
 
-        connect(this,               &TerrainProfile::visibleWidthChanged,           this, &TerrainProfile::_updateSignal, Qt::QueuedConnection);
-        connect(_missionController, &MissionController::recalcTerrainProfile,       this, &TerrainProfile::_updateSignal, Qt::QueuedConnection);
-    }
+//        connect(this,               &TerrainProfile::visibleWidthChanged,           this, &TerrainProfile::_updateSignal, Qt::QueuedConnection);
+//        connect(_missionController, &MissionController::recalcTerrainProfile,       this, &TerrainProfile::_updateSignal, Qt::QueuedConnection);
+//    }
 }
 
 void TerrainProfile::_newVisualItems(void)
 {
-    _visualItems = _missionController->visualItems();
-    emit _updateSignal();
+//    _visualItems = _missionController->visualItems();
+//    emit _updateSignal();
 }
 
 void TerrainProfile::_createGeometry(QSGGeometryNode*& geometryNode, QSGGeometry*& geometry, QSGGeometry::DrawingMode drawingMode, const QColor& color)

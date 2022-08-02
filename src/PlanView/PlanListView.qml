@@ -14,9 +14,10 @@ QGCListView {
     focus: true
     model: folderModel
     delegate: fileDelegate
-    property var toolTipDelay: 1000
+    property int toolTipDelay: 500
     property var directory
-
+    property color _splitLineColor: "#707070" // "#424242"
+    property color _splitLineColorLighter: "#424242" // "#424242"
     FolderListModel {
         id: folderModel
         folder: "file:" + _appSettings.missionSavePath
@@ -28,14 +29,14 @@ QGCListView {
         id: fileDelegate
         Rectangle {
             id: rect
-            anchors.left: parent.left
-            anchors.right: parent.right
+//            anchors.left: parent.left
+//            anchors.right: parent.right
+            width: listView.width
             anchors.leftMargin: 1
             height: 50
             state: "normal"
-            property var rowHovered: mouseArea.containsMouse
+            property bool rowHovered: mouseArea.containsMouse
             color: ListView.isCurrentItem ? qgcPal.window : (rowHovered ? qgcPal.windowShadeDark : qgcPal.windowShade)
-            focus: true
 
             MouseArea {
                 id: mouseArea
@@ -44,75 +45,88 @@ QGCListView {
                 propagateComposedEvents: true
                 onClicked: {
                     listView.currentIndex = index
+                    listView.focus = true
                     _currentPlanFileName = folderModel.get(index, "fileBaseName")
-                    console.log(_currentPlanFileName)
-                    _planMasterController.loadFromFile(_currentPlanFileDir + "/" + folderModel.get(index, "fileName"))
+                    _planMasterController.loadFromFile(_currentPlanFileDir + "/" + _currentPlanFileName)
                     _planMasterController.fitViewportToItems()
+                    console.log("mouseArea in plan listview", listView.currentIndex)
                 }
-                onEntered: rowHovered = true
-                onExited: rowHovered = false
 
                 RowLayout {
                     id: rowLayout
                     anchors.fill: parent
                     anchors.leftMargin: 5
-//                    anchors.rightMargin: 5
-                    QGCLabel {
-                        id: fileNameLable
-                        text: fileBaseName
-                        elide: Text.ElideRight
-                        Layout.maximumWidth: rowBtn.visible ? parent.width - rowBtn.width - 15 : rect.width - rect.anchors.margins
+                    TextField {
+                        id: textInput
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
+                        Layout.leftMargin: 5
                         Layout.fillWidth: true
-//                        Layout.verticalCenter: parent.verticalCenter
-//                        height
-//                        Layout.fillHeight: true
-//                        font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                        color: qgcPal.buttonText
-                        property var lableHovered: mouseArea.containsMouse
-                        ToolTip {
-                            id: toolTipText
-                            text: fileNameLable.text
-                            delay: toolTipDelay
-                            visible: mouseAreaText.containsMouse
-                        }
-
-                        MouseArea {
-                            id: mouseAreaText
+                        implicitHeight: rect.height / 2
+                        text: fileBaseName
+                        color: qgcPal.text
+                        hoverEnabled: listView.currentIndex === index
+                        enabled: listView.currentIndex === index
+                        background: Rectangle {
                             anchors.fill: parent
-                            hoverEnabled: true
-                            propagateComposedEvents: true
-                            onDoubleClicked: {
-                                textInput.visible = true
-                                textInput.focus = true
-                                textInput.text = _currentPlanFileName
-                                mouse.accepted = true
-                                console.log("double clicked", rect.height, mouseArea.height,rowLayout.height, fileNameLable.height)
-                            }
+                            color: "transparent"
+                            border.color: textInput.focus ? qgcPal.colorGrey : "transparent"
                         }
-
-                        QGCTextField {
-                            id: textInput
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            implicitHeight: rect.height / 2
-                            Layout.fillWidth: true
-                            text: qsTr("")
-                            visible: focus
-                            onAccepted: {
-                                visible = false
-                                _planMasterController.renameCurrentFile(text)
+                        leftPadding: focus ? 5 : 0
+                        onEditingFinished: {
+                            focus = false                           
+                            if (_currentPlanFileName !== text && text != "") {
+                                var previousPlanFileName = _currentPlanFileName
+                                _currentPlanFileName = text
+                                if (!_planMasterController.renameCurrentFile(text)) {
+                                    _currentPlanFileName = previousPlanFileName
+                                    text = previousPlanFileName
+                                }
+                            } else if (text == "") {
+                                text = fileName
                             }
-                        }
 
+                        }
                     }
 
                     Row {
                         id: rowBtn
                         spacing: 5
                         Layout.alignment: Qt.AlignRight
-                        Layout.rightMargin: ScreenTools.defaultFontPixelWidth
+                        Layout.rightMargin: 10
                         QGCIconButton {
-                            id: btnEdit
+                            id: buttonDelete
+                            visible: rect.ListView.isCurrentItem || rect.rowHovered ? true : false
+                            showNormal: hovered
+                            iconSource: "/qmlimages/DeleteFile.svg"
+                            ToolTip.text: qsTr("delete")
+                            highlighted: hovered
+                            onClicked: {
+                                var removedResule
+                                toolTipDelete.visible = false
+                                if (listView.currentIndex === index) {
+
+                                    _planMasterController.removeAll();
+//                                    _planMasterController.removeAllFromVehicle();
+                                    _currentPlanFileName = folderModel.get(index, "fileBaseName")
+                                    removedResule = _planMasterController.removeSelectedFiles(_currentPlanFileDir + "/" + _currentPlanFileName)
+                                    listView.currentIndex = -1  // 不选任何任务文件
+                                    _currentPlanFileName = ""
+                                } else {
+                                    var selectedPlanFileName = folderModel.get(index, "fileBaseName")
+                                    removedResule = _planMasterController.removeSelectedFiles(_currentPlanFileDir + "/" + selectedPlanFileName)
+                                }
+                            }
+                            ToolTip {
+                                id: toolTipDelete
+                                text: "delete"
+                                visible: parent.hovered
+                                delay: toolTipDelay
+                            }
+
+                        }
+
+                        QGCIconButton {
+                            id: buttonEdit
                             visible: rect.ListView.isCurrentItem || rect.rowHovered ? true : false
                             iconSource: "/qmlimages/Edit.svg"
                             ToolTip {
@@ -126,38 +140,11 @@ QGCListView {
                                 toolTipEdit.visible = false
                                 listView.currentIndex = index
                                 console.log("folderModel.get:", folderModel.get(index, "fileName"))
-                                _currentPlanFileName = folderModel.get(index, "fileName")
+                                _currentPlanFileName = folderModel.get(index, "fileBaseName")
                                 _planMasterController.loadFromFile(_currentPlanFileDir + "/" + _currentPlanFileName)
                                 _planMasterController.fitViewportToItems()
                                 enterPlanEditMode(true)
                             }
-                        }
-                        QGCIconButton {
-                            id: btnSave
-                            visible: rect.ListView.isCurrentItem || rect.rowHovered ? true : false
-                            _showHighlight: hovered
-                            iconSource: "/qmlimages/DeleteFile.svg"
-                            ToolTip.text: qsTr("delete")
-                            highlighted: hovered
-                            onClicked: {
-                                toolTipDelete.visible = false
-                                if (listView.currentIndex === index) {
-                                    _planMasterController.removeAll();
-                                    _planMasterController.removeAllFromVehicle();
-                                }
-
-                                listView.currentIndex = index
-                                _currentPlanFileName = folderModel.get(index, "fileName")
-                                var removedResule = _planMasterController.removeSelectedFiles(_currentPlanFileDir + "/" + _currentPlanFileName)
-                                console.log("remove file:", _currentPlanFileDir + "/" + _currentPlanFileName, removedResule)
-                            }
-                            ToolTip {
-                                id: toolTipDelete
-                                text: "delete"
-                                visible: parent.hovered
-                                delay: toolTipDelay
-                            }
-
                         }
 
                     }
@@ -165,16 +152,16 @@ QGCListView {
 
             }
 
-
             Rectangle {
                 height: 1
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
-                color: "grey"
+                color: _splitLineColorLighter
             }
         }
     }
+    Component.onCompleted: listView.currentIndex = -1
 }
 
 

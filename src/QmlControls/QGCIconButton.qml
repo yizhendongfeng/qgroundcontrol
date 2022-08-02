@@ -9,10 +9,11 @@ Button {
     id:             control
     hoverEnabled:   true
     focusPolicy:    Qt.ClickFocus
-    width: ScreenTools.defaultFontPixelWidth * 2.5
+    width:          ScreenTools.implicitButtonHeight
     height: width
     property string iconSource
-    property bool   _showHighlight:     pressed | hovered | checked
+    property alias sourceSize: icon.sourceSize
+    property bool  showNormal: pressed | hovered | checked // _showNormal, true: 灰色（不可交互或状态改变），false: 高亮（表示可交互）
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
     contentItem: Item {
@@ -21,11 +22,11 @@ Button {
             id:                     icon
             anchors.fill:           parent
             source:                 control.iconSource
-//            width:             ScreenTools.defaultFontPixelWidth * 2
-            color:                  _showHighlight ? qgcPal.text : qgcPal.colorGrey
+            color:                  showNormal ? qgcPal.colorGrey : qgcPal.text
             fillMode:               Image.PreserveAspectFit
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
+            antialiasing:       true
         }
     }
     background: Rectangle {

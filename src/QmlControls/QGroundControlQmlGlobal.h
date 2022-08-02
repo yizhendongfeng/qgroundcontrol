@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -15,28 +15,11 @@
 #include "SimulatedPosition.h"
 #include "QGCLoggingCategory.h"
 #include "AppSettings.h"
-#include "AirspaceManager.h"
-#include "ADSBVehicleManager.h"
 #include "QGCPalette.h"
 #include "QmlUnitsConversion.h"
-#if defined(QGC_ENABLE_PAIRING)
-#include "PairingManager.h"
-#endif
-#if defined(QGC_GST_TAISYNC_ENABLED)
-#include "TaisyncManager.h"
-#else
+
 class TaisyncManager;
-#endif
-#if defined(QGC_GST_MICROHARD_ENABLED)
-#include "MicrohardManager.h"
-#else
 class MicrohardManager;
-#endif
-
-#ifdef QT_DEBUG
-#include "MockLink.h"
-#endif
-
 class QGCToolbox;
 class LinkManager;
 
@@ -63,13 +46,8 @@ public:
     Q_PROPERTY(QGCMapEngineManager* mapEngineManager        READ    mapEngineManager        CONSTANT)
     Q_PROPERTY(QGCPositionManager*  qgcPositionManger       READ    qgcPositionManger       CONSTANT)
     Q_PROPERTY(VideoManager*        videoManager            READ    videoManager            CONSTANT)
-    Q_PROPERTY(MAVLinkLogManager*   mavlinkLogManager       READ    mavlinkLogManager       CONSTANT)
     Q_PROPERTY(SettingsManager*     settingsManager         READ    settingsManager         CONSTANT)
-    Q_PROPERTY(AirspaceManager*     airspaceManager         READ    airspaceManager         CONSTANT)
-    Q_PROPERTY(ADSBVehicleManager*  adsbVehicleManager      READ    adsbVehicleManager      CONSTANT)
     Q_PROPERTY(QGCCorePlugin*       corePlugin              READ    corePlugin              CONSTANT)
-    Q_PROPERTY(MissionCommandTree*  missionCommandTree      READ    missionCommandTree      CONSTANT)
-    Q_PROPERTY(FactGroup*           gpsRtk                  READ    gpsRtkFactGroup         CONSTANT)
     Q_PROPERTY(bool                 airmapSupported         READ    airmapSupported         CONSTANT)
     Q_PROPERTY(TaisyncManager*      taisyncManager          READ    taisyncManager          CONSTANT)
     Q_PROPERTY(bool                 taisyncSupported        READ    taisyncSupported        CONSTANT)
@@ -101,11 +79,8 @@ public:
     Q_PROPERTY(qreal zOrderTrajectoryLines      READ zOrderTrajectoryLines      CONSTANT)
     Q_PROPERTY(qreal zOrderWaypointLines        READ zOrderWaypointLines        CONSTANT)
     //-------------------------------------------------------------------------
-    // MavLink Protocol
-    Q_PROPERTY(bool     isVersionCheckEnabled   READ isVersionCheckEnabled      WRITE setIsVersionCheckEnabled      NOTIFY isVersionCheckEnabledChanged)
-    Q_PROPERTY(int      mavlinkSystemID         READ mavlinkSystemID            WRITE setMavlinkSystemID            NOTIFY mavlinkSystemIDChanged)
-    Q_PROPERTY(bool     hasAPMSupport           READ hasAPMSupport              CONSTANT)
-    Q_PROPERTY(bool     hasMAVLinkInspector     READ hasMAVLinkInspector        CONSTANT)
+    // shenHang Protocol
+    Q_PROPERTY(int      shenHangSystemID         READ shenHangSystemID            WRITE setShenHangSystemID            NOTIFY shenHangSystemIDChanged)
 
 
 #if defined(QGC_ENABLE_PAIRING)
@@ -119,14 +94,6 @@ public:
 
     Q_INVOKABLE void    deleteAllSettingsNextBoot       () { _app->deleteAllSettingsNextBoot(); }
     Q_INVOKABLE void    clearDeleteAllSettingsNextBoot  () { _app->clearDeleteAllSettingsNextBoot(); }
-
-    Q_INVOKABLE void    startPX4MockLink            (bool sendStatusText);
-    Q_INVOKABLE void    startGenericMockLink        (bool sendStatusText);
-    Q_INVOKABLE void    startAPMArduCopterMockLink  (bool sendStatusText);
-    Q_INVOKABLE void    startAPMArduPlaneMockLink   (bool sendStatusText);
-    Q_INVOKABLE void    startAPMArduSubMockLink     (bool sendStatusText);
-    Q_INVOKABLE void    startAPMArduRoverMockLink   (bool sendStatusText);
-    Q_INVOKABLE void    stopOneMockLink             (void);
 
     /// Returns the list of available logging category names.
     Q_INVOKABLE QStringList loggingCategories(void) const { return QGCLoggingCategoryRegister::instance()->registeredCategories(); }
@@ -152,14 +119,10 @@ public:
     MultiVehicleManager*    multiVehicleManager ()  { return _multiVehicleManager; }
     QGCMapEngineManager*    mapEngineManager    ()  { return _mapEngineManager; }
     QGCPositionManager*     qgcPositionManger   ()  { return _qgcPositionManager; }
-    MissionCommandTree*     missionCommandTree  ()  { return _missionCommandTree; }
     VideoManager*           videoManager        ()  { return _videoManager; }
-    MAVLinkLogManager*      mavlinkLogManager   ()  { return _mavlinkLogManager; }
     QGCCorePlugin*          corePlugin          ()  { return _corePlugin; }
     SettingsManager*        settingsManager     ()  { return _settingsManager; }
     FactGroup*              gpsRtkFactGroup     ()  { return _gpsRtkFactGroup; }
-    AirspaceManager*        airspaceManager     ()  { return _airspaceManager; }
-    ADSBVehicleManager*     adsbVehicleManager  ()  { return _adsbVehicleManager; }
     QmlUnitsConversion*     unitsConversion     ()  { return &_unitsConversion; }
 #if defined(QGC_ENABLE_PAIRING)
     bool                    supportsPairing     ()  { return true; }
@@ -192,20 +155,8 @@ public:
     qreal zOrderTrajectoryLines     () { return 48; }
     qreal zOrderWaypointLines       () { return 47; }
 
-    bool    isVersionCheckEnabled   () { return _toolbox->mavlinkProtocol()->versionCheckEnabled(); }
-    int     mavlinkSystemID         () { return _toolbox->mavlinkProtocol()->getSystemId(); }
-#if defined(NO_ARDUPILOT_DIALECT)
-    bool    hasAPMSupport           () { return false; }
-#else
-    bool    hasAPMSupport           () { return true; }
-#endif
-
-#if defined(QGC_ENABLE_MAVLINK_INSPECTOR)
-    bool    hasMAVLinkInspector     () { return true; }
-#else
-    bool    hasMAVLinkInspector     () { return false; }
-#endif
-
+    int     shenHangSystemID         () { return _toolbox->shenHangProtocol()->getSystemId(); }
+    void    setShenHangSystemID(int id);
     bool    singleFirmwareSupport   ();
     bool    singleVehicleSupport    ();
     bool    px4ProFirmwareSupported ();
@@ -214,7 +165,6 @@ public:
     void    setSkipSetupPage        (bool skip);
 
     void    setIsVersionCheckEnabled    (bool enable);
-    void    setMavlinkSystemID          (int  id);
     void    setFlightMapPosition        (QGeoCoordinate& coordinate);
     void    setFlightMapZoom            (double zoom);
 
@@ -236,28 +186,23 @@ public:
 signals:
     void isMultiplexingEnabledChanged   (bool enabled);
     void isVersionCheckEnabledChanged   (bool enabled);
-    void mavlinkSystemIDChanged         (int id);
-    void flightMapPositionChanged       (QGeoCoordinate flightMapPosition);
+    void shenHangSystemIDChanged         (int id);
     void flightMapZoomChanged           (double flightMapZoom);
     void skipSetupPageChanged           ();
-
+    void flightMapPositionChanged       (QGeoCoordinate& coordinatecoordinate);
 private:
     double                  _flightMapInitialZoom   = 17.0;
     LinkManager*            _linkManager            = nullptr;
     MultiVehicleManager*    _multiVehicleManager    = nullptr;
     QGCMapEngineManager*    _mapEngineManager       = nullptr;
     QGCPositionManager*     _qgcPositionManager     = nullptr;
-    MissionCommandTree*     _missionCommandTree     = nullptr;
     VideoManager*           _videoManager           = nullptr;
-    MAVLinkLogManager*      _mavlinkLogManager      = nullptr;
     QGCCorePlugin*          _corePlugin             = nullptr;
     FirmwarePluginManager*  _firmwarePluginManager  = nullptr;
     SettingsManager*        _settingsManager        = nullptr;
     FactGroup*              _gpsRtkFactGroup        = nullptr;
-    AirspaceManager*        _airspaceManager        = nullptr;
     TaisyncManager*         _taisyncManager         = nullptr;
     MicrohardManager*       _microhardManager       = nullptr;
-    ADSBVehicleManager*     _adsbVehicleManager     = nullptr;
     QGCPalette*             _globalPalette          = nullptr;
     QmlUnitsConversion      _unitsConversion;
 #if defined(QGC_ENABLE_PAIRING)

@@ -1,48 +1,94 @@
 ﻿#pragma once
+#include <QMetaType>
+
 #pragma pack(1)
 
 /******************** 航线信息 ********************/
+struct QuerySingBank                   // 查询单个bank信息（ty_msg0=130,ty_msg1=1）
+{
+    uint16_t idBank;
+    uint8_t  reserved[18];
+};
 
+struct SetSingleBank {                  // 设置单个bank（ty_msg0=130,ty_msg1=2）
+    uint16_t idBank;                    // 对应的bank编号
+    uint16_t idBankSuc;                 // 对应接续航线bank编号
+    uint16_t idBankIWpSuc;              // 对应接续航线中航点编号
+    uint8_t actBankEnd;                 // 设置航线完成动作，暂未定义，保留
+    uint8_t flagBankVerified;           // 设置航线校验位，0：校验未通过；1：校验通过
+    uint8_t flagBankLock;               // 设置航线锁定位，0：解除锁定；1：设置锁定
+    uint8_t resesrved[10];              // 保留
+};
+
+struct RefactorInfoSlots {              // 重构infoslot表单（ty_msg0=130,ty_msg1=3）
+    uint16_t idBank;                    // 对应需要重构的bank编号
+    uint16_t nWp;                       // 对应bank内的航路点数目
+    uint16_t nInfoSlot;                 // 对应bank内的infoslot数目
+    uint8_t reserved[18];
+};
+
+struct QureySingleInfoSlot {            // 查询单个infoslot（ty_msg0=130,ty_msg1=4）
+    uint16_t idBank;                    // 对应要查询的infoslot所在的bank编号
+    uint16_t idInfoSlot;                // 对应需要查询的infoslot编号
+    uint8_t reserved[16];
+};
+
+struct BankAutoSwitch {                 // 航线自动跳转控制命令（ty_msg0=130,ty_msg1=5）
+    uint8_t flagHalt;                   // 0：航路点自动切换使能；1：航路点自动切换失能
+    uint8_t reserved[19];
+};
+
+struct WaypointSwitch {                 // 航路点跳转命令（ty_msg0=130,ty_msg1=6）
+    uint16_t idBank;                    // 对应跳转目标bank编号
+    uint16_t idWp;                      // 对应跳转目标bank内的
+    uint8_t switchMode;                 // 跳转时机，0：立即跳转；1：满足当前航点切换条件后跳转
+    uint8_t reserved[15];
+};
 
 /******************** 航线回复数据 ********************/
 struct TotalBankInfo {                  // 整体航路信息（ty_msg0=194,ty_msg1=0）
-    uint16_t largeBankInfslCapacity;   // 飞行器可存储的最大大航线中infoslot容量
-    uint16_t smallBankInfoslCapacity;   // 飞行器可存储的最大小航线中infoslot容量
+    uint16_t largeBankInfoSlotCapacity; // 飞行器可存储的最大大航线中infoslot容量
+    uint16_t smallBankInfoSlotCapacity; // 飞行器可存储的最大小航线中infoslot容量
     uint16_t largeBankNumber;           // 飞行器可存储的最大大航线条数
     uint16_t smallBankNumber;           // 飞行器可存储的最大小航线条数
     uint16_t idTransientBank;           // 过渡航线对应的编号
+    uint8_t  reserved[10];
 };
 Q_DECLARE_METATYPE(TotalBankInfo)
 struct SingleBankInfo {                 // 单个bank信息（ty_msg0=194,ty_msg1=1，2，5，或6）
     uint16_t idBank;                    // 对应的bank编号
-    uint16_t tyBank;                    // 对应的bank类型码
-    uint16_t nInfoslotMax;              // 对应的bank最大infoslot容量
+    uint16_t typeBank;                  // 对应的bank类型码
+    uint16_t nInfoSlotMax;              // 对应的bank最大infoslot容量
     uint16_t iWp;                       // 当前bank中待执行航路点编号
     uint16_t nWp;                       // 前bank中航路点总数
-    uint16_t nInfoslot;                 // 当前bank中infoslot总数
+    uint16_t nInfoSlot;                 // 当前bank中infoslot总数
     uint16_t idBankSuc;                 // 接续航线编号
     uint16_t idBankIwpSuc;              // 接续航路点编号
     uint16_t actBankEnd;                // 对应航线执行完成后动作
     uint8_t stateBank;                  // 对应航线状态，bit0，0：未装载，1：装载；bit1， 0：未校验，1：已校验；bit2， 0：未锁定；1：已锁定；bit3， 0：空闲，1：占用；bit4：7：保留
     uint8_t switchState;                // 对应的bank编号，0：自动切换开，1：自动切换关
 };
+
 struct SingleBankCheckInfo {            // 单个bank校验信息（ty_msg0=194,ty_msg1=3）
     uint16_t idBank;                    // 对应的bank编号
     uint16_t tyBank;                    // 对应的bank类型码
     uint16_t nWp;                       // 前bank中航路点总数
-    uint16_t nInfosl;                   // 当前bank中infoslot总数
+    uint16_t nInfoSlot;                 // 当前bank中infoslot总数
     uint32_t crc32;                     // 对应bank的crc32校验码
+    uint8_t  reserved[8];
 };
+
 struct ErrorBankInfo {                  // 查询单个infoslot返回信息（ty_msg0=1,ty_msg1=4）
     uint8_t errTyMsg1;                  // 出错的命令对应的ty_msg1编号
     uint8_t dgnCode;                    // 错误编码，2：编号超界，4：无效指令，其他：保留
+    uint8_t reserved[18];
 };
 
 struct WaypointInfoSlot {       // 航路点信息报文（ty_msg0=1）
     uint16_t idBank;        // 航线标号，从0开始依次递增，最大值通过配置文件设置
     uint16_t idWp;          // 航路点（waypoint）标号，每个bank之内从0开始，依照主要infoslot数目依次递增，若单一航点由多个infoslot描述，则该航点对应的所有infoslot中的id_wp字段均相等
-    uint16_t idInfosl;      // infoslot标号，每个bank之内从0开始随所有类型infoslot数目依次递增
-    uint16_t tyInfosl;      // infoslot类型，大类编号（bit0~3）：0：非法，1：主要infoslot，2：补充infoslot，2~15：保留；小类编号（bit4~11）：0：基本，1：动态；bit12~15：航点占用infoslot总数
+    uint16_t idInfoSlot;    // infoslot标号，每个bank之内从0开始随所有类型infoslot数目依次递增
+    uint16_t typeInfoSlot;    // infoslot类型，大类编号（bit0~3）：0：非法，1：主要infoslot，2：补充infoslot，2~15：保留；小类编号（bit4~11）：0：基本，1：动态；bit12~15：航点占用infoslot总数
     double lon;             // 经度：±180
     double lat;             // 纬度：±90
     float alt;              // 单位m
@@ -56,16 +102,36 @@ struct WaypointInfoSlot {       // 航路点信息报文（ty_msg0=1）
     uint16_t actArrvl;      // 到达动作字段，双字节无符号整型
     uint16_t swCondSet;     // 切换条件设置
     uint8_t actInflt;       // 飞行中动作字段
-    uint8_t heHdgCtrlMode;  // 高度和航向控制模式字段
+    uint8_t hgtHdgCtrlMode;  // 高度和航向控制模式字段
     int8_t swAngDeg;        // 盘旋方位角切换条件字段
     uint8_t swTurns;        // 盘旋切换圈数字段
     uint8_t gdMode;         // 制导模式字段
-    uint8_t mmvrSty;        // 机动风格字段
+    uint8_t mnvrSty;        // 机动风格字段
     uint8_t transSty;       // 过渡风格字段
     uint8_t reserved0;      // 保留变量
     uint8_t reserved1;      // 保留变量
     uint8_t cs;             // 校验字
 };
+
+struct AckSetting {         // 设置相关命令的回复报文，包括重置设置命令（ty_msg0=129,ty_msg1=0），载入设置返回（ty_msg0=193,ty_msg1=1），保存设置返回（ty_msg0=193,ty_msg1=2）
+    uint8_t idCfgGroup0;    // 0~0xFE对应各设置组id；0xFF重置所有设置组
+    uint8_t execuateState;  // 0：正常执行；其他：异常
+    uint8_t reserved[18];
+};
+
+struct AckSingleParam {     // 单个参数查询返回（ty_msg0=193,ty_msg1=3），单个参数设置返回（ty_msg0=193,ty_msg1=4）
+    uint8_t idCfgGroup;     // 0~0xFE对应各设置组id
+    uint8_t lenCfg;         // 查询的设置参数的字节数，根据xml文件确定
+    uint16_t addrOffset;    // 查询的设置参数在对应组内的偏移地址，根据xml文件确定
+    uint8_t data[16];       // 具体设置值，按内存顺序排列，低字节在前，高字节在后
+};
+
+struct AckSettingError {    // 错误信息返回（ty_msg0=193,ty_msg1=255），设置命令执行出错时返回的报文
+    uint8_t errTyMsg1;      // 出错的命令对应的ty_msg1编号
+    uint8_t dngCode;        // 错误编码，2：编号超界；4：无效指令；其他：保留
+    uint8_t reserved[18];
+};
+
 struct GeneralStatus {      // 常规状态信息报文（ty_msg0=2）
     uint8_t tyObj;          // 0：通用类型，1：直升机，2：固定翼，3：多旋翼，4：串列矢量，5：并列矢量，6：倾转，其他：保留
     uint8_t tyVcf;          // 载具构型信息，0：旋翼构型，1：固定翼构型，其他：保留
@@ -133,7 +199,7 @@ struct GpsRawInt {
  int16_t yaw; /*< [cdeg] Yaw in earth frame from north. Use 0 if this GPS does not provide yaw. Use 65535 if this GPS is configured to provide yaw and is currently unable to provide it. Use 36000 for north.*/
 };
 
-#pragma pack ()
+#pragma pack ()  //取消指定对齐,恢复缺省对齐
 
 
 enum CommandParamType {          // ty_msg0=129时, ty_msg1用以对机上参数进行读取、设置、初始化、保存等操作，名称id_cfggroup
@@ -163,15 +229,16 @@ enum CommandBank {              // 航线相关命令（ty_msg0=130）
     WAYPOINT_AUTO_SW,           // 航路点跳转命令（ty_msg0=130,ty_msg1=6）
 };
 
-enum AckCommandBank {           // 航线相关命令（ty_msg0=194），该报文为查询整体航路信息命令（ty_msg0=130）的回复报文
+enum AckCommandBank {           // 航线相关命令        （ty_msg0=194），该报文为查询整体航路信息命令（ty_msg0=130）的回复报文
     ACK_NONE = -1,              // 未请求
-    ACK_QUERY_ALL = 0,          // 查询整体航路信息（ty_msg0=194,ty_msg1=0）
-    ACK_QUERY_SINGLE_BANK,      // 查询单个bank信息（ty_msg0=194,ty_msg1=1）
-    ACK_SET_SINGLE_BANK,        // 设置单个bank（ty_msg0=194,ty_msg1=2）
-    ACK_REFACTOR_INFO_SLOT,     // 重构infoslot表单（ty_msg0=194,ty_msg1=3）
-    ACK_QUERY_SINGLE_INFO_SLOT, // 查询单个infoslot（ty_msg0=194,ty_msg1=4）
-    ACK_BANK_AUTO_SW,           // 航线自动跳转控制命令（ty_msg0=194,ty_msg1=5）
-    ACK_WAYPOINT_AUTO_SW,       // 航路点跳转命令（ty_msg0=194,ty_msg1=6）
+    ACK_QUERY_ALL_BANK = 0,     // 查询整体航路信息     （ty_msg0=194,ty_msg1=0）
+    ACK_QUERY_SINGLE_BANK,      // 查询单个bank信息    （ty_msg0=194,ty_msg1=1）
+    ACK_SET_SINGLE_BANK,        // 设置单个bank       （ty_msg0=194,ty_msg1=2）
+    ACK_REFACTOR_INFO_SLOT,     // 重构infoslot表单   （ty_msg0=194,ty_msg1=3）
+    ACK_QUERY_SINGLE_INFO_SLOT, // 查询单个infoslot   （ty_msg0=1,ty_msg1=4）
+    ACK_BANK_AUTO_SW,           // 航线自动跳转控制命令 （ty_msg0=194,ty_msg1=5）
+    ACK_WAYPOINT_AUTO_SW,       // 航路点跳转命令      （ty_msg0=194,ty_msg1=6）
+    ACK_SET_SINGLE_INFO_SLOT,   // 设置航点infoSlot   （ty_msg0=1)
     ACK_BANK_ERROR = 255
 };
 
@@ -238,3 +305,11 @@ struct CommandInfo {
     uint8_t tyMsg1;
     QString commandName;
 };
+
+enum TypeInfoSlot {
+    INVALID = 0,        // 0：非法
+    MAJOR,              // 1：主要infoslot
+    MINOR,              // 2：补充infoslot
+    RESERVED            // 3~15：保留
+};
+

@@ -1,4 +1,4 @@
-/*!
+﻿/*!
  * @file
  *   @brief Camera Controller
  *   @author Gus Grubba <gus@auterion.com>
@@ -7,7 +7,6 @@
 
 #include "QGCApplication.h"
 #include "QGCCameraManager.h"
-#include "JoystickManager.h"
 
 QGC_LOGGING_CATEGORY(CameraManagerLog, "CameraManagerLog")
 
@@ -57,9 +56,6 @@ QGCCameraManager::_vehicleReady(bool ready)
     if(ready) {
         if(qgcApp()->toolbox()->multiVehicleManager()->activeVehicle() == _vehicle) {
             _vehicleReadyState = true;
-            JoystickManager *pJoyMgr = qgcApp()->toolbox()->joystickManager();
-            _activeJoystickChanged(pJoyMgr->activeJoystick());
-            connect(pJoyMgr, &JoystickManager::activeJoystickChanged, this, &QGCCameraManager::_activeJoystickChanged);
         }
     }
 }
@@ -377,41 +373,11 @@ QGCCameraManager::_requestCameraInfo(int compID)
 {
     qCDebug(CameraManagerLog) << "_requestCameraInfo(" << compID << ")";
     if(_vehicle) {
-        _vehicle->sendMavCommand(
+/*        _vehicle->sendMavCommand(
             compID,                                 // target component
             MAV_CMD_REQUEST_CAMERA_INFORMATION,     // command id
             false,                                  // showError
-            1);                                     // Do Request
-    }
-}
-
-//----------------------------------------------------------------------------------------
-void
-QGCCameraManager::_activeJoystickChanged(Joystick* joystick)
-{
-    qCDebug(CameraManagerLog) << "Joystick changed";
-    if(_activeJoystick) {
-        disconnect(_activeJoystick, &Joystick::stepZoom,            this, &QGCCameraManager::_stepZoom);
-        disconnect(_activeJoystick, &Joystick::startContinuousZoom, this, &QGCCameraManager::_startZoom);
-        disconnect(_activeJoystick, &Joystick::stopContinuousZoom,  this, &QGCCameraManager::_stopZoom);
-        disconnect(_activeJoystick, &Joystick::stepCamera,          this, &QGCCameraManager::_stepCamera);
-        disconnect(_activeJoystick, &Joystick::stepStream,          this, &QGCCameraManager::_stepStream);
-        disconnect(_activeJoystick, &Joystick::triggerCamera,       this, &QGCCameraManager::_triggerCamera);
-        disconnect(_activeJoystick, &Joystick::startVideoRecord,    this, &QGCCameraManager::_startVideoRecording);
-        disconnect(_activeJoystick, &Joystick::stopVideoRecord,     this, &QGCCameraManager::_stopVideoRecording);
-        disconnect(_activeJoystick, &Joystick::toggleVideoRecord,   this, &QGCCameraManager::_toggleVideoRecording);
-    }
-    _activeJoystick = joystick;
-    if(_activeJoystick) {
-        connect(_activeJoystick, &Joystick::stepZoom,               this, &QGCCameraManager::_stepZoom);
-        connect(_activeJoystick, &Joystick::startContinuousZoom,    this, &QGCCameraManager::_startZoom);
-        connect(_activeJoystick, &Joystick::stopContinuousZoom,     this, &QGCCameraManager::_stopZoom);
-        connect(_activeJoystick, &Joystick::stepCamera,             this, &QGCCameraManager::_stepCamera);
-        connect(_activeJoystick, &Joystick::stepStream,             this, &QGCCameraManager::_stepStream);
-        connect(_activeJoystick, &Joystick::triggerCamera,          this, &QGCCameraManager::_triggerCamera);
-        connect(_activeJoystick, &Joystick::startVideoRecord,       this, &QGCCameraManager::_startVideoRecording);
-        connect(_activeJoystick, &Joystick::stopVideoRecord,        this, &QGCCameraManager::_stopVideoRecording);
-        connect(_activeJoystick, &Joystick::toggleVideoRecord,      this, &QGCCameraManager::_toggleVideoRecording);
+            1);  */                                   // Do Request
     }
 }
 

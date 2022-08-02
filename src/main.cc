@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -211,6 +211,36 @@ bool checkAndroidWritePermission() {
 }
 #endif
 
+//#define DUMP        // 生成dump文件
+
+#ifdef DUMP
+#include <DbgHelp.h>
+LONG ApplicationCrashHandler(EXCEPTION_POINTERS *pException){   //异常捕获
+    /*
+      ***保存数据代码***
+    */
+    //创建 Dump 文件
+    QString fileName(QDateTime::currentDateTime().toString("yyyyMMdd ") + QTime::currentTime().toString("HH_mm_ss") + ".dmp");
+    HANDLE hDumpFile = CreateFile((LPWSTR)fileName.utf16(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if( hDumpFile != INVALID_HANDLE_VALUE) {
+        //Dump信息
+        MINIDUMP_EXCEPTION_INFORMATION dumpInfo;
+        dumpInfo.ExceptionPointers = pException;
+        dumpInfo.ThreadId = GetCurrentThreadId();
+        dumpInfo.ClientPointers = TRUE;
+        //写入Dump文件内容
+        MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hDumpFile, MiniDumpNormal, &dumpInfo, NULL, NULL);
+    }
+    //这里弹出一个错误对话框并退出程序
+    EXCEPTION_RECORD* record = pException->ExceptionRecord;
+    QString errCode(QString::number(record->ExceptionCode,16)),errAdr(QString::number((size_t)record->ExceptionAddress,16))/*,errMod*/;
+    QMessageBox::critical(NULL,QStringLiteral("程序崩溃"),QStringLiteral("<FONT size=4><div><b>对于发生的错误，表示诚挚的歉意</b><br/></div>")+
+        QStringLiteral("<div>错误代码：%1</div><div>错误地址：%2</div></FONT>").arg(errCode).arg(errAdr),
+        QMessageBox::Ok);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif
+
 //-----------------------------------------------------------------------------
 /**
  * @brief Starts the application
@@ -232,7 +262,7 @@ int main(int argc, char *argv[])
 
     RunGuard guard(runguardString);
     if (!guard.tryToRun()) {
-        // QApplication is necessary to use QMessageBox
+         // QApplication is necessary to use QMessageBox
         QApplication errorApp(argc, argv);
         QMessageBox::critical(nullptr, QObject::tr("Error"),
             QObject::tr("A second instance of %1 is already running. Please close the other instance and try again.").arg(QGC_APPLICATION_NAME)
@@ -249,7 +279,9 @@ int main(int argc, char *argv[])
     if (!qEnvironmentVariableIsSet("QT_LOGGING_TO_CONSOLE"))
         qputenv("QT_LOGGING_TO_CONSOLE", "1");
 #endif
-
+#ifdef DUMP
+    SetUnhandledExceptionFilter((LPTOP_LEVEL_EXCEPTION_FILTER)ApplicationCrashHandler);//注冊异常捕获函数
+#endif
     // install the message handler
     AppMessages::installHandler();
 
@@ -400,13 +432,15 @@ int main(int argc, char *argv[])
         }
         exitCode = app->exec();
     }
-
+    qDebug() << "exitCode" << exitCode;
     app->_shutdown();
+    qDebug() << "app->_shutdown";
     delete app;
+    qDebug() << "delete app";
     //-- Shutdown Cache System
     destroyMapEngine();
 
-    qDebug() << "After app delete";
+    qDebug() << "destroyMapEngine()";
 
     return exitCode;
 }

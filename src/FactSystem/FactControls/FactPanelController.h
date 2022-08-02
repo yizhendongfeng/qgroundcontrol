@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -16,7 +16,6 @@
 #include <QObject>
 #include <QQuickItem>
 
-#include "UASInterface.h"
 #include "AutoPilotPlugin.h"
 #include "QGCLoggingCategory.h"
 

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -49,7 +49,6 @@ private:
     static void _stateRequestMetaDataJson       (StateMachine* stateMachine);
     static void _stateRequestTranslationJson    (StateMachine* stateMachine);
     static void _stateRequestComplete           (StateMachine* stateMachine);
-    static bool _uriIsMAVLinkFTP                (const QString& uri);
 
 
     ComponentInformationManager*    _compMgr                    = nullptr;

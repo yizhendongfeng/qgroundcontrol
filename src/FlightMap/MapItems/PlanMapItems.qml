@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -65,6 +65,8 @@ Item {
             line.color: "#be781c"                           // Hack, can't get palette to work in here
             z:          QGroundControl.zOrderWaypointLines
             path:       _missionController.waypointPath
+            onPathChanged:
+                console.log("path.length:", path.length)
         }
     }
 }

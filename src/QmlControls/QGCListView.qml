@@ -11,25 +11,25 @@ ListView {
     property color indicatorColor: qgcPal.text
 
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
-//    ScrollBar.vertical: ScrollBar {
-//        padding: 0
-//        policy: root.contentHeight > root.height ? ScrollBar.AlwaysOn:ScrollBar.AlwaysOff
-//        contentItem: Rectangle {
-//            implicitWidth: ScreenTools.defaultFontPixelWidth * 0.8
-//            radius: width / 2
-//            color: qgcPal.colorGrey
-//        }
-//        background: Rectangle {
-//            color: qgcPal.alertBorder
-//            radius: width / 2
-//        }
-//    }
+    ScrollBar.vertical: ScrollBar {
+        padding: 0
+        policy: root.contentHeight > root.height ? ScrollBar.AlwaysOn:ScrollBar.AlwaysOff
+        contentItem: Rectangle {
+            implicitWidth: ScreenTools.defaultFontPixelWidth * 0.8
+            radius: width / 2
+            color: qgcPal.colorGrey
+        }
+        background: Rectangle {
+            color: qgcPal.alertBorder
+            radius: width / 2
+        }
+    }
 //    ScrollBar.horizontal: ScrollBar { }
 
-    Component.onCompleted: {
-        var indicatorComponent = Qt.createComponent("QGCFlickableVerticalIndicator.qml")
-        indicatorComponent.createObject(root)
-        indicatorComponent = Qt.createComponent("QGCFlickableHorizontalIndicator.qml")
-        indicatorComponent.createObject(root)
-    }
+//    Component.onCompleted: {
+//        var indicatorComponent = Qt.createComponent("QGCFlickableVerticalIndicator.qml")
+//        indicatorComponent.createObject(root)
+//        indicatorComponent = Qt.createComponent("QGCFlickableHorizontalIndicator.qml")
+//        indicatorComponent.createObject(root)
+//    }
 }
