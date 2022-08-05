@@ -105,8 +105,8 @@ void ShenHangAutoPilotPlugin::parametersReadyPreChecks(void)
     AutoPilotPlugin::parametersReadyPreChecks();
 
     QString hitlParam("SYS_HITL");
-    if (_vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, hitlParam) &&
-            _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, hitlParam)->rawValue().toBool()) {
+    if (_vehicle->parameterManager()->parameterExists(hitlParam) &&
+            _vehicle->parameterManager()->getParameter(hitlParam)->rawValue().toBool()) {
         qgcApp()->showAppMessage(tr("Warning: Hardware In The Loop (HITL) simulation is enabled for this vehicle."));
     }
 }

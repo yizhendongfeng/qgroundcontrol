@@ -32,7 +32,7 @@ Rectangle {
     property bool   _showRCToParam:     false   //_activeVehicle.px4Firmware
     property var    _appSettings:       QGroundControl.settingsManager.appSettings
     property var    _controller:        controller
-
+    property color  _splitLineColor: "#707070"
     ParameterEditorController {
         id: controller
     }
@@ -40,7 +40,7 @@ Rectangle {
     Rectangle {
         id: leftBorder
         width: 1
-        color: qgcPal.colorGrey
+        color: _splitLineColor  //qgcPal.colorGrey
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.left: parent.left
@@ -203,9 +203,10 @@ Rectangle {
         id :                groupScroll
         width:              ScreenTools.defaultFontPixelWidth * 50
         anchors.top:        header.bottom
+        anchors.topMargin:  ScreenTools.defaultFontPixelWidth
         anchors.bottom:     parent.bottom
         anchors.left:       parent.left
-        anchors.leftMargin: ScreenTools.defaultFontPixelWidth / 2
+        anchors.leftMargin: ScreenTools.defaultFontPixelWidth
         clip:               true
         pixelAligned:       true
         contentHeight:      groupedViewCategoryColumn.height
@@ -218,46 +219,26 @@ Rectangle {
             anchors.right:  parent.right
             spacing:        Math.ceil(ScreenTools.defaultFontPixelHeight * 0.25)
 
-            Repeater {
-                model: controller.categories
+            Column {
+                Layout.fillWidth:   true
+                spacing:            Math.ceil(ScreenTools.defaultFontPixelHeight * 0.25)
 
-                Column {
-                    Layout.fillWidth:   true
-                    spacing:            Math.ceil(ScreenTools.defaultFontPixelHeight * 0.25)
-
-
-                    SectionHeader {
-                        id:             categoryHeader
-                        anchors.left:   parent.left
-                        anchors.right:  parent.right
+                Repeater {
+                    model: controller.groups
+                    QGCButton {
+                        id:             buttonGroup
+                        width:          ScreenTools.defaultFontPixelWidth * 50
                         text:           object.name
-                        checked:        object == controller.currentCategory
-                        exclusiveGroup: sectionGroup
+                        height:         _rowHeight
+                        checked:        object == controller.currentGroup
+                        autoExclusive:  true
 
-                        onCheckedChanged: {
-                            if (checked) {
-                                controller.currentCategory  = object
-                            }
+                        onClicked: {
+                            if (!checked) _rowWidth = 10
+                            checked = true
+                            controller.currentGroup = object
                         }
-                    }
-
-                    Repeater {
-                        model: categoryHeader.checked ? object.groups : 0
-                        QGCButton {
-                            id:             buttonGroup
-                            width:          ScreenTools.defaultFontPixelWidth * 50
-                            text:           object.name
-                            height:         _rowHeight
-                            checked:        object == controller.currentGroup
-                            autoExclusive:  true
-
-                            onClicked: {
-                                if (!checked) _rowWidth = 10
-                                checked = true
-                                controller.currentGroup = object
-                            }
-//                            Component.onCompleted:  console.log("object.name:", object.name)
-                        }
+                        //                            Component.onCompleted:  console.log("object.name:", object.name)
                     }
                 }
             }

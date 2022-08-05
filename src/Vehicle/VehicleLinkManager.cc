@@ -27,23 +27,6 @@ VehicleLinkManager::VehicleLinkManager(Vehicle* vehicle)
     _commLostCheckTimer.setInterval(_commLostCheckTimeoutMSecs);
 }
 
-void VehicleLinkManager::mavlinkMessageReceived(LinkInterface* link, mavlink_message_t message)
-{
-    // Radio status messages come from Sik Radios directly. It doesn't indicate there is any life on the other end.
-    if (message.msgid != MAVLINK_MSG_ID_RADIO_STATUS) {
-        int linkIndex = _containsLinkIndex(link);
-        if (linkIndex == -1) {
-            _addLink(link);
-        } else {
-            LinkInfo_t& linkInfo = _rgLinkInfo[linkIndex];
-            linkInfo.heartbeatElapsedTimer.restart();
-            if (_rgLinkInfo[linkIndex].commLost) {
-                _commRegainedOnLink(link);
-            }
-        }
-    }
-}
-
 void VehicleLinkManager::shenHangMessageReceived(LinkInterface* link, ShenHangProtocolMessage message)
 {
     int linkIndex = _containsLinkIndex(link);

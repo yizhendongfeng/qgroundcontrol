@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -121,7 +121,7 @@ Item {
 
             Connections {
                 target:             mapCircle
-                onCenterChanged:    updateCoordinate()
+                function onCenterChanged() { updateCoordinate() }
             }
 
             sourceItem: QGCColoredImage {

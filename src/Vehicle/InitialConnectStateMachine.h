@@ -29,20 +29,12 @@ public:
     void            statesCompleted (void) const final;
 
 private:
-    static void _stateRequestCapabilities               (StateMachine* stateMachine);
-    static void _stateRequestProtocolVersion            (StateMachine* stateMachine);
-    static void _stateRequestCompInfo                   (StateMachine* stateMachine);
-    static void _stateRequestCompInfoComplete           (void* requestAllCompleteFnData);
     static void _stateRequestParameters                 (StateMachine* stateMachine);
     static void _stateRequestMission                    (StateMachine* stateMachine);
     static void _stateRequestGeoFence                   (StateMachine* stateMachine);
     static void _stateSignalInitialConnectComplete      (StateMachine* stateMachine);
 
-    static void _capabilitiesCmdResultHandler           (void* resultHandlerData, int compId, MAV_RESULT result, Vehicle::MavCmdResultFailureCode_t failureCode);
-    static void _protocolVersionCmdResultHandler        (void* resultHandlerData, int compId, MAV_RESULT result, Vehicle::MavCmdResultFailureCode_t failureCode);
-
-    static void _waitForAutopilotVersionResultHandler   (void* resultHandlerData, bool noResponsefromVehicle, const mavlink_message_t& message);
-    static void _waitForProtocolVersionResultHandler    (void* resultHandlerData, bool noResponsefromVehicle, const mavlink_message_t& message);
+//    float _progress(float subProgress = 0.f);
 
     Vehicle* _vehicle;
 

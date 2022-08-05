@@ -13,7 +13,7 @@
 #include <QLoggingCategory>
 #include <QTimer>
 
-#include "MissionItem.h"
+//#include "MissionItem.h"
 #include "QGCLoggingCategory.h"
 #include "LinkInterface.h"
 #include "ShenHangProtocol.h"
@@ -23,6 +23,32 @@ class MissionCommandTree;
 
 Q_DECLARE_LOGGING_CATEGORY(PlanManagerLog)
 
+
+typedef enum {
+    AckNone,            ///< State machine is idle
+    AckMissionCount,    ///< MISSION_COUNT message expected
+    AckMissionItem,     ///< MISSION_ITEM expected
+    AckMissionQuery,    ///< MISSION_Query is expected, or MISSION_ACK to end sequence
+    AckMissionClearAll, ///< MISSION_CLEAR_ALL sent, MISSION_ACK is expected
+    AckGuidedItem,      ///< MISSION_ACK expected in response to ArduPilot guided mode single item send
+} AckType_t;
+
+enum MISSION_TYPE_SHENHANG
+{
+   SHENHANG_MISSION_TYPE_MISSION=0, /* Items are mission commands for main mission. | */
+   SHENHANG_MISSION_TYPE_FENCE=1, /* Specifies GeoFence area(s). Items are MAV_CMD_NAV_FENCE_ GeoFence items. | */
+   SHENHANG_MISSION_TYPE_RALLY=2, /* Specifies the rally points for the vehicle. Rally points are alternative RTL points. Items are MAV_CMD_NAV_RALLY_POINT rally point items. | */
+   SHENHANG_MISSION_TYPE_ALL=255, /* Only used in MISSION_CLEAR_ALL to clear all mission types. | */
+   SHENHANG_MISSION_TYPE_ENUM_END=256, /*  | */
+};
+typedef enum {
+    TransactionNone,
+    TransactionRead,
+    TransactionWrite,
+    TransactionRemoveAll
+} TransactionType_t;
+
+
 /// The PlanManager class is the base class for the Mission, GeoFence and Rally Point managers. All of which use the
 /// new mavlink v2 mission protocol.
 class PlanManager : public QObject
@@ -30,7 +56,7 @@ class PlanManager : public QObject
     Q_OBJECT
 
 public:
-    PlanManager(Vehicle* vehicle, MAV_MISSION_TYPE planType);
+    PlanManager(Vehicle* vehicle, MISSION_TYPE_SHENHANG planType);
     ~PlanManager();
 
     bool inProgress(void) const;
@@ -148,29 +174,6 @@ private slots:
     void _ackTimeout(void);
 
 protected:
-    typedef enum {
-        AckNone,            ///< State machine is idle
-        AckMissionCount,    ///< MISSION_COUNT message expected
-        AckMissionItem,     ///< MISSION_ITEM expected
-        AckMissionQuery,    ///< MISSION_Query is expected, or MISSION_ACK to end sequence
-        AckMissionClearAll, ///< MISSION_CLEAR_ALL sent, MISSION_ACK is expected
-        AckGuidedItem,      ///< MISSION_ACK expected in response to ArduPilot guided mode single item send
-    } AckType_t;
-
-    enum MISSION_TYPE_SHENHANG
-    {
-       SHENHANG_MISSION_TYPE_MISSION=0, /* Items are mission commands for main mission. | */
-       SHENHANG_MISSION_TYPE_FENCE=1, /* Specifies GeoFence area(s). Items are MAV_CMD_NAV_FENCE_ GeoFence items. | */
-       SHENHANG_MISSION_TYPE_RALLY=2, /* Specifies the rally points for the vehicle. Rally points are alternative RTL points. Items are MAV_CMD_NAV_RALLY_POINT rally point items. | */
-       SHENHANG_MISSION_TYPE_ALL=255, /* Only used in MISSION_CLEAR_ALL to clear all mission types. | */
-       SHENHANG_MISSION_TYPE_ENUM_END=256, /*  | */
-    };
-    typedef enum {
-        TransactionNone,
-        TransactionRead,
-        TransactionWrite,
-        TransactionRemoveAll
-    } TransactionType_t;
 
     void _startAckTimeout(AckCommandBank ack);
     bool _checkForExpectedAck(AckCommandBank receivedAck);
@@ -178,7 +181,7 @@ protected:
     void _clearMissionItems(void);
     void _sendError(ErrorCode_t errorCode, const QString& errorMsg);
     QString _ackTypeToString(AckCommandBank ackType);
-    QString _missionResultToString(MAV_MISSION_RESULT result);
+//    QString _missionResultToString(MAV_MISSION_RESULT result);
     void _finishTransaction(bool success, bool apmGuidedItemWrite = false);
     void _writeInfoSlotsWorker(void);
     void _clearAndDeleteReadInfoSlots(void);
@@ -196,7 +199,7 @@ protected:
 //    void _handleInfoSlot(const ShenHangProtocolMessage& message);
 
 
-    QString _planTypeString(void);
+//    QString _planTypeString(void);
     void _queryAllBanks(void);
     void _querySingleBankInfo(uint16_t idBank);
     void _setSingleBankInfo(SetSingleBank setSingleBank);
@@ -205,7 +208,7 @@ protected:
     void _setSingleInfoSlot(WaypointInfoSlot* infoSlot);
 protected:
     Vehicle*            _vehicle =              nullptr;
-    MAV_MISSION_TYPE    _planType;
+//    MAV_MISSION_TYPE    _planType;
 
     QTimer*             _ackTimeoutTimer =      nullptr;
     AckType_t           _expectedAck;

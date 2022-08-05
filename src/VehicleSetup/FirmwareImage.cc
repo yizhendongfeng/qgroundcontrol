@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -13,7 +13,7 @@
 #include "QGCMAVLink.h"
 #include "QGCApplication.h"
 #include "FirmwarePlugin.h"
-#include "CompInfoParam.h"
+//#include "CompInfoParam.h"
 #include "Bootloader.h"
 
 #include <QDebug>
@@ -256,7 +256,7 @@ bool FirmwareImage::_px4Load(const QString& imageFilename)
     }
 
     // What firmware type is this?
-    MAV_AUTOPILOT firmwareType = (MAV_AUTOPILOT)px4Json[_jsonMavAutopilotKey].toInt(MAV_AUTOPILOT_PX4);
+    MAV_AUTOPILOT firmwareType = (MAV_AUTOPILOT)px4Json[_jsonMavAutopilotKey].toInt(MAV_AUTOPILOT_SHEN_HANG);
     emit statusMessage(QString("MAV_AUTOPILOT = %1").arg(firmwareType));
     
     // Decompress the parameter xml and save to file
@@ -282,9 +282,6 @@ bool FirmwareImage::_px4Load(const QString& imageFilename)
         } else {
             emit statusMessage(tr("Unable to open parameter meta data file %1 for writing, error: %2").arg(parameterFilename, parameterFile.errorString()));
         }
-
-        // Cache this file with the system
-        CompInfoParam::_cachePX4MetaDataFile(parameterFilename);
     }
 
     // Decompress the airframe xml and save to file

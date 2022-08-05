@@ -14,7 +14,7 @@
 #include "SettingsManager.h"
 #include "AppSettings.h"
 #include "QGCFileDownload.h"
-#include "QGCCameraManager.h"
+//#include "QGCCameraManager.h"
 
 #include <QRegularExpression>
 #include <QDebug>
@@ -144,18 +144,6 @@ bool FirmwarePlugin::supportsJSButton(void)
     return false;
 }
 
-bool FirmwarePlugin::adjustIncomingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message)
-{
-    Q_UNUSED(vehicle);
-    Q_UNUSED(message);
-    // Generic plugin does no message adjustment
-    return true;
-}
-
-void FirmwarePlugin::adjustOutgoingMavlinkMessageThreadSafe(Vehicle* /*vehicle*/, LinkInterface* /*outgoingLink*/, mavlink_message_t* /*message*/)
-{
-    // Generic plugin does no message adjustment
-}
 
 void FirmwarePlugin::initializeVehicle(Vehicle* vehicle)
 {
@@ -172,31 +160,24 @@ bool FirmwarePlugin::sendHomePositionToVehicle(void)
     return false;
 }
 
-QList<MAV_CMD> FirmwarePlugin::supportedMissionCommands(QGCMAVLink::VehicleClass_t /* vehicleClass */)
-{
-    // Generic supports all commands
-    return QList<MAV_CMD>();
-}
+//QList<MAV_CMD> FirmwarePlugin::supportedMissionCommands(QGCMAVLink::VehicleClass_t /* vehicleClass */)
+//{
+//    // Generic supports all commands
+//    return QList<MAV_CMD>();
+//}
 
 QString FirmwarePlugin::missionCommandOverrides(QGCMAVLink::VehicleClass_t vehicleClass) const
 {
-    switch (vehicleClass) {
-    case QGCMAVLink::VehicleClassGeneric:
-        return QStringLiteral(":/json/MavCmdInfoCommon.json");
-    case QGCMAVLink::VehicleClassFixedWing:
-        return QStringLiteral(":/json/MavCmdInfoFixedWing.json");
-    case QGCMAVLink::VehicleClassMultiRotor:
-        return QStringLiteral(":/json/MavCmdInfoMultiRotor.json");
-    case QGCMAVLink::VehicleClassVTOL:
-        return QStringLiteral(":/json/MavCmdInfoVTOL.json");
-    case QGCMAVLink::VehicleClassSub:
-        return QStringLiteral(":/json/MavCmdInfoSub.json");
-    case QGCMAVLink::VehicleClassRoverBoat:
-        return QStringLiteral(":/json/MavCmdInfoRover.json");
-    default:
-        qWarning() << "FirmwarePlugin::missionCommandOverrides called with bad VehicleClass_t:" << vehicleClass;
-        return QString();
-    }
+//    switch (vehicleClass) {
+//    case QGCMAVLink::VehicleClassGeneric:
+//        return QStringLiteral(":/json/MavCmdInfoCommon.json");
+//    case QGCMAVLink::VehicleClassFixedWing:
+//        return QStringLiteral(":/json/MavCmdInfoFixedWing.json");
+//    default:
+//        qWarning() << "FirmwarePlugin::missionCommandOverrides called with bad VehicleClass_t:" << vehicleClass;
+//        return QString();
+//    }
+    return QString();
 }
 
 void FirmwarePlugin::_getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion)
@@ -910,15 +891,11 @@ bool FirmwarePlugin::hasGimbal(Vehicle* vehicle, bool& rollSupported, bool& pitc
     return false;
 }
 
-QGCCameraManager* FirmwarePlugin::createCameraManager(Vehicle* vehicle)
-{
-    return new QGCCameraManager(vehicle);
-}
+//QGCCameraManager* FirmwarePlugin::createCameraManager(Vehicle* vehicle)
+//{
+//    return new QGCCameraManager(vehicle);
+//}
 
-QGCCameraControl* FirmwarePlugin::createCameraControl(const mavlink_camera_information_t *info, Vehicle *vehicle, int compID, QObject* parent)
-{
-    return new QGCCameraControl(info, vehicle, compID, parent);
-}
 
 uint32_t FirmwarePlugin::highLatencyCustomModeTo32Bits(uint16_t hlCustomMode)
 {

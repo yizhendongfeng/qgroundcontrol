@@ -31,11 +31,5 @@ private slots:
     void _shenHangMessageReceived(const ShenHangProtocolMessage& message);
 
 private:
-    void _handleHighLatency(const mavlink_message_t& message);
-    void _handleHighLatency2(const mavlink_message_t& message);
-    void _handleMissionCurrent(const mavlink_message_t& message);
-    void _updateMissionIndex(int index);
-    void _handleHeartbeat(const mavlink_message_t& message);
-
     int _cachedLastCurrentIndex;
 };

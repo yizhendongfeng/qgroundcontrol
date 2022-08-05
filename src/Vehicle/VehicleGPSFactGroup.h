@@ -27,7 +27,8 @@ public:
     Q_PROPERTY(Fact* vdop               READ vdop               CONSTANT)
     Q_PROPERTY(Fact* courseOverGround   READ courseOverGround   CONSTANT)
     Q_PROPERTY(Fact* count              READ count              CONSTANT)
-    Q_PROPERTY(Fact* lock               READ lock               CONSTANT)
+    Q_PROPERTY(Fact* status             READ status             CONSTANT)
+    Q_PROPERTY(Fact* dualAntenna        READ dualAntenna        CONSTANT)
 
     Fact* lat               () { return &_latFact; }
     Fact* lon               () { return &_lonFact; }
@@ -36,10 +37,9 @@ public:
     Fact* vdop              () { return &_vdopFact; }
     Fact* courseOverGround  () { return &_courseOverGroundFact; }
     Fact* count             () { return &_countFact; }
-    Fact* lock              () { return &_lockFact; }
+    Fact* status            () { return &_statusFact; }
+    Fact* dualAntenna       () { return &_dualAntennaFact; }
 
-    // Overrides from FactGroup
-    void handleMessage(Vehicle* vehicle, mavlink_message_t& message) override;
     void setShenHangGpsInfo(GpsRawInt& gpsRawInt);
 
     static const char* _latFactName;
@@ -49,13 +49,10 @@ public:
     static const char* _vdopFactName;
     static const char* _courseOverGroundFactName;
     static const char* _countFactName;
-    static const char* _lockFactName;
+    static const char* _statusFactName;
+    static const char* _dualAntennaFactName;
 
 private:
-    void _handleGpsRawInt   (mavlink_message_t& message);
-    void _handleHighLatency (mavlink_message_t& message);
-    void _handleHighLatency2(mavlink_message_t& message);
-
     Fact _latFact;
     Fact _lonFact;
     Fact _mgrsFact;
@@ -63,5 +60,6 @@ private:
     Fact _vdopFact;
     Fact _courseOverGroundFact;
     Fact _countFact;
-    Fact _lockFact;
+    Fact _statusFact;
+    Fact _dualAntennaFact;
 };

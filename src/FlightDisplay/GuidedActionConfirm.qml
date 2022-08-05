@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -18,8 +18,8 @@ import QGroundControl.Palette       1.0
 
 Rectangle {
     id:                     _root
-    Layout.minimumWidth:    mainLayout.width + (_margins * 2)
-    Layout.preferredHeight: mainLayout.height + (_margins * 2)
+//    Layout.minimumWidth:    mainLayout.width + (_margins * 2)
+//    Layout.preferredHeight: mainLayout.height + (_margins * 2)
     radius:                 ScreenTools.defaultFontPixelWidth / 2
     color:                  qgcPal.windowShadeLight
     visible:                false
@@ -78,7 +78,8 @@ Rectangle {
 
     ColumnLayout {
         id:                         mainLayout
-        anchors.horizontalCenter:   parent.horizontalCenter
+//        anchors.horizontalCenter:   parent.horizontalCenter
+        anchors.fill: parent
         spacing:                    _margins
 
         QGCLabel {
@@ -86,6 +87,9 @@ Rectangle {
             Layout.fillWidth:       true
             horizontalAlignment:    Text.AlignHCenter
             wrapMode:               Text.WordWrap
+            onTextChanged: {
+                console.log("text changed width", width, "contentWidth", messageText.contentWidth, text)
+            }
         }
 
         QGCCheckBox {

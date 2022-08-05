@@ -339,9 +339,9 @@ ApplicationWindow {
         visible:    !QGroundControl.videoManager.fullScreen
     }
 
-    footer: LogReplayStatusBar {
-        visible: QGroundControl.settingsManager.flyViewSettings.showLogReplayStatusBar.rawValue
-    }
+//    footer: LogReplayStatusBar {
+//        visible: QGroundControl.settingsManager.flyViewSettings.showLogReplayStatusBar.rawValue
+//    }
 
     function showToolSelectDialog() {
         if (!mainWindow.preventViewSwitch()) {

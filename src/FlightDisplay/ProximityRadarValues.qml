@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -13,7 +13,7 @@ import QtQuick 2.12
 QtObject {
     property var    vehicle
 
-    property bool   telemetryAvailable: vehicle && vehicle.distanceSensors.telemetryAvailable
+    property bool   telemetryAvailable: false   //vehicle && vehicle.distanceSensors.telemetryAvailable
 
     signal rotationValueChanged ///< Signalled when any available rotation value changes
 

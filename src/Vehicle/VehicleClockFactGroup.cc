@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -15,8 +15,8 @@ const char* VehicleClockFactGroup::_currentDateFactName = "currentDate";
 
 VehicleClockFactGroup::VehicleClockFactGroup(QObject* parent)
     : FactGroup(1000, ":/json/Vehicle/ClockFact.json", parent)
-    , _currentTimeFact  (0, _currentTimeFactName,    FactMetaData::valueTypeString)
-    , _currentDateFact  (0, _currentDateFactName,    FactMetaData::valueTypeString)
+    , _currentTimeFact  (_currentTimeFactName,    FactMetaData::valueTypeString)
+    , _currentDateFact  (_currentDateFactName,    FactMetaData::valueTypeString)
 {
     _addFact(&_currentTimeFact, _currentTimeFactName);
     _addFact(&_currentDateFact, _currentDateFactName);

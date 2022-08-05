@@ -78,15 +78,15 @@
 #include "ParameterManager.h"
 #include "SettingsManager.h"
 #include "QGCCorePlugin.h"
-#include "QGCCameraManager.h"
-#include "VisualMissionItem.h"
+//#include "QGCCameraManager.h"
+//#include "VisualMissionItem.h"
 #include "EditPositionDialogController.h"
 #include "FactValueSliderListModel.h"
-#include "ShapeFileHelper.h"
+//#include "ShapeFileHelper.h"
 #include "QGCFileDownload.h"
 #include "FirmwareImage.h"
-#include "LogReplayLink.h"
-#include "VehicleObjectAvoidance.h"
+//#include "LogReplayLink.h"
+//#include "VehicleObjectAvoidance.h"
 #include "TrajectoryPoints.h"
 #include "RCToParamDialogController.h"
 #include "QGCImageProvider.h"
@@ -141,8 +141,6 @@ QGCApplication* QGCApplication::_app = nullptr;
 const char* QGCApplication::_deleteAllSettingsKey           = "DeleteAllSettingsNextBoot";
 const char* QGCApplication::_settingsVersionKey             = "SettingsVersion";
 
-// Mavlink status structures for entire app
-mavlink_status_t m_mavlink_status[MAVLINK_COMM_NUM_BUFFERS];
 
 // Qml Singleton factories
 
@@ -166,10 +164,10 @@ static QObject* qgroundcontrolQmlGlobalSingletonFactory(QQmlEngine*, QJSEngine*)
     return qmlGlobal;
 }
 
-static QObject* shapeFileHelperSingletonFactory(QQmlEngine*, QJSEngine*)
-{
-    return new ShapeFileHelper;
-}
+//static QObject* shapeFileHelperSingletonFactory(QQmlEngine*, QJSEngine*)
+//{
+//    return new ShapeFileHelper;
+//}
 
 QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     : QApplication          (argc, argv)
@@ -497,10 +495,9 @@ void QGCApplication::_initCommon()
     qmlRegisterUncreatableType<Vehicle>                 (kQGCVehicle,                       1, 0, "Vehicle",                    kRefOnly);
     qmlRegisterUncreatableType<MissionManager>          (kQGCVehicle,                       1, 0, "MissionManager",             kRefOnly);
     qmlRegisterUncreatableType<ParameterManager>        (kQGCVehicle,                       1, 0, "ParameterManager",           kRefOnly);
-    qmlRegisterUncreatableType<VehicleObjectAvoidance>  (kQGCVehicle,                       1, 0, "VehicleObjectAvoidance",     kRefOnly);
-    qmlRegisterUncreatableType<QGCCameraManager>        (kQGCVehicle,                       1, 0, "QGCCameraManager",           kRefOnly);
-    qmlRegisterUncreatableType<QGCCameraControl>        (kQGCVehicle,                       1, 0, "QGCCameraControl",           kRefOnly);
-    qmlRegisterUncreatableType<QGCVideoStreamInfo>      (kQGCVehicle,                       1, 0, "QGCVideoStreamInfo",         kRefOnly);
+//    qmlRegisterUncreatableType<QGCCameraManager>        (kQGCVehicle,                       1, 0, "QGCCameraManager",           kRefOnly);
+//    qmlRegisterUncreatableType<QGCCameraControl>        (kQGCVehicle,                       1, 0, "QGCCameraControl",           kRefOnly);
+//    qmlRegisterUncreatableType<QGCVideoStreamInfo>      (kQGCVehicle,                       1, 0, "QGCVideoStreamInfo",         kRefOnly);
     qmlRegisterUncreatableType<LinkInterface>           (kQGCVehicle,                       1, 0, "LinkInterface",              kRefOnly);
     qmlRegisterUncreatableType<VehicleLinkManager>      (kQGCVehicle,                       1, 0, "VehicleLinkManager",         kRefOnly);
 
@@ -513,9 +510,7 @@ void QGCApplication::_initCommon()
     qmlRegisterUncreatableType<ItemInfoSlot>        (kQGroundControl,                       1, 0, "ItemInfoSlot",               kRefOnly);
     qmlRegisterUncreatableType<FlightPathSegment>   (kQGroundControl,                       1, 0, "FlightPathSegment",          kRefOnly);
     qmlRegisterUncreatableType<QmlObjectListModel>  (kQGroundControl,                       1, 0, "QmlObjectListModel",         kRefOnly);
-    qmlRegisterUncreatableType<LogReplayLink>       (kQGroundControl,                       1, 0, "LogReplayLink",              kRefOnly);
     qmlRegisterUncreatableType<InstrumentValueData> (kQGroundControl,                       1, 0, "InstrumentValueData",        kRefOnly);
-    qmlRegisterType<LogReplayLinkController>        (kQGroundControl,                       1, 0, "LogReplayLinkController");
 #if defined(QGC_ENABLE_MAVLINK_INSPECTOR)
 #endif
 #if defined(QGC_ENABLE_PAIRING)
@@ -557,8 +552,8 @@ void QGCApplication::_initCommon()
     // Register Qml Singletons
     qmlRegisterSingletonType<QGroundControlQmlGlobal>   ("QGroundControl",                          1, 0, "QGroundControl",         qgroundcontrolQmlGlobalSingletonFactory);
     qmlRegisterSingletonType<ScreenToolsController>     ("QGroundControl.ScreenToolsController",    1, 0, "ScreenToolsController",  screenToolsControllerSingletonFactory);
-    qmlRegisterSingletonType<ShapeFileHelper>           ("QGroundControl.ShapeFileHelper",          1, 0, "ShapeFileHelper",        shapeFileHelperSingletonFactory);
-    qmlRegisterSingletonType<ShapeFileHelper>           ("MAVLink",                                 1, 0, "MAVLink",                mavlinkSingletonFactory);
+//    qmlRegisterSingletonType<ShapeFileHelper>           ("QGroundControl.ShapeFileHelper",          1, 0, "ShapeFileHelper",        shapeFileHelperSingletonFactory);
+//    qmlRegisterSingletonType<ShapeFileHelper>           ("MAVLink",                                 1, 0, "MAVLink",                mavlinkSingletonFactory);
 
     // Although this should really be in _initForNormalAppBoot putting it here allowws us to create unit tests which pop up more easily
     if(QFontDatabase::addApplicationFont(":/fonts/opensans") < 0) {
@@ -699,12 +694,10 @@ bool QGCApplication::_checkTelemetrySavePath(bool /*useMessageBox*/)
     return true;
 }
 
-void QGCApplication::reportMissingParameter(int componentId, const QString& name)
+void QGCApplication::reportMissingParameter(const QString& name)
 {
-    QPair<int, QString>  missingParam(componentId, name);
-
-    if (!_missingParams.contains(missingParam)) {
-        _missingParams.append(missingParam);
+    if (!_missingParams.contains(name)) {
+        _missingParams.append(name);
     }
     _missingParamsDelayedDisplayTimer.start();
 }
@@ -714,8 +707,8 @@ void QGCApplication::_missingParamsDisplay(void)
 {
     if (_missingParams.count()) {
         QString params;
-        for (QPair<int, QString>& missingParam: _missingParams) {
-            QString param = QStringLiteral("%1:%2").arg(missingParam.first).arg(missingParam.second);
+        for (QString missingParam: _missingParams) {
+            QString param = missingParam;
             if (params.isEmpty()) {
                 params += param;
             } else {

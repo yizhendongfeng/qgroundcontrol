@@ -18,7 +18,7 @@
 QGC_LOGGING_CATEGORY(GeoFenceManagerLog, "GeoFenceManagerLog")
 
 GeoFenceManager::GeoFenceManager(Vehicle* vehicle)
-    : PlanManager       (vehicle, MAV_MISSION_TYPE_FENCE)
+    : PlanManager       (vehicle, SHENHANG_MISSION_TYPE_FENCE)
 #if defined(QGC_AIRMAP_ENABLED)
     , _airspaceManager  (qgcApp()->toolbox()->airspaceManager())
 #endif
@@ -197,7 +197,3 @@ void GeoFenceManager::_planManagerLoadComplete(bool removeAllRequested)
     emit loadComplete();
 }
 
-bool GeoFenceManager::supported(void) const
-{
-    return (_vehicle->capabilityBits() & MAV_PROTOCOL_CAPABILITY_MISSION_FENCE) && (_vehicle->maxProtoVersion() >= 200);
-}

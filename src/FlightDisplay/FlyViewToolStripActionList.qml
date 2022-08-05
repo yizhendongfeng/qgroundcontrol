@@ -23,7 +23,7 @@ ToolStripActionList {
 //            iconSource:     "/qmlimages/Plan.svg"
 //            onTriggered:    mainWindow.showPlanView()
 //        },
-        PreFlightCheckListShowAction { onTriggered: displayPreFlightChecklist() },
+//        PreFlightCheckListShowAction { onTriggered: displayPreFlightChecklist() },
         GuidedActionTakeoff { },
         GuidedActionLand { },
         GuidedActionRTL { },

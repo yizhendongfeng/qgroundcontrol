@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -55,8 +55,8 @@ void VehicleComponent::setupTriggerSignals(void)
 {
     // Watch for changed on trigger list params
     for (const QString &paramName: setupCompleteChangedTriggerList()) {
-        if (_vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, paramName)) {
-            Fact* fact = _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, paramName);
+        if (_vehicle->parameterManager()->parameterExists(paramName)) {
+            Fact* fact = _vehicle->parameterManager()->getParameter(paramName);
             connect(fact, &Fact::valueChanged, this, &VehicleComponent::_triggerUpdated);
         }
     }

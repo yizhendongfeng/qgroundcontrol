@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -34,8 +34,8 @@ class QmlObjectListModel;
 class VideoReceiver;
 class VideoSink;
 class PlanMasterController;
-class QGCCameraManager;
-class QGCCameraControl;
+//class QGCCameraManager;
+//class QGCCameraControl;
 class QQuickItem;
 class InstrumentValueAreaController;
 
@@ -122,10 +122,6 @@ public:
     /// Allows the plugin to override the release of VideoSink.
     virtual void releaseVideoSink(void* sink);
 
-    /// Allows the plugin to see all mavlink traffic to a vehicle
-    /// @return true: Allow vehicle to continue processing, false: Vehicle should not process message
-    virtual bool mavlinkMessage(Vehicle* vehicle, LinkInterface* link, mavlink_message_t message);
-
     /// Allows custom builds to add custom items to the FlightMap. Objects put into QmlObjectListModel should derive from QmlComponentInfo and set the url property.
     virtual QmlObjectListModel* customMapItems();
 
@@ -208,8 +204,8 @@ protected:
     bool                _showTouchAreas;
     bool                _showAdvancedUI;
     Vehicle*            _activeVehicle  = nullptr;
-    QGCCameraManager*   _cameraManager  = nullptr;
-    QGCCameraControl*   _currentCamera  = nullptr;
+//    QGCCameraManager*   _cameraManager  = nullptr;
+//    QGCCameraControl*   _currentCamera  = nullptr;
     QVariantList        _toolBarIndicatorList;
 
 private:

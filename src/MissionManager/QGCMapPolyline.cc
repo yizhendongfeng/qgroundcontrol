@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -12,7 +12,7 @@
 #include "JsonHelper.h"
 #include "QGCQGeoCoordinate.h"
 #include "QGCApplication.h"
-#include "KMLHelper.h"
+//#include "KMLHelper.h"
 
 #include <QGeoRectangle>
 #include <QDebug>
@@ -356,24 +356,24 @@ QList<QGeoCoordinate> QGCMapPolyline::offsetPolyline(double distance)
     return rgNewPolyline;
 }
 
-bool QGCMapPolyline::loadKMLFile(const QString& kmlFile)
-{
-    _beginResetIfNotActive();
+//bool QGCMapPolyline::loadKMLFile(const QString& kmlFile)
+//{
+//    _beginResetIfNotActive();
 
-    QString errorString;
-    QList<QGeoCoordinate> rgCoords;
-    if (!KMLHelper::loadPolylineFromFile(kmlFile, rgCoords, errorString)) {
-        qgcApp()->showAppMessage(errorString);
-        return false;
-    }
+//    QString errorString;
+//    QList<QGeoCoordinate> rgCoords;
+//    if (!KMLHelper::loadPolylineFromFile(kmlFile, rgCoords, errorString)) {
+//        qgcApp()->showAppMessage(errorString);
+//        return false;
+//    }
 
-    clear();
-    appendVertices(rgCoords);
+//    clear();
+//    appendVertices(rgCoords);
 
-    _endResetIfNotActive();
+//    _endResetIfNotActive();
 
-    return true;
-}
+//    return true;
+//}
 
 void QGCMapPolyline::_polylineModelDirtyChanged(bool dirty)
 {

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -19,10 +19,10 @@ const char*  RCToParamDialogController::_maxFactName =      "MaxValue";
 QMap<QString, FactMetaData*> RCToParamDialogController::_metaDataMap;
 
 RCToParamDialogController::RCToParamDialogController(void)
-    : _scaleFact    (0, _scaleFactName,     FactMetaData::valueTypeDouble)
-    , _centerFact   (0, _centerFactName,    FactMetaData::valueTypeDouble)
-    , _minFact      (0, _minFactName,       FactMetaData::valueTypeDouble)
-    , _maxFact      (0, _maxFactName,       FactMetaData::valueTypeDouble)
+    : _scaleFact    (_scaleFactName,     FactMetaData::valueTypeDouble)
+    , _centerFact   (_centerFactName,    FactMetaData::valueTypeDouble)
+    , _minFact      (_minFactName,       FactMetaData::valueTypeDouble)
+    , _maxFact      (_maxFactName,       FactMetaData::valueTypeDouble)
 {
     if (_metaDataMap.isEmpty()) {
         _metaDataMap = FactMetaData::createMapFromJsonFile(QStringLiteral(":/json/RCToParamDialog.FactMetaData.json"), nullptr /* QObject parent */);
@@ -44,7 +44,7 @@ void RCToParamDialogController::setTuningFact(Fact* tuningFact)
     _maxFact.setRawValue(_tuningFact->rawMax().toDouble());
 
     connect(_tuningFact, &Fact::vehicleUpdated, this, &RCToParamDialogController::_parameterUpdated);
-    qgcApp()->toolbox()->multiVehicleManager()->activeVehicle()->parameterManager()->refreshParameter(FactSystem::defaultComponentId, _tuningFact->name());
+//    qgcApp()->toolbox()->multiVehicleManager()->activeVehicle()->parameterManager()->refreshParameter(FactSystem::defaultComponentId, _tuningFact->name());
 }
 
 void RCToParamDialogController::_parameterUpdated(void)

@@ -105,11 +105,12 @@ public:
     Q_PROPERTY(bool                 diffOtherVehicle        MEMBER _diffOtherVehicle        NOTIFY diffOtherVehicleChanged)
     Q_PROPERTY(bool                 diffMultipleComponents  MEMBER _diffMultipleComponents  NOTIFY diffMultipleComponentsChanged)
     Q_PROPERTY(QmlObjectListModel*  diffList                READ diffList                   CONSTANT)
+    Q_PROPERTY(QmlObjectListModel*  groups  READ getGroups  CONSTANT)
 
     Q_INVOKABLE QStringList searchParameters(const QString& searchText, bool searchInName=true, bool searchInDescriptions=true);
 
     Q_INVOKABLE void saveToFile                     (const QString& filename);
-    Q_INVOKABLE bool buildDiffFromFile              (const QString& filename);
+//    Q_INVOKABLE bool buildDiffFromFile              (const QString& filename);
     Q_INVOKABLE void clearDiff                      (void);
     Q_INVOKABLE void sendDiff                       (void);
     Q_INVOKABLE void refresh                        (void);
@@ -119,15 +120,13 @@ public:
     /******************** 沈航参数组 设置 ********************/
     Q_INVOKABLE void parameterGroupCommand (int command, int groupId);
 
-
-
     QObject*            currentCategory     (void) { return _currentCategory; }
     QObject*            currentGroup        (void) { return _currentGroup; }
     QmlObjectListModel* categories          (void) { return &_categories; }
     QmlObjectListModel* diffList            (void) { return &_diffList; }
     void                setCurrentCategory  (QObject* currentCategory);
     void                setCurrentGroup     (QObject* currentGroup);
-
+    QmlObjectListModel*  getGroups(void) { return &_groups; }
 signals:
     void searchTextChanged              (QString searchText);
     void currentCategoryChanged         (void);
@@ -143,7 +142,7 @@ private slots:
     void _searchTextChanged     (void);
     void _buildLists            (void);
     void _buildListsForComponent(int compId);
-    void _factAdded             (int compId, Fact* fact);
+    void _factAdded             (Fact* fact);
 
 private:
     bool _shouldShow(Fact *fact);
@@ -162,4 +161,5 @@ private:
     QmlObjectListModel          _searchParameters;
     QmlObjectListModel*         _parameters             = nullptr;
     QMap<QString, ParameterEditorCategory*> _mapCategoryName2Category;
+    QmlObjectListModel          _groups;
 };

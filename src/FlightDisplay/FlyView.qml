@@ -78,7 +78,7 @@ Item {
         anchors.top:            parent.top
         anchors.bottom:         parent.bottom
         anchors.left:           parent.left
-        anchors.right:          guidedAltSlider.visible ? guidedAltSlider.left : parent.right
+        anchors.right:          parent.right
         z:                      _fullItemZorder + 1
         parentToolInsets:       _toolInsets
         mapControl:             _mapControl
@@ -134,6 +134,24 @@ Item {
         visible:            false
     }
 
+//    FlyViewToolStrip {
+//        id:                     toolStrip1
+//        anchors.bottom:         parent.bottom
+//        anchors.horizontalCenter: parent.horizontalCenter
+//        anchors.bottomMargin:      _toolsMargin * 2    //_toolsMargin + parentToolInsets.topEdgeLeftInset
+//        anchors.rightMargin:    _toolsMargin * 2    //_toolsMargin + parentToolInsets.leftEdgeCenterInset
+//        //            z:                      videoControl.z + 1
+//        maxHeight:              parent.height / 2   //parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+//        //        maxWidth:               parent.width - x - instrumentPanel.width - _toolsMargin//parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+//        visible:                !QGroundControl.videoManager.fullScreen
+//        radius:                 ScreenTools.defaultFontPixelWidth / 2
+////        showActionText:         false
+////        onDisplayPreFlightChecklist: mainWindow.showPopupDialogFromComponent(preFlightChecklistPopup)
+//        property real leftInset: x + width
+//    }
+
+
+
     FlyViewMap {
         id:                     mapControl
         anchors.fill:           parent
@@ -144,37 +162,20 @@ Item {
         mapName:                "FlightDisplayView"
     }
 
+    MapScale {
+        id:                 mapScale
+        anchors.margins:    _toolsMargin
+        anchors.right:      guidedAltSlider.visible ? guidedAltSlider.left : parent.right
+        anchors.bottom:     parent.bottom
+        mapControl:         mapControl
+        buttonsOnLeft:      false
+        visible:            true//!ScreenTools.isTinyScreen && QGroundControl.corePlugin.options.flyView.showMapScale && mapControl.pipState.state === mapControl.pipState.windowState
+
+        property real centerInset: visible ? parent.height - y : 0
+    }
 //    FlyViewVideo {
 //        id: videoControl
 //        visible: false
-//        OsdOverlay {
-//            id: osdOverlay
-//            activeVehicle: globals.activeVehicle
-//            anchors.fill: parent
-//        }
-
-//        FlyViewToolStrip {
-//            id:                     toolStrip
-//            anchors.leftMargin:     1//_toolsMargin + parentToolInsets.leftEdgeCenterInset
-//            anchors.topMargin:      1//_toolsMargin + parentToolInsets.topEdgeLeftInset
-//            anchors.left:           parent.left
-//            anchors.verticalCenter: parent.verticalCenter
-//            //            z:                      videoControl.z + 1
-//            maxHeight:              parent.height / 3   //parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
-//            //        maxWidth:               parent.width - x - instrumentPanel.width - _toolsMargin//parentToolInsets.bottomEdgeLeftInset - _toolsMargin
-//            visible:                !QGroundControl.videoManager.fullScreen
-//            radius:                 ScreenTools.defaultFontPixelWidth / 2
-//            onDisplayPreFlightChecklist: mainWindow.showPopupDialogFromComponent(preFlightChecklistPopup)
-//            property real leftInset: x + width
-//        }
-
-
-//        PhotoVideoControl {
-//            id:                     photoVideoControl
-//            anchors.margins:        _toolsMargin * 2
-//            anchors.right:          parent.right
-//            anchors.verticalCenter: parent.verticalCenter
-//        }
 //    }
 
     QGCPipOverlay {
@@ -185,7 +186,7 @@ Item {
         anchors.margins:        _toolsMargin
         item1IsFullSettingsKey: "MainFlyWindowIsMap"
         item1:                  mapControl
-        item2:                  QGroundControl.videoManager.hasVideo ? videoControl : null
+        item2:                  null    //QGroundControl.videoManager.hasVideo ? videoControl : null  //null
         fullZOrder:             _fullItemZorder
         pipZOrder:              _pipItemZorder
         show:                   true//!QGroundControl.videoManager.fullScreen &&

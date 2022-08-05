@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -178,11 +178,6 @@ void FactGroup::setLiveUpdates(bool liveUpdates)
 QString FactGroup::_camelCase(const QString& text)
 {
     return text[0].toLower() + text.right(text.length() - 1);
-}
-
-void FactGroup::handleMessage(Vehicle* /* vehicle */, mavlink_message_t& /* message */)
-{
-    // Default implementation does nothing
 }
 
 void FactGroup::_setTelemetryAvailable (bool telemetryAvailable)

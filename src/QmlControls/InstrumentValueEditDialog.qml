@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -63,7 +63,7 @@ QGCPopupDialog {
                 }
                 Connections {
                     target: instrumentValueData
-                    onFactGroupNameChanged: factGroupCombo.currentIndex = factGroupCombo.find(instrumentValueData.factGroupName)
+                    function onFactGroupNameChanged() { factGroupCombo.currentIndex = factGroupCombo.find(instrumentValueData.factGroupName) }
                 }
             }
 
@@ -80,7 +80,7 @@ QGCPopupDialog {
                 }
                 Connections {
                     target: instrumentValueData
-                    onFactNameChanged: factNamesCombo.currentIndex = factNamesCombo.find(instrumentValueData.factName)
+                    function onFactNameChanged() { factNamesCombo.currentIndex = factNamesCombo.find(instrumentValueData.factName) }
                 }
             }
 
@@ -202,7 +202,7 @@ QGCPopupDialog {
 
                 Connections {
                     target:             instrumentValueData
-                    onRangeTypeChanged: rangeLoader.updateSourceComponent()
+                    function onRangeTypeChanged() { rangeLoader.updateSourceComponent() }
                 }
 
             }

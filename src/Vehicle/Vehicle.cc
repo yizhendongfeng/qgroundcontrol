@@ -24,23 +24,21 @@
 #include "GeoFenceManager.h"
 #include "QGCApplication.h"
 #include "QGCImageProvider.h"
-#include "MissionCommandTree.h"
+//#include "MissionCommandTree.h"
 #include "SettingsManager.h"
 #include "QGCQGeoCoordinate.h"
 #include "QGCCorePlugin.h"
 #include "QGCOptions.h"
-#include "QGCCameraManager.h"
+//#include "QGCCameraManager.h"
 #include "VideoReceiver.h"
 #include "VideoManager.h"
 #include "VideoSettings.h"
 #include "PositionManager.h"
-#include "VehicleObjectAvoidance.h"
 #include "TrajectoryPoints.h"
 #include "QGCGeo.h"
 #include "ParameterManager.h"
-#include "ComponentInformationManager.h"
 #include "InitialConnectStateMachine.h"
-#include "VehicleBatteryFactGroup.h"
+//#include "VehicleBatteryFactGroup.h"
 
 #if defined(QGC_AIRMAP_ENABLED)
 #include "AirspaceVehicleManager.h"
@@ -88,31 +86,26 @@ const char* Vehicle::_distanceSensorFactGroupName =     "distanceSensor";
 const char* Vehicle::_escStatusFactGroupName =          "escStatus";
 const char* Vehicle::_estimatorStatusFactGroupName =    "estimatorStatus";
 
-const QList<int> Vehicle::_pidTuningMessages = {MAVLINK_MSG_ID_ATTITUDE_QUATERNION, MAVLINK_MSG_ID_ATTITUDE_TARGET};
-
-
 static const struct Bit2Name FlightMode2Name[] = {
     { FlyMode::RC_ANGULAR_VEL,             "RcAngularVel" },
-    { FlyMode::RC_ANGLE,                  "RcAngle" },
+    { FlyMode::RC_ANGLE,                   "RcAngle" },
     { FlyMode::RADIO_ANGULAR_VEL,          "RadioAngularVel" },
-    { FlyMode::RADIO_ANGLE,               "RadioAngle" },
+    { FlyMode::RADIO_ANGLE,                "RadioAngle" },
     { FlyMode::ALTITUDE_RC_ANGLE,          "AltitudeRcAngle" },
     { FlyMode::ALTITUDE_RADIO_ANGLE,       "AltitudeRadioAngle" },
-    { FlyMode::ALTITUDE_RC_SPEED_HEAD,      "AltitudeRcSpeedHead" },
-    { FlyMode::ALTITUDE_RADIO_SPEED_HEAD,   "AltitudeRadioSpeedHead" },
-    { FlyMode::PROGRAM_CONTROL,           "ProgramControl" }
+    { FlyMode::ALTITUDE_RC_SPEED_HEAD,     "AltitudeRcSpeedHead" },
+    { FlyMode::ALTITUDE_RADIO_SPEED_HEAD,  "AltitudeRadioSpeedHead" },
+    { FlyMode::PROGRAM_CONTROL,            "ProgramControl" }
 };
 
 // Standard connected vehicle
 Vehicle::Vehicle(LinkInterface*             link,
                  int                        vehicleId,
-                 int                        defaultComponentId,
                  MAV_AUTOPILOT              firmwareType,
                  MAV_TYPE                   vehicleType,
                  FirmwarePluginManager*     firmwarePluginManager)
     : FactGroup                     (_vehicleUIUpdateRateMSecs, ":/json/Vehicle/VehicleFact.json")
     , _id                           (vehicleId)
-    , _defaultComponentId           (defaultComponentId)
     , _firmwareType                 (firmwareType)
     , _vehicleType                  (vehicleType)
     , _toolbox                      (qgcApp()->toolbox())
@@ -121,35 +114,29 @@ Vehicle::Vehicle(LinkInterface*             link,
     , _defaultHoverSpeed            (_settingsManager->appSettings()->offlineEditingHoverSpeed()->rawValue().toDouble())
     , _firmwarePluginManager        (firmwarePluginManager)
     , _trajectoryPoints             (new TrajectoryPoints(this, this))
-    , _rollFact                     (0, _rollFactName,              FactMetaData::valueTypeDouble)
-    , _pitchFact                    (0, _pitchFactName,             FactMetaData::valueTypeDouble)
-    , _headingFact                  (0, _headingFactName,           FactMetaData::valueTypeDouble)
-    , _rollRateFact                 (0, _rollRateFactName,          FactMetaData::valueTypeDouble)
-    , _pitchRateFact                (0, _pitchRateFactName,         FactMetaData::valueTypeDouble)
-    , _yawRateFact                  (0, _yawRateFactName,           FactMetaData::valueTypeDouble)
-    , _groundSpeedFact              (0, _groundSpeedFactName,       FactMetaData::valueTypeDouble)
-    , _airSpeedFact                 (0, _airSpeedFactName,          FactMetaData::valueTypeDouble)
-    , _climbRateFact                (0, _climbRateFactName,         FactMetaData::valueTypeDouble)
-    , _altitudeRelativeFact         (0, _altitudeRelativeFactName,  FactMetaData::valueTypeDouble)
-    , _altitudeAMSLFact             (0, _altitudeAMSLFactName,      FactMetaData::valueTypeDouble)
-    , _flightDistanceFact           (0, _flightDistanceFactName,    FactMetaData::valueTypeDouble)
-    , _flightTimeFact               (0, _flightTimeFactName,        FactMetaData::valueTypeElapsedTimeInSeconds)
-    , _distanceToHomeFact           (0, _distanceToHomeFactName,    FactMetaData::valueTypeDouble)
-    , _missionItemIndexFact         (0, _missionItemIndexFactName,  FactMetaData::valueTypeUint16)
-    , _headingToNextWPFact          (0, _headingToNextWPFactName,   FactMetaData::valueTypeDouble)
-    , _headingToHomeFact            (0, _headingToHomeFactName,     FactMetaData::valueTypeDouble)
-    , _distanceToGCSFact            (0, _distanceToGCSFactName,     FactMetaData::valueTypeDouble)
-    , _hobbsFact                    (0, _hobbsFactName,             FactMetaData::valueTypeString)
-    , _throttlePctFact              (0, _throttlePctFactName,       FactMetaData::valueTypeUint16)
+    , _rollFact                     (_rollFactName,              FactMetaData::valueTypeDouble)
+    , _pitchFact                    (_pitchFactName,             FactMetaData::valueTypeDouble)
+    , _headingFact                  (_headingFactName,           FactMetaData::valueTypeDouble)
+    , _rollRateFact                 (_rollRateFactName,          FactMetaData::valueTypeDouble)
+    , _pitchRateFact                (_pitchRateFactName,         FactMetaData::valueTypeDouble)
+    , _yawRateFact                  (_yawRateFactName,           FactMetaData::valueTypeDouble)
+    , _groundSpeedFact              (_groundSpeedFactName,       FactMetaData::valueTypeDouble)
+    , _airSpeedFact                 (_airSpeedFactName,          FactMetaData::valueTypeDouble)
+    , _climbRateFact                (_climbRateFactName,         FactMetaData::valueTypeDouble)
+    , _altitudeRelativeFact         (_altitudeRelativeFactName,  FactMetaData::valueTypeDouble)
+    , _altitudeAMSLFact             (_altitudeAMSLFactName,      FactMetaData::valueTypeDouble)
+    , _flightDistanceFact           (_flightDistanceFactName,    FactMetaData::valueTypeDouble)
+    , _flightTimeFact               (_flightTimeFactName,        FactMetaData::valueTypeElapsedTimeInSeconds)
+    , _distanceToHomeFact           (_distanceToHomeFactName,    FactMetaData::valueTypeDouble)
+    , _missionItemIndexFact         (_missionItemIndexFactName,  FactMetaData::valueTypeUint16)
+    , _headingToNextWPFact          (_headingToNextWPFactName,   FactMetaData::valueTypeDouble)
+    , _headingToHomeFact            (_headingToHomeFactName,     FactMetaData::valueTypeDouble)
+    , _distanceToGCSFact            (_distanceToGCSFactName,     FactMetaData::valueTypeDouble)
+    , _hobbsFact                    (_hobbsFactName,             FactMetaData::valueTypeString)
+    , _throttlePctFact              (_throttlePctFactName,       FactMetaData::valueTypeUint16)
     , _gpsFactGroup                 (this)
-    , _windFactGroup                (this)
-    , _vibrationFactGroup           (this)
-    , _temperatureFactGroup         (this)
     , _clockFactGroup               (this)
     , _setpointFactGroup            (this)
-    , _distanceSensorFactGroup      (this)
-    , _escStatusFactGroup           (this)
-    , _estimatorStatusFactGroup     (this)
 {
     qCDebug(VehicleLog) << "Vehicle::Vehicle()" << this->id() << this;
     _linkManager = _toolbox->linkManager();
@@ -208,14 +195,7 @@ Vehicle::Vehicle(LinkInterface*             link,
         _firmwarePlugin->adjustMetaData(vehicleType, getFact(factName)->metaData());
     }
 
-    _sendMultipleTimer.start(_sendMessageMultipleIntraMessageDelay);
-    connect(&_sendMultipleTimer, &QTimer::timeout, this, &Vehicle::_sendMessageMultipleNext);
-
     connect(&_orbitTelemetryTimer, &QTimer::timeout, this, &Vehicle::_orbitTelemetryTimeout);
-
-    // Create camera manager instance
-    _cameraManager = _firmwarePlugin->createCameraManager(this);
-    emit cameraManagerChanged();
 
     for (size_t i = 0; i < sizeof(FlightMode2Name) / sizeof(FlightMode2Name[0]); i++)
         shenHangFlightModes << FlightMode2Name[i].name;
@@ -232,7 +212,6 @@ Vehicle::Vehicle(MAV_AUTOPILOT              firmwareType,
                  QObject*                   parent)
     : FactGroup                         (_vehicleUIUpdateRateMSecs, ":/json/Vehicle/VehicleFact.json", parent)
     , _id                               (0)
-    , _defaultComponentId               (MAV_COMP_ID_ALL)
     , _offlineEditingVehicle            (true)
     , _firmwareType                     (firmwareType)
     , _vehicleType                      (vehicleType)
@@ -243,64 +222,35 @@ Vehicle::Vehicle(MAV_AUTOPILOT              firmwareType,
     , _mavlinkProtocolRequestComplete   (true)
     , _maxProtoVersion                  (200)
     , _capabilityBitsKnown              (true)
-    , _capabilityBits                   (MAV_PROTOCOL_CAPABILITY_MISSION_FENCE | MAV_PROTOCOL_CAPABILITY_MISSION_RALLY)
     , _firmwarePluginManager            (firmwarePluginManager)
     , _trajectoryPoints                 (new TrajectoryPoints(this, this))
-    , _rollFact                         (0, _rollFactName,              FactMetaData::valueTypeDouble)
-    , _pitchFact                        (0, _pitchFactName,             FactMetaData::valueTypeDouble)
-    , _headingFact                      (0, _headingFactName,           FactMetaData::valueTypeDouble)
-    , _rollRateFact                     (0, _rollRateFactName,          FactMetaData::valueTypeDouble)
-    , _pitchRateFact                    (0, _pitchRateFactName,         FactMetaData::valueTypeDouble)
-    , _yawRateFact                      (0, _yawRateFactName,           FactMetaData::valueTypeDouble)
-    , _groundSpeedFact                  (0, _groundSpeedFactName,       FactMetaData::valueTypeDouble)
-    , _airSpeedFact                     (0, _airSpeedFactName,          FactMetaData::valueTypeDouble)
-    , _climbRateFact                    (0, _climbRateFactName,         FactMetaData::valueTypeDouble)
-    , _altitudeRelativeFact             (0, _altitudeRelativeFactName,  FactMetaData::valueTypeDouble)
-    , _altitudeAMSLFact                 (0, _altitudeAMSLFactName,      FactMetaData::valueTypeDouble)
-    , _flightDistanceFact               (0, _flightDistanceFactName,    FactMetaData::valueTypeDouble)
-    , _flightTimeFact                   (0, _flightTimeFactName,        FactMetaData::valueTypeElapsedTimeInSeconds)
-    , _distanceToHomeFact               (0, _distanceToHomeFactName,    FactMetaData::valueTypeDouble)
-    , _missionItemIndexFact             (0, _missionItemIndexFactName,  FactMetaData::valueTypeUint16)
-    , _headingToNextWPFact              (0, _headingToNextWPFactName,   FactMetaData::valueTypeDouble)
-    , _headingToHomeFact                (0, _headingToHomeFactName,     FactMetaData::valueTypeDouble)
-    , _distanceToGCSFact                (0, _distanceToGCSFactName,     FactMetaData::valueTypeDouble)
-    , _hobbsFact                        (0, _hobbsFactName,             FactMetaData::valueTypeString)
-    , _throttlePctFact                  (0, _throttlePctFactName,       FactMetaData::valueTypeUint16)
+    , _rollFact                         (_rollFactName,              FactMetaData::valueTypeDouble)
+    , _pitchFact                        (_pitchFactName,             FactMetaData::valueTypeDouble)
+    , _headingFact                      (_headingFactName,           FactMetaData::valueTypeDouble)
+    , _rollRateFact                     (_rollRateFactName,          FactMetaData::valueTypeDouble)
+    , _pitchRateFact                    (_pitchRateFactName,         FactMetaData::valueTypeDouble)
+    , _yawRateFact                      (_yawRateFactName,           FactMetaData::valueTypeDouble)
+    , _groundSpeedFact                  (_groundSpeedFactName,       FactMetaData::valueTypeDouble)
+    , _airSpeedFact                     (_airSpeedFactName,          FactMetaData::valueTypeDouble)
+    , _climbRateFact                    (_climbRateFactName,         FactMetaData::valueTypeDouble)
+    , _altitudeRelativeFact             (_altitudeRelativeFactName,  FactMetaData::valueTypeDouble)
+    , _altitudeAMSLFact                 (_altitudeAMSLFactName,      FactMetaData::valueTypeDouble)
+    , _flightDistanceFact               (_flightDistanceFactName,    FactMetaData::valueTypeDouble)
+    , _flightTimeFact                   (_flightTimeFactName,        FactMetaData::valueTypeElapsedTimeInSeconds)
+    , _distanceToHomeFact               (_distanceToHomeFactName,    FactMetaData::valueTypeDouble)
+    , _missionItemIndexFact             (_missionItemIndexFactName,  FactMetaData::valueTypeUint16)
+    , _headingToNextWPFact              (_headingToNextWPFactName,   FactMetaData::valueTypeDouble)
+    , _headingToHomeFact                (_headingToHomeFactName,     FactMetaData::valueTypeDouble)
+    , _distanceToGCSFact                (_distanceToGCSFactName,     FactMetaData::valueTypeDouble)
+    , _hobbsFact                        (_hobbsFactName,             FactMetaData::valueTypeString)
+    , _throttlePctFact                  (_throttlePctFactName,       FactMetaData::valueTypeUint16)
     , _gpsFactGroup                     (this)
-    , _windFactGroup                    (this)
-    , _vibrationFactGroup               (this)
     , _clockFactGroup                   (this)
-    , _distanceSensorFactGroup          (this)
 {
+    qCDebug(VehicleLog) << "Disconnected Vehicle for offline editing";
     _linkManager = _toolbox->linkManager();
-
-    // This will also set the settings based firmware/vehicle types. So it needs to happen first.
-    if (_firmwareType == MAV_AUTOPILOT_TRACK) {
-        trackFirmwareVehicleTypeChanges();
-    }
-
     _commonInit();
-
-    connect(_settingsManager->appSettings()->offlineEditingCruiseSpeed(),   &Fact::rawValueChanged, this, &Vehicle::_offlineCruiseSpeedSettingChanged);
-    connect(_settingsManager->appSettings()->offlineEditingHoverSpeed(),    &Fact::rawValueChanged, this, &Vehicle::_offlineHoverSpeedSettingChanged);
-
-    _offlineFirmwareTypeSettingChanged(_firmwareType);  // This adds correct terrain capability bit
     _firmwarePlugin->initializeVehicle(this);
-}
-
-void Vehicle::trackFirmwareVehicleTypeChanges(void)
-{
-    connect(_settingsManager->appSettings()->offlineEditingFirmwareClass(), &Fact::rawValueChanged, this, &Vehicle::_offlineFirmwareTypeSettingChanged);
-    connect(_settingsManager->appSettings()->offlineEditingVehicleClass(),  &Fact::rawValueChanged, this, &Vehicle::_offlineVehicleTypeSettingChanged);
-
-    _offlineFirmwareTypeSettingChanged(_settingsManager->appSettings()->offlineEditingFirmwareClass()->rawValue());
-    _offlineVehicleTypeSettingChanged(_settingsManager->appSettings()->offlineEditingVehicleClass()->rawValue());
-}
-
-void Vehicle::stopTrackingFirmwareVehicleTypeChanges(void)
-{
-    disconnect(_settingsManager->appSettings()->offlineEditingFirmwareClass(),  &Fact::rawValueChanged, this, &Vehicle::_offlineFirmwareTypeSettingChanged);
-    disconnect(_settingsManager->appSettings()->offlineEditingVehicleClass(),  &Fact::rawValueChanged, this, &Vehicle::_offlineVehicleTypeSettingChanged);
 }
 
 void Vehicle::_commonInit()
@@ -328,15 +278,13 @@ void Vehicle::_commonInit()
     connect(_missionManager, &MissionManager::sendComplete,             _trajectoryPoints, &TrajectoryPoints::clear);
     connect(_missionManager, &MissionManager::newMissionItemsAvailable, _trajectoryPoints, &TrajectoryPoints::clear);
 
-    _componentInformationManager    = new ComponentInformationManager   (this);
     _initialConnectStateMachine     = new InitialConnectStateMachine    (this);
     _vehicleLinkManager             = new VehicleLinkManager            (this);
 
     _parameterManager = new ParameterManager(this);
     connect(_parameterManager, &ParameterManager::parametersReadyChanged, this, &Vehicle::_parametersReady);
 
-    _objectAvoidance = new VehicleObjectAvoidance(this, this);
-
+    connect(_parameterManager, &ParameterManager::loadProgressChanged, this, &Vehicle::_gotProgressUpdate);
     // GeoFenceManager needs to access ParameterManager so make sure to create after
     _geoFenceManager = new GeoFenceManager(this);
     connect(_geoFenceManager, &GeoFenceManager::error,          this, &Vehicle::_geoFenceManagerError);
@@ -371,14 +319,8 @@ void Vehicle::_commonInit()
     _addFact(&_hobbsFact,               _hobbsFactName);
 
     _addFactGroup(&_gpsFactGroup,               _gpsFactGroupName);
-    _addFactGroup(&_windFactGroup,              _windFactGroupName);
-    _addFactGroup(&_vibrationFactGroup,         _vibrationFactGroupName);
-    _addFactGroup(&_temperatureFactGroup,       _temperatureFactGroupName);
     _addFactGroup(&_clockFactGroup,             _clockFactGroupName);
     _addFactGroup(&_setpointFactGroup,          _setpointFactGroupName);
-    _addFactGroup(&_distanceSensorFactGroup,    _distanceSensorFactGroupName);
-    _addFactGroup(&_escStatusFactGroup,         _escStatusFactGroupName);
-    _addFactGroup(&_estimatorStatusFactGroup,   _estimatorStatusFactGroupName);
 
     // Add firmware-specific fact groups, if provided
     QMap<QString, FactGroup*>* fwFactGroups = _firmwarePlugin->factGroups();
@@ -422,35 +364,35 @@ Vehicle::~Vehicle()
 
 void Vehicle::prepareDelete()
 {
-    if(_cameraManager) {
-        // because of _cameraManager QML bindings check for nullptr won't work in the binding pipeline
-        // the dangling pointer access will cause a runtime fault
-        auto tmpCameras = _cameraManager;
-        _cameraManager = nullptr;
-        delete tmpCameras;
-        emit cameraManagerChanged();
-        qApp->processEvents();
-    }
+//    if(_cameraManager) {
+//        // because of _cameraManager QML bindings check for nullptr won't work in the binding pipeline
+//        // the dangling pointer access will cause a runtime fault
+//        auto tmpCameras = _cameraManager;
+//        _cameraManager = nullptr;
+//        delete tmpCameras;
+//        emit cameraManagerChanged();
+//        qApp->processEvents();
+//    }
 }
 
-void Vehicle::_offlineFirmwareTypeSettingChanged(QVariant varFirmwareType)
-{
-    _firmwareType = static_cast<MAV_AUTOPILOT>(varFirmwareType.toInt());
-    _firmwarePlugin = _firmwarePluginManager->firmwarePluginForAutopilot(_firmwareType, _vehicleType);
-    if (_firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA) {
-        _capabilityBits |= MAV_PROTOCOL_CAPABILITY_TERRAIN;
-    } else {
-        _capabilityBits &= ~MAV_PROTOCOL_CAPABILITY_TERRAIN;
-    }
-    emit firmwareTypeChanged();
-    emit capabilityBitsChanged(_capabilityBits);
-}
+//void Vehicle::_offlineFirmwareTypeSettingChanged(QVariant varFirmwareType)
+//{
+//    _firmwareType = static_cast<MAV_AUTOPILOT>(varFirmwareType.toInt());
+//    _firmwarePlugin = _firmwarePluginManager->firmwarePluginForAutopilot(_firmwareType, _vehicleType);
+//    if (_firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA) {
+//        _capabilityBits |= MAV_PROTOCOL_CAPABILITY_TERRAIN;
+//    } else {
+//        _capabilityBits &= ~MAV_PROTOCOL_CAPABILITY_TERRAIN;
+//    }
+//    emit firmwareTypeChanged();
+//    emit capabilityBitsChanged(_capabilityBits);
+//}
 
-void Vehicle::_offlineVehicleTypeSettingChanged(QVariant varVehicleType)
-{
-    _vehicleType = static_cast<MAV_TYPE>(varVehicleType.toInt());
-    emit vehicleTypeChanged();
-}
+//void Vehicle::_offlineVehicleTypeSettingChanged(QVariant varVehicleType)
+//{
+//    _vehicleType = static_cast<MAV_TYPE>(varVehicleType.toInt());
+//    emit vehicleTypeChanged();
+//}
 
 void Vehicle::_offlineCruiseSpeedSettingChanged(QVariant value)
 {
@@ -576,9 +518,9 @@ void Vehicle::_chunkedStatusTextCompleted(uint8_t compId)
         messageText.remove(0, 1);
         readAloud = true;
     }
-    else if (severity <= MAV_SEVERITY_NOTICE) {
-        readAloud = true;
-    }
+//    else if (severity <= MAV_SEVERITY_NOTICE) {
+//        readAloud = true;
+//    }
 
     if (readAloud) {
         if (!skipSpoken) {
@@ -606,25 +548,25 @@ void Vehicle::_chunkedStatusTextCompleted(uint8_t compId)
 #pragma warning(push, 0)
 #endif
 
-void Vehicle::_setCapabilities(uint64_t capabilityBits)
-{
-    _capabilityBits = capabilityBits;
-    _capabilityBitsKnown = true;
-    emit capabilitiesKnownChanged(true);
-    emit capabilityBitsChanged(_capabilityBits);
+//void Vehicle::_setCapabilities(uint64_t capabilityBits)
+//{
+//    _capabilityBits = capabilityBits;
+//    _capabilityBitsKnown = true;
+//    emit capabilitiesKnownChanged(true);
+//    emit capabilityBitsChanged(_capabilityBits);
 
-    QString supports("supports");
-    QString doesNotSupport("does not support");
+//    QString supports("supports");
+//    QString doesNotSupport("does not support");
 
-    qCDebug(VehicleLog) << QString("Vehicle %1 Mavlink 2.0").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_MAVLINK2 ? supports : doesNotSupport);
-    qCDebug(VehicleLog) << QString("Vehicle %1 MISSION_ITEM_INT").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_MISSION_INT ? supports : doesNotSupport);
-    qCDebug(VehicleLog) << QString("Vehicle %1 MISSION_COMMAND_INT").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_COMMAND_INT ? supports : doesNotSupport);
-    qCDebug(VehicleLog) << QString("Vehicle %1 GeoFence").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_MISSION_FENCE ? supports : doesNotSupport);
-    qCDebug(VehicleLog) << QString("Vehicle %1 RallyPoints").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_MISSION_RALLY ? supports : doesNotSupport);
-    qCDebug(VehicleLog) << QString("Vehicle %1 Terrain").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_TERRAIN ? supports : doesNotSupport);
+//    qCDebug(VehicleLog) << QString("Vehicle %1 Mavlink 2.0").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_MAVLINK2 ? supports : doesNotSupport);
+//    qCDebug(VehicleLog) << QString("Vehicle %1 MISSION_ITEM_INT").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_MISSION_INT ? supports : doesNotSupport);
+//    qCDebug(VehicleLog) << QString("Vehicle %1 MISSION_COMMAND_INT").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_COMMAND_INT ? supports : doesNotSupport);
+//    qCDebug(VehicleLog) << QString("Vehicle %1 GeoFence").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_MISSION_FENCE ? supports : doesNotSupport);
+//    qCDebug(VehicleLog) << QString("Vehicle %1 RallyPoints").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_MISSION_RALLY ? supports : doesNotSupport);
+//    qCDebug(VehicleLog) << QString("Vehicle %1 Terrain").arg(_capabilityBits & MAV_PROTOCOL_CAPABILITY_TERRAIN ? supports : doesNotSupport);
 
-    _setMaxProtoVersionFromBothSources();
-}
+//    _setMaxProtoVersionFromBothSources();
+//}
 
 void Vehicle::_setMaxProtoVersion(unsigned version) {
 
@@ -633,19 +575,6 @@ void Vehicle::_setMaxProtoVersion(unsigned version) {
         qCDebug(VehicleLog) << "_setMaxProtoVersion before:after" << _maxProtoVersion << version;
         _maxProtoVersion = version;
         emit requestProtocolVersion(_maxProtoVersion);
-    }
-}
-
-void Vehicle::_setMaxProtoVersionFromBothSources()
-{
-    if (_mavlinkProtocolRequestComplete && _capabilityBitsKnown) {
-        if (_mavlinkProtocolRequestMaxProtoVersion != 0) {
-            qCDebug(VehicleLog) << "_setMaxProtoVersionFromBothSources using protocol version message";
-            _setMaxProtoVersion(_mavlinkProtocolRequestMaxProtoVersion);
-        } else {
-            qCDebug(VehicleLog) << "_setMaxProtoVersionFromBothSources using capability bits";
-            _setMaxProtoVersion(capabilityBits() & MAV_PROTOCOL_CAPABILITY_MAVLINK2 ? 200 : 100);
-        }
     }
 }
 
@@ -726,68 +655,6 @@ bool Vehicle::sendShenHangMessageOnLinkThreadSafe(LinkInterface* link, ShenHangP
     _messagesSent++;
     emit messagesSentChanged();
     return true;
-}
-
-int Vehicle::motorCount()
-{
-    switch (_vehicleType) {
-    case MAV_TYPE_HELICOPTER:
-        return 1;
-    case MAV_TYPE_VTOL_DUOROTOR:
-        return 2;
-    case MAV_TYPE_TRICOPTER:
-        return 3;
-    case MAV_TYPE_QUADROTOR:
-    case MAV_TYPE_VTOL_QUADROTOR:
-        return 4;
-    case MAV_TYPE_HEXAROTOR:
-        return 6;
-    case MAV_TYPE_OCTOROTOR:
-        return 8;
-    case MAV_TYPE_SUBMARINE:
-    {
-        // Supported frame types
-        enum {
-            SUB_FRAME_BLUEROV1,
-            SUB_FRAME_VECTORED,
-            SUB_FRAME_VECTORED_6DOF,
-            SUB_FRAME_VECTORED_6DOF_90DEG,
-            SUB_FRAME_SIMPLEROV_3,
-            SUB_FRAME_SIMPLEROV_4,
-            SUB_FRAME_SIMPLEROV_5,
-            SUB_FRAME_CUSTOM
-        };
-
-        uint8_t frameType = parameterManager()->getParameter(_compID, "FRAME_CONFIG")->rawValue().toInt();
-
-        switch (frameType) {  // ardupilot/libraries/AP_Motors/AP_Motors6DOF.h sub_frame_t
-
-        case SUB_FRAME_BLUEROV1:
-        case SUB_FRAME_VECTORED:
-            return 6;
-
-        case SUB_FRAME_SIMPLEROV_3:
-            return 3;
-
-        case SUB_FRAME_SIMPLEROV_4:
-            return 4;
-
-        case SUB_FRAME_SIMPLEROV_5:
-            return 5;
-
-        case SUB_FRAME_VECTORED_6DOF:
-        case SUB_FRAME_VECTORED_6DOF_90DEG:
-        case SUB_FRAME_CUSTOM:
-            return 8;
-
-        default:
-            return -1;
-        }
-    }
-
-    default:
-        return -1;
-    }
 }
 
 bool Vehicle::coaxialMotors()
@@ -943,22 +810,6 @@ void Vehicle::setFlightMode(const QString& flightMode)
             qCDebug(VehicleLog) << "setFlightMode: primary link gone!";
             return;
         }
-
-//        uint8_t newBaseMode = _base_mode & ~MAV_MODE_FLAG_DECODE_POSITION_CUSTOM_MODE;
-
-        // setFlightMode will only set MAV_MODE_FLAG_CUSTOM_MODE_ENABLED in base_mode, we need to move back in the existing
-        // states.
-//        newBaseMode |= base_mode;
-
-//        mavlink_message_t msg;
-//        mavlink_msg_set_mode_pack_chan(_mavlink->getSystemId(),
-//                                       _mavlink->getComponentId(),
-//                                       sharedLink->mavlinkChannel(),
-//                                       &msg,
-//                                       id(),
-//                                       newBaseMode,
-//                                       custom_mode);
-//        sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
     } else {
         qCWarning(VehicleLog) << "FirmwarePlugin::setFlightMode failed, flightMode:" << flightMode;
     }
@@ -974,28 +825,6 @@ QVariantList Vehicle::links() const {
     return ret;
 }
 #endif
-
-void Vehicle::_sendMessageMultipleNext()
-{
-    if (_nextSendMessageMultipleIndex < _sendMessageMultipleList.count()) {
-        qCDebug(VehicleLog) << "_sendMessageMultipleNext:" << _sendMessageMultipleList[_nextSendMessageMultipleIndex].message.msgid;
-
-        SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
-        if (sharedLink) {
-//            sendMessageOnLinkThreadSafe(sharedLink.get(), _sendMessageMultipleList[_nextSendMessageMultipleIndex].message);
-        }
-
-        if (--_sendMessageMultipleList[_nextSendMessageMultipleIndex].retryCount <= 0) {
-            _sendMessageMultipleList.removeAt(_nextSendMessageMultipleIndex);
-        } else {
-            _nextSendMessageMultipleIndex++;
-        }
-    }
-
-    if (_nextSendMessageMultipleIndex >= _sendMessageMultipleList.count()) {
-        _nextSendMessageMultipleIndex = 0;
-    }
-}
 
 void Vehicle::_missionManagerError(int errorCode, const QString& errorMsg)
 {
@@ -1030,6 +859,18 @@ void Vehicle::_flightTimerStop()
 void Vehicle::_updateFlightTime()
 {
     _flightTimeFact.setRawValue((double)_flightTimer.elapsed() / 1000.0);
+}
+
+void Vehicle::_gotProgressUpdate(float progressValue)
+{
+    if (sender() != _initialConnectStateMachine && _initialConnectStateMachine->active()) {
+        return;
+    }
+    if (sender() == _initialConnectStateMachine && !_initialConnectStateMachine->active()) {
+        progressValue = 0.f;
+    }
+    _loadProgress = progressValue;
+    emit loadProgressChanged(progressValue);
 }
 
 void Vehicle::_firstMissionLoadComplete()
@@ -1067,7 +908,7 @@ void Vehicle::_say(const QString& text)
 
 bool Vehicle::airship() const
 {
-    return QGCMAVLink::isAirship(vehicleType());
+    return QGCMAVLink::isHelicopter(vehicleType());
 }
 
 bool Vehicle::fixedWing() const
@@ -1077,12 +918,12 @@ bool Vehicle::fixedWing() const
 
 bool Vehicle::rover() const
 {
-    return QGCMAVLink::isRoverBoat(vehicleType());
+    return QGCMAVLink::isJustaposedVector(vehicleType());
 }
 
 bool Vehicle::sub() const
 {
-    return QGCMAVLink::isSub(vehicleType());
+    return QGCMAVLink::isTandemVector(vehicleType());
 }
 
 bool Vehicle::multiRotor() const
@@ -1092,7 +933,7 @@ bool Vehicle::multiRotor() const
 
 bool Vehicle::vtol() const
 {
-    return QGCMAVLink::isVTOL(vehicleType());
+    return QGCMAVLink::TiltRotor(vehicleType());
 }
 
 bool Vehicle::supportsThrottleModeCenterZero() const
@@ -1122,39 +963,18 @@ bool Vehicle::supportsMotorInterference() const
 
 bool Vehicle::supportsTerrainFrame() const
 {
-    return !px4Firmware();
+    return !shenHangFirmware();
 }
 
 QString Vehicle::vehicleTypeName() const {
     static QMap<int, QString> typeNames = {
-        { MAV_TYPE_GENERIC,         tr("Generic micro air vehicle" )},
-        { MAV_TYPE_FIXED_WING,      tr("Fixed wing aircraft")},
-        { MAV_TYPE_QUADROTOR,       tr("Quadrotor")},
-        { MAV_TYPE_COAXIAL,         tr("Coaxial helicopter")},
-        { MAV_TYPE_HELICOPTER,      tr("Normal helicopter with tail rotor.")},
-        { MAV_TYPE_ANTENNA_TRACKER, tr("Ground installation")},
-        { MAV_TYPE_GCS,             tr("Operator control unit / ground control station")},
-        { MAV_TYPE_AIRSHIP,         tr("Airship, controlled")},
-        { MAV_TYPE_FREE_BALLOON,    tr("Free balloon, uncontrolled")},
-        { MAV_TYPE_ROCKET,          tr("Rocket")},
-        { MAV_TYPE_GROUND_ROVER,    tr("Ground rover")},
-        { MAV_TYPE_SURFACE_BOAT,    tr("Surface vessel, boat, ship")},
-        { MAV_TYPE_SUBMARINE,       tr("Submarine")},
-        { MAV_TYPE_HEXAROTOR,       tr("Hexarotor")},
-        { MAV_TYPE_OCTOROTOR,       tr("Octorotor")},
-        { MAV_TYPE_TRICOPTER,       tr("Octorotor")},
-        { MAV_TYPE_FLAPPING_WING,   tr("Flapping wing")},
-        { MAV_TYPE_KITE,            tr("Flapping wing")},
-        { MAV_TYPE_ONBOARD_CONTROLLER, tr("Onboard companion controller")},
-        { MAV_TYPE_VTOL_DUOROTOR,   tr("Two-rotor VTOL using control surfaces in vertical operation in addition. Tailsitter")},
-        { MAV_TYPE_VTOL_QUADROTOR,  tr("Quad-rotor VTOL using a V-shaped quad config in vertical operation. Tailsitter")},
-        { MAV_TYPE_VTOL_TILTROTOR,  tr("Tiltrotor VTOL")},
-        { MAV_TYPE_VTOL_RESERVED2,  tr("VTOL reserved 2")},
-        { MAV_TYPE_VTOL_RESERVED3,  tr("VTOL reserved 3")},
-        { MAV_TYPE_VTOL_RESERVED4,  tr("VTOL reserved 4")},
-        { MAV_TYPE_VTOL_RESERVED5,  tr("VTOL reserved 5")},
-        { MAV_TYPE_GIMBAL,          tr("Onboard gimbal")},
-        { MAV_TYPE_ADSB,            tr("Onboard ADSB peripheral")},
+        { MAV_TYPE_GENERIC,           tr("Generic micro air vehicle" )},
+        { MAV_TYPE_HELICOPTER,        tr("Normal helicopter with tail rotor.")},
+        { MAV_TYPE_FIXED_WING,        tr("Fixed wing aircraft")},
+        { MAV_TYPE_MULTIROTOR,        tr("Quadrotor")},
+        { MAV_TYPE_TANDEM_VECTOR,     tr("Tandem vector helicopter")},
+        { MAV_TYPE_JUXTAPOSED_VECTOR, tr("Juxtaposed vector helicopter")},
+        { MAV_TYPE_TILT_ROTOR,        tr("Tilt rotor")}
     };
     return typeNames[_vehicleType];
 }
@@ -1268,6 +1088,11 @@ void Vehicle::startMission()
     _firmwarePlugin->startMission(this);
 }
 
+void Vehicle::setCurrentMissionSequence(int seq)
+{
+
+}
+
 void Vehicle::guidedModeGotoLocation(const QGeoCoordinate& gotoCoord)
 {
     if (!guidedModeSupported()) {
@@ -1321,30 +1146,6 @@ void Vehicle::setGuidedMode(bool guidedMode)
 void Vehicle::emergencyStop()
 {
 
-}
-
-void Vehicle::setCurrentMissionSequence(int seq)
-{
-    SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
-    if (!sharedLink) {
-        qCDebug(VehicleLog) << "setCurrentMissionSequence: primary link gone!";
-        return;
-    }
-
-//    mavlink_message_t       msg;
-
-    if (!_firmwarePlugin->sendHomePositionToVehicle()) {
-        seq--;
-    }
-//    mavlink_msg_mission_set_current_pack_chan(
-//                static_cast<uint8_t>(_mavlink->getSystemId()),
-//                static_cast<uint8_t>(_mavlink->getComponentId()),
-//                sharedLink->mavlinkChannel(),
-//                &msg,
-//                static_cast<uint8_t>(id()),
-//                _compID,
-//                static_cast<uint16_t>(seq));
-//    sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
 }
 
 void Vehicle::_sendShenHangCommandResponseTimeoutCheck()
@@ -1520,75 +1321,6 @@ void Vehicle::rebootVehicle()
 
 void Vehicle::startCalibration(Vehicle::CalibrationType calType)
 {
-    SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
-    if (!sharedLink) {
-        qCDebug(VehicleLog) << "startCalibration: primary link gone!";
-        return;
-    }
-
-    float param1 = 0;
-    float param2 = 0;
-    float param3 = 0;
-    float param4 = 0;
-    float param5 = 0;
-    float param6 = 0;
-    float param7 = 0;
-
-    switch (calType) {
-    case CalibrationGyro:
-        param1 = 1;
-        break;
-    case CalibrationMag:
-        param2 = 1;
-        break;
-    case CalibrationRadio:
-        param4 = 1;
-        break;
-    case CalibrationCopyTrims:
-        param4 = 2;
-        break;
-    case CalibrationAccel:
-        param5 = 1;
-        break;
-    case CalibrationLevel:
-        param5 = 2;
-        break;
-    case CalibrationEsc:
-        param7 = 1;
-        break;
-    case CalibrationPX4Airspeed:
-        param6 = 1;
-        break;
-    case CalibrationPX4Pressure:
-        param3 = 1;
-        break;
-    case CalibrationAPMCompassMot:
-        param6 = 1;
-        break;
-    case CalibrationAPMPressureAirspeed:
-        param3 = 1;
-        break;
-    case CalibrationAPMPreFlight:
-        param3 = 1; // GroundPressure/Airspeed
-        if (multiRotor() || rover()) {
-            // Gyro cal for ArduCopter only
-            param1 = 1;
-        }
-    }
-
-    // We can't use sendMavCommand here since we have no idea how long it will be before the command returns a result. This in turn
-    // causes the retry logic to break down.
-//    mavlink_message_t msg;
-//    mavlink_msg_command_long_pack_chan(_mavlink->getSystemId(),
-//                                       _mavlink->getComponentId(),
-//                                       sharedLink->mavlinkChannel(),
-//                                       &msg,
-//                                       id(),
-//                                       defaultComponentId(),            // target component
-//                                       MAV_CMD_PREFLIGHT_CALIBRATION,    // command id
-//                                       0,                                // 0=first transmission of command
-//                                       param1, param2, param3, param4, param5, param6, param7);
-//    sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
 }
 
 void Vehicle::stopCalibration(void)
@@ -1731,8 +1463,8 @@ void Vehicle::_setupAutoDisarmSignalling()
 {
     QString param = _firmwarePlugin->autoDisarmParameter(this);
 
-    if (!param.isEmpty() && _parameterManager->parameterExists(FactSystem::defaultComponentId, param)) {
-        Fact* fact = _parameterManager->getParameter(FactSystem::defaultComponentId,param);
+    if (!param.isEmpty() && _parameterManager->parameterExists(param)) {
+        Fact* fact = _parameterManager->getParameter(param);
         connect(fact, &Fact::rawValueChanged, this, &Vehicle::autoDisarmChanged);
         emit autoDisarmChanged();
     }
@@ -1742,8 +1474,8 @@ bool Vehicle::autoDisarm()
 {
     QString param = _firmwarePlugin->autoDisarmParameter(this);
 
-    if (!param.isEmpty() && _parameterManager->parameterExists(FactSystem::defaultComponentId, param)) {
-        Fact* fact = _parameterManager->getParameter(FactSystem::defaultComponentId,param);
+    if (!param.isEmpty() && _parameterManager->parameterExists(param)) {
+        Fact* fact = _parameterManager->getParameter(param);
         return fact->rawValue().toDouble() > 0;
     }
 
@@ -1824,10 +1556,10 @@ QString Vehicle::hobbsMeter()
     static const char* HOOBS_HI = "LND_FLIGHT_T_HI";
     static const char* HOOBS_LO = "LND_FLIGHT_T_LO";
     //-- TODO: Does this exist on non PX4?
-    if (_parameterManager->parameterExists(FactSystem::defaultComponentId, HOOBS_HI) &&
-            _parameterManager->parameterExists(FactSystem::defaultComponentId, HOOBS_LO)) {
-        Fact* factHi = _parameterManager->getParameter(FactSystem::defaultComponentId, HOOBS_HI);
-        Fact* factLo = _parameterManager->getParameter(FactSystem::defaultComponentId, HOOBS_LO);
+    if (_parameterManager->parameterExists(HOOBS_HI) &&
+            _parameterManager->parameterExists(HOOBS_LO)) {
+        Fact* factHi = _parameterManager->getParameter(HOOBS_HI);
+        Fact* factLo = _parameterManager->getParameter(HOOBS_LO);
         uint64_t hobbsTimeSeconds = ((uint64_t)factHi->rawValue().toUInt() << 32 | (uint64_t)factLo->rawValue().toUInt()) / 1000000;
         int hours   = hobbsTimeSeconds / 3600;
         int minutes = (hobbsTimeSeconds % 3600) / 60;
@@ -1910,68 +1642,14 @@ void Vehicle::updateFlightDistance(double distance)
     _flightDistanceFact.setRawValue(_flightDistanceFact.rawValue().toDouble() + distance);
 }
 
-void Vehicle::sendParamMapRC(const QString& paramName, double scale, double centerValue, int tuningID, double minValue, double maxValue)
-{
-    SharedLinkInterfacePtr  sharedLink = vehicleLinkManager()->primaryLink().lock();
-    if (!sharedLink) {
-        qCDebug(VehicleLog) << "sendParamMapRC: primary link gone!";
-        return;
-    }
-
-//    mavlink_message_t       message;
-
-    char param_id_cstr[MAVLINK_MSG_PARAM_MAP_RC_FIELD_PARAM_ID_LEN] = {};
-    // Copy string into buffer, ensuring not to exceed the buffer size
-    for (unsigned int i = 0; i < sizeof(param_id_cstr); i++) {
-        if ((int)i < paramName.length()) {
-            param_id_cstr[i] = paramName.toLatin1()[i];
-        }
-    }
-
-//    mavlink_msg_param_map_rc_pack_chan(static_cast<uint8_t>(_mavlink->getSystemId()),
-//                                       static_cast<uint8_t>(_mavlink->getComponentId()),
-//                                       sharedLink->mavlinkChannel(),
-//                                       &message,
-//                                       _id,
-//                                       MAV_COMP_ID_AUTOPILOT1,
-//                                       param_id_cstr,
-//                                       -1,                                                  // parameter name specified as string in previous argument
-//                                       static_cast<uint8_t>(tuningID),
-//                                       static_cast<float>(scale),
-//                                       static_cast<float>(centerValue),
-//                                       static_cast<float>(minValue),
-//                                       static_cast<float>(maxValue));
-//    sendMessageOnLinkThreadSafe(sharedLink.get(), message);
-}
-
-void Vehicle::clearAllParamMapRC(void)
-{
-    SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
-    if (!sharedLink) {
-        qCDebug(VehicleLog)<< "clearAllParamMapRC: primary link gone!";
-        return;
-    }
-
-//    char param_id_cstr[MAVLINK_MSG_PARAM_MAP_RC_FIELD_PARAM_ID_LEN] = {};
-
-//    for (int i = 0; i < 3; i++) {
-//        mavlink_message_t message;
-//        mavlink_msg_param_map_rc_pack_chan(static_cast<uint8_t>(_mavlink->getSystemId()),
-//                                           static_cast<uint8_t>(_mavlink->getComponentId()),
-//                                           sharedLink->mavlinkChannel(),
-//                                           &message,
-//                                           _id,
-//                                           MAV_COMP_ID_AUTOPILOT1,
-//                                           param_id_cstr,
-//                                           -2,                                                  // Disable map for specified tuning id
-//                                           i,                                                   // tuning id
-//                                           0, 0, 0, 0);                                         // unused
-//        sendMessageOnLinkThreadSafe(sharedLink.get(), message);
-//    }
-}
 
 void Vehicle::triggerSimpleCamera()
 {
+}
+
+bool Vehicle::isInitialConnectComplete() const
+{
+    return !_initialConnectStateMachine->active();
 }
 
 
@@ -2001,9 +1679,12 @@ void Vehicle::HandleGeneralStatus(ShenHangProtocolMessage& msg)
     }
 
     /******************** 处理GPS信息 ********************/
-    gpsRawInt.satellitesUsed = generalStatus.modeGnssSv & 0B00001111;
-    gpsRawInt.fixType = (generalStatus.modeGnssSv & 0B00110000) >> 4;
-    gpsRawInt.doubleAntenna = generalStatus.modeGnssSv >> 7;
+    gpsRawInt.satellitesUsed = generalStatus.modeGnssSv & 0x1f;
+    gpsRawInt.status = (generalStatus.modeGnssSv & 0b01100000) >> 5;
+    gpsRawInt.dualAntenna = generalStatus.modeGnssSv >> 7;
+    gpsRawInt.alt = generalStatus.alt * 1000;
+//    gpsRawInt.velG = generalStatus.vG * 100;
+//    gpsRawInt.velV = generalStatus.vV * 100;
 //    gpsRawInt.yaw = generalStatus.crsDeg100x;
     _gpsFactGroup.setShenHangGpsInfo(gpsRawInt);
     _headingFact.setRawValue(generalStatus.crsDeg100x / 100.f);
@@ -2018,9 +1699,22 @@ void Vehicle::HandlePosVelTime(ShenHangProtocolMessage& msg)
     gpsRawInt.lat = static_cast<int32_t>(posVelTime.latDeg * 1e7);
     gpsRawInt.lon = static_cast<int32_t>(posVelTime.lonDeg * 1e7);
     gpsRawInt.alt = static_cast<int32_t>(posVelTime.alt * 1e3);
-    gpsRawInt.vel = static_cast<uint16_t>(posVelTime.vG * 1e3f);
+    gpsRawInt.velG = static_cast<uint16_t>(posVelTime.vG * 1e3f);
+    gpsRawInt.velV = static_cast<uint16_t>(posVelTime.vUp * 1e3f);
     gpsRawInt.cog = static_cast<int16_t>(qRadiansToDegrees(posVelTime.crsRad) * 100);
     _climbRateFact.setRawValue(posVelTime.vUp);
+
+    _coordinate.setLongitude(posVelTime.lonDeg);
+    _coordinate.setLatitude(posVelTime.latDeg);
+    _coordinate.setAltitude(posVelTime.alt);
+    _altitudeAMSLFact.setRawValue(posVelTime.alt);
+    _altitudeRelativeFact.setRawValue(posVelTime.alt - 5);
+    emit coordinateChanged(_coordinate);
+    if (_flying == false) {
+        _flying = true;
+        emit flyingChanged(true);
+        _updateArmed(true);
+    }
 }
 
 void Vehicle::HandleAttitude(ShenHangProtocolMessage& msg)
@@ -2035,7 +1729,10 @@ void Vehicle::HandleAttitude(ShenHangProtocolMessage& msg)
 //    Fact _rollFact;
 //    Fact _pitchFact;
 //    Fact _headingFact;
-    
+    // FIXME 此处直接使用四元数作为姿态角来测试，不知道怎么把三个四元数转为姿态角
+    _rollFact.setRawValue(attitude.q1Int16);
+    _pitchFact.setRawValue(attitude.q2Int16);
+    _headingFact.setRawValue(attitude.q3Int16 );
     _rollRateFact.setRawValue(qRadiansToDegrees(attitude.p1000x / 1000.f));
     _pitchRateFact.setRawValue(qRadiansToDegrees(attitude.q1000x / 1000.f));
     _yawRateFact.setRawValue(qRadiansToDegrees(attitude.r1000x / 1000.f));
@@ -2097,6 +1794,8 @@ void Vehicle::HandleAckCommandParam(ShenHangProtocolMessage& msg)
     default:
         break;
     }
+    qCDebug(VehicleLog) << "AckCommandParam msg.tyMsg1" << "idCfgGroup0" << idCfgGroup0
+                        << "execuateState" << execuateState << "lenCfg" << lenCfg << "errTyMsg1" << errTyMsg1 << "dgnCode" << dgnCode;
 }
 
 void Vehicle::HandleAckCommandBank(ShenHangProtocolMessage& msg)

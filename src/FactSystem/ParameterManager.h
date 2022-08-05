@@ -18,7 +18,6 @@
 #include <QJsonObject>
 
 #include "FactSystem.h"
-#include "MAVLinkProtocol.h"
 #include "AutoPilotPlugin.h"
 #include "QGCMAVLink.h"
 #include "Vehicle.h"
@@ -27,7 +26,7 @@
 Q_DECLARE_LOGGING_CATEGORY(ParameterManagerVerbose1Log)
 Q_DECLARE_LOGGING_CATEGORY(ParameterManagerVerbose2Log)
 Q_DECLARE_LOGGING_CATEGORY(ParameterManagerDebugCacheFailureLog)
-
+#define MAVPACKED( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop) )
 struct ParamUnion {
     union {
         float paramFloat;
@@ -41,6 +40,30 @@ struct ParamUnion {
     };
     FactMetaData::ValueType_t type;
 };
+/**
+ * Old-style 4 byte param union
+ *
+ * This struct is the data format to be used when sending
+ * parameters. The parameter should be copied to the native
+ * type (without type conversion)
+ * and re-instanted on the receiving side using the
+ * native type as well.
+ */
+MAVPACKED(
+typedef struct param_union {
+    union {
+        float param_float;
+        int32_t param_int32;
+        uint32_t param_uint32;
+        int16_t param_int16;
+        uint16_t param_uint16;
+        int8_t param_int8;
+        uint8_t param_uint8;
+        uint8_t bytes[4];
+    };
+    uint8_t type;
+}) mavlink_param_union_t;
+
 
 class ParameterEditorController;
 
@@ -69,20 +92,14 @@ public:
     /// @return Location of parameter cache file
     static QString parameterCacheFile(int vehicleId, int componentId);
 
-    void mavlinkMessageReceived(mavlink_message_t message);
     void shenHangMessageReceived(ShenHangProtocolMessage message);
-    QList<int> componentIds(void);
 
     /// Re-request the full set of parameters from the autopilot
     /**
      * @brief refreshGroupParameters 请求参数，默认请求所有参数组参数
-     * @param componentID
      * @param groupId 0~0xFE对应各设置组id；0xff查询所有设置组。
      */
-    void refreshGroupParameters(uint8_t componentID, uint8_t groupId = 0xff);
-
-    /// Request a refresh on the specific parameter
-    void refreshParameter(int componentId, const QString& paramName);
+    void refreshGroupParameters(uint8_t groupId = 0xff);
 
     /// Request a refresh on all parameters that begin with the specified prefix
 //    void refreshParametersPrefix(int componentId, const QString& namePrefix);
@@ -113,19 +130,17 @@ public:
     bool parameterExists(int componentId, const uint8_t& groupId, const uint16_t& addrOffset);
 
     /// Returns true if the specifed parameter exists
-    ///     @param componentId: Component id or FactSystem::defaultComponentId
     ///     @param name: Parameter name
-    bool parameterExists(int componentId, const QString& paramName);
+    bool parameterExists(const QString& paramName);
 
     /// Returns all parameter names
     QStringList parameterNames(int componentId);
-    QMap<int /* comp id */, QMap<uint8_t /* groupId */, QMap<uint16_t /* addrOffset */, Fact*>>> getCompGroupId2FactMap() const {return _mapCompGroupId2FactMap;}
+    QMap<uint8_t /* groupId */, QMap<uint16_t /* addrOffset */, Fact*>> getCompGroupId2FactMap() const {return _mapGroupId2FactMap;}
     /// Returns the specified Parameter. Returns a default empty fact is parameter does not exists. Also will pop
     /// a missing parameter error to user if parameter does not exist.
-    ///     @param componentId: Component id or FactSystem::defaultComponentId
     ///     @param name: Parameter name
-    Fact* getParameter(int componentId, const QString& paramName);
-    Fact* getParameter(int componentId, const uint8_t& groupId, const uint16_t& addrOffset);
+    Fact* getParameter(const QString& paramName);
+    Fact* getParameter(const uint8_t& groupId, const uint16_t& addrOffset);
     /**
      * @brief getBatchQueueCount 获取需请求参数个数
      * @return
@@ -141,32 +156,28 @@ public:
     bool pendingWrites(void);
 
     Vehicle* vehicle(void) { return _vehicle; }
-
-    static MAV_PARAM_TYPE               factTypeToMavType(FactMetaData::ValueType_t factType);
-    static FactMetaData::ValueType_t    mavTypeToFactType(MAV_PARAM_TYPE mavType);
-
 signals:
     void parametersReadyChanged     (bool parametersReady);
     void missingParametersChanged   (bool missingParameters);
     void loadProgressChanged        (float value);
     void pendingWritesChanged       (bool pendingWrites);
-    void factAdded                  (int componentId, Fact* fact);
+    void factAdded                  (Fact* fact);
 
 private slots:
     void    _factRawValueUpdated                (const QVariant& rawValue);
 
 private:
-    void    _handleParamValue                   (uint8_t componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t mavParamType, QVariant parameterValue);
+    void    _loadParameterMetaDataFromFile();
+    void    _handleParamValue                   (uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t mavParamType, QVariant parameterValue);
     void    _factRawValueUpdateWorker           (int componentId, uint8_t groupId, uint8_t lenCfg, uint16_t addrOffset, FactMetaData::ValueType_t valueType, const QVariant& rawValue);
     void    _waitingParamTimeout                (void);
     void    _tryCacheLookup                     (void);
     void    _initialRequestTimeout              (void);
     void    _groupCommandTimeout                (void);
     int     _actualComponentId                  (int componentId);
-    void    _readParameterRaw                   (int componentId, uint8_t groupId, uint8_t lenCfg, uint16_t addrOffset);
-    void    _sendParamSetToVehicle              (int componentId, uint8_t groupId, uint8_t lenCfg, uint16_t addrOffset, FactMetaData::ValueType_t valueType, const QVariant& value);
+    void    _readParameterRaw                   (uint8_t groupId, uint8_t lenCfg, uint16_t addrOffset);
+    void    _sendParamSetToVehicle              (uint8_t groupId, uint8_t lenCfg, uint16_t addrOffset, FactMetaData::ValueType_t valueType, const QVariant& value);
     void    _writeLocalParamCache               (int vehicleId, int componentId);
-    void    _tryCacheHashLoad                   (int vehicleId, int componentId, QVariant hash_value);
     void    _loadMetaData                       (void);
     void    _clearMetaData                      (void);
     void    _loadOfflineEditingParams           (void);
@@ -179,10 +190,9 @@ private:
     static QVariant _stringToTypedVariant(const QString& string, FactMetaData::ValueType_t type, bool failOk = false);
 
     Vehicle*            _vehicle;
-    MAVLinkProtocol*    _mavlink;
 
-    QMap<int /* comp id */,  QMap<QString /* fact name */,  Fact*>> _mapCompId2FactMap;
-    QMap<int /* comp id */, QMap<uint8_t /* groupId */, QMap<uint16_t /* addrOffset */, Fact*>>> _mapCompGroupId2FactMap;
+    QMap<QString /* fact name */,  Fact*> _mapCompId2FactMap;
+    QMap<uint8_t /* groupId */, QMap<uint16_t /* addrOffset */, Fact*>> _mapGroupId2FactMap;
 
     double      _loadProgress;                  ///< Parameter load progess, [0.0,1.0]
     bool        _parametersReady;               ///< true: parameter load complete
@@ -195,10 +205,6 @@ private:
 
     typedef QPair<int /* FactMetaData::ValueType_t */, QVariant /* Fact::rawValue */> ParamTypeVal;
     typedef QMap<QString /* parameter name */, ParamTypeVal> CacheMapName2ParamTypeVal;
-
-    QMap<int /* component id */, bool>                                              _debugCacheCRC; ///< true: debug cache crc failure
-    QMap<int /* component id */, CacheMapName2ParamTypeVal>                         _debugCacheMap;
-    QMap<int /* component id */, QMap<QString /* param name */, bool /* seen */>>   _debugCacheParamSeen;
 
     // Wait counts from previous parameter update cycle
     int _prevWaitingReadParamIndexCount;
@@ -219,18 +225,18 @@ private:
     bool        _indexBatchQueueActive; ///< true: we are actively batching re-requests for missing index base params, false: index based re-request has not yet started
     QMap<uint8_t, QList<int> >  _indexBatchQueue;                   ///< Key: Group id, Value: retry list }
     int _indexBatchQueueCount = 0;
-    QMap<int, int>                  _paramCountMap;             ///< Key: Component id, Value: count of parameters in this component
+    int _paramCountMap;             ///< Key: Component id, Value: count of parameters in this component
 
     ///Key: ComponentId, Value:{ Key: GroupId, Value: Map { Key: addrOffset, Value: retry count } }
-    QMap<int, QMap<uint8_t, QMap<uint16_t, int> > > _waitingReadParamIndexMap;
-    QMap<int, QMap<uint8_t, QMap<uint16_t, int> > > _waitingWriteParamIndexMap;
-    ///Key: ComponentId, Value:{ Key: GroupId, Value: Map { Key: CommandParamType, Value: retry count } }
-    QMap<int, QMap<uint8_t, QMap<CommandParamType, int> > > _waitingGroupCommandMap;
+    QMap<uint8_t, QMap<uint16_t, int> > _waitingReadParamIndexMap;
+    QMap<uint8_t, QMap<uint16_t, int> > _waitingWriteParamIndexMap;
+    /// Key: GroupId, Value: Map { Key: CommandParamType, Value: retry count }
+    QMap<uint8_t, QMap<CommandParamType, int>> _waitingGroupCommandMap;
 
 
     QMap<int, QMap<QString, int> >  _waitingReadParamNameMap;   ///< Key: Component id, Value: Map { Key: groupId still waiting for, Value: retry count }
     QMap<int, QMap<QString, int> >  _waitingWriteParamNameMap;  ///< Key: Component id, Value: Map { Key: groupId name still waiting for, Value: retry count }
-    QMap<int, QList<int> >          _failedReadParamIndexMap;   ///< Key: Component id, Value: failed parameter index
+    QList<int>          _failedReadParamIndexMap;   ///< failed parameter index
 
     int _totalParamCount;                       ///< Number of parameters across all components
     int _waitingWriteParamBatchCount = 0;       ///< Number of parameters which are batched up waiting on write responses
@@ -239,7 +245,7 @@ private:
     QTimer _initialRequestTimeoutTimer;
     QTimer _groupCommandTimeoutTimer;
     QTimer _waitingParamTimeoutTimer;
-    ShenHangParameterMetaData* shenHangMetaData;
+    ShenHangParameterMetaData* _shenHangMetaData = nullptr;
     Fact _defaultFact;   ///< Used to return default fact, when parameter not found
     CommandParamType lastCommandGroupType;
     uint8_t lastCommandGroupId;

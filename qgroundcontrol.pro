@@ -350,7 +350,6 @@ HEADERS += \
     src/MissionManager/ItemInfoSlot.h \
     src/QmlControls/QmlUnitsConversion.h \
     src/Vehicle/ShenHangVehicleData.h \
-    src/Vehicle/VehicleEscStatusFactGroup.h \
     src/api/QGCCorePlugin.h \
     src/api/QGCOptions.h \
     src/api/QGCSettings.h \
@@ -367,7 +366,6 @@ SOURCES += \
     src/MissionManager/ItemBank.cpp \
     src/MissionManager/ItemWaypoint.cpp \
     src/MissionManager/ItemInfoSlot.cpp \
-    src/Vehicle/VehicleEscStatusFactGroup.cc \
     src/api/QGCCorePlugin.cc \
     src/api/QGCOptions.cc \
     src/api/QGCSettings.cc \
@@ -395,35 +393,20 @@ DebugBuild { PX4FirmwarePlugin { PX4FirmwarePluginFactory { APMFirmwarePlugin { 
 #        src/FactSystem/FactSystemTestGeneric.h \
 #        src/FactSystem/FactSystemTestPX4.h \
 #        src/FactSystem/ParameterManagerTest.h \
-#        src/MissionManager/CameraCalcTest.h \
-#        src/MissionManager/CameraSectionTest.h \
 #        src/MissionManager/CorridorScanComplexItemTest.h \
 #        src/MissionManager/FWLandingPatternTest.h \
-#        src/MissionManager/LandingComplexItemTest.h \
-#        src/MissionManager/MissionCommandTreeEditorTest.h \
-#        src/MissionManager/MissionCommandTreeTest.h \
 #        src/MissionManager/MissionControllerManagerTest.h \
 #        src/MissionManager/MissionControllerTest.h \
-#        src/MissionManager/MissionItemTest.h \
 #        src/MissionManager/MissionManagerTest.h \
 #        src/MissionManager/MissionSettingsTest.h \
 #        src/MissionManager/PlanMasterControllerTest.h \
 #        src/MissionManager/QGCMapPolygonTest.h \
 #        src/MissionManager/QGCMapPolylineTest.h \
-#        src/MissionManager/SectionTest.h \
-#        src/MissionManager/SimpleMissionItemTest.h \
-#        src/MissionManager/SpeedSectionTest.h \
-#        src/MissionManager/StructureScanComplexItemTest.h \
-#        src/MissionManager/SurveyComplexItemTest.h \
-#        src/MissionManager/TransectStyleComplexItemTest.h \
-#        src/MissionManager/TransectStyleComplexItemTestBase.h \
-#        src/MissionManager/VisualMissionItemTest.h \
 #        src/qgcunittest/GeoTest.h \
 #        src/qgcunittest/MavlinkLogTest.h \
 #        src/qgcunittest/MultiSignalSpy.h \
 #        src/qgcunittest/MultiSignalSpyV2.h \
 #        src/qgcunittest/UnitTest.h \
-#        src/Vehicle/FTPManagerTest.h \
 #        src/Vehicle/RequestMessageTest.h \
 #        src/Vehicle/SendMavCommandWithHandlerTest.h \
 #        src/Vehicle/SendMavCommandWithSignallingTest.h \
@@ -442,35 +425,21 @@ DebugBuild { PX4FirmwarePlugin { PX4FirmwarePluginFactory { APMFirmwarePlugin { 
 #        src/FactSystem/FactSystemTestPX4.cc \
 #        src/FactSystem/ParameterManagerTest.cc \
 #        src/MissionManager/CameraCalcTest.cc \
-#        src/MissionManager/CameraSectionTest.cc \
 #        src/MissionManager/CorridorScanComplexItemTest.cc \
 #        src/MissionManager/FWLandingPatternTest.cc \
-#        src/MissionManager/LandingComplexItemTest.cc \
-#        src/MissionManager/MissionCommandTreeEditorTest.cc \
-#        src/MissionManager/MissionCommandTreeTest.cc \
 #        src/MissionManager/MissionControllerManagerTest.cc \
 #        src/MissionManager/MissionControllerTest.cc \
-#        src/MissionManager/MissionItemTest.cc \
 #        src/MissionManager/MissionManagerTest.cc \
 #        src/MissionManager/MissionSettingsTest.cc \
 #        src/MissionManager/PlanMasterControllerTest.cc \
 #        src/MissionManager/QGCMapPolygonTest.cc \
 #        src/MissionManager/QGCMapPolylineTest.cc \
-#        src/MissionManager/SectionTest.cc \
-#        src/MissionManager/SimpleMissionItemTest.cc \
-#        src/MissionManager/SpeedSectionTest.cc \
-#        src/MissionManager/StructureScanComplexItemTest.cc \
-#        src/MissionManager/SurveyComplexItemTest.cc \
-#        src/MissionManager/TransectStyleComplexItemTest.cc \
-#        src/MissionManager/TransectStyleComplexItemTestBase.cc \
-#        src/MissionManager/VisualMissionItemTest.cc \
 #        src/qgcunittest/GeoTest.cc \
 #        src/qgcunittest/MavlinkLogTest.cc \
 #        src/qgcunittest/MultiSignalSpy.cc \
 #        src/qgcunittest/MultiSignalSpyV2.cc \
 #        src/qgcunittest/UnitTest.cc \
 #        src/qgcunittest/UnitTestList.cc \
-#        src/Vehicle/FTPManagerTest.cc \
 #        src/Vehicle/RequestMessageTest.cc \
 #        src/Vehicle/SendMavCommandWithHandlerTest.cc \
 #        src/Vehicle/SendMavCommandWithSignallingTest.cc \
@@ -488,34 +457,14 @@ DebugBuild { PX4FirmwarePlugin { PX4FirmwarePluginFactory { APMFirmwarePlugin { 
 
 HEADERS += \
     src/Audio/AudioOutput.h \
-    src/Camera/QGCCameraControl.h \
-    src/Camera/QGCCameraIO.h \
-    src/Camera/QGCCameraManager.h \
     src/CmdLineOptParser.h \
     src/FirmwarePlugin/PX4/px4_custom_mode.h \
     src/JsonHelper.h \
-    src/KMLDomDocument.h \
-    src/KMLHelper.h \
-    src/LogCompressor.h \
-#    src/MissionManager/CameraCalc.h \
-#    src/MissionManager/CameraSection.h \
-#    src/MissionManager/CameraSpec.h \
-#    src/MissionManager/ComplexMissionItem.h \
-#    src/MissionManager/CorridorScanComplexItem.h \
-#    src/MissionManager/CorridorScanPlanCreator.h \
     src/MissionManager/BlankPlanCreator.h \
-#    src/MissionManager/FixedWingLandingComplexItem.h \
     src/MissionManager/GeoFenceController.h \
     src/MissionManager/GeoFenceManager.h \
-#    src/MissionManager/KMLPlanDomDocument.h \
-#    src/MissionManager/LandingComplexItem.h \
-#    src/MissionManager/MissionCommandList.h \
-#    src/MissionManager/MissionCommandTree.h \
-#    src/MissionManager/MissionCommandUIInfo.h \
     src/MissionManager/MissionController.h \
-#    src/MissionManager/MissionItem.h \
     src/MissionManager/MissionManager.h \
-#    src/MissionManager/MissionSettingsItem.h \
     src/MissionManager/PlanElementController.h \
     src/MissionManager/PlanCreator.h \
     src/MissionManager/PlanManager.h \
@@ -525,20 +474,7 @@ HEADERS += \
     src/MissionManager/QGCMapCircle.h \
     src/MissionManager/QGCMapPolygon.h \
     src/MissionManager/QGCMapPolyline.h \
-#    src/MissionManager/RallyPoint.h \
-#    src/MissionManager/RallyPointController.h \
-#    src/MissionManager/RallyPointManager.h \
-#    src/MissionManager/SimpleMissionItem.h \
-#    src/MissionManager/Section.h \
-#    src/MissionManager/SpeedSection.h \
-#    src/MissionManager/StructureScanComplexItem.h \
-#    src/MissionManager/StructureScanPlanCreator.h \
-#    src/MissionManager/SurveyComplexItem.h \
 #    src/MissionManager/SurveyPlanCreator.h \
-#    src/MissionManager/TakeoffMissionItem.h \
-#    src/MissionManager/TransectStyleComplexItem.h \
-#    src/MissionManager/VisualMissionItem.h \
-#    src/MissionManager/VTOLLandingComplexItem.h \
     src/PositionManager/PositionManager.h \
     src/PositionManager/SimulatedPosition.h \
     src/Geo/QGCGeo.h \
@@ -573,14 +509,11 @@ HEADERS += \
     src/QmlControls/QGroundControlQmlGlobal.h \
     src/QmlControls/QmlObjectListModel.h \
     src/QmlControls/QGCGeoBoundingCube.h \
-#    src/QmlControls/RCChannelMonitorController.h \
     src/QmlControls/RCToParamDialogController.h \
     src/QmlControls/ScreenToolsController.h \
-#    src/QmlControls/TerrainProfile.h \
     src/QmlControls/ToolStripAction.h \
     src/QmlControls/ToolStripActionList.h \
     src/QtLocationPlugin/QMLControl/QGCMapEngineManager.h \
-#    src/Settings/ADSBVehicleManagerSettings.h \
     src/Settings/AppSettings.h \
     src/Settings/AutoConnectSettings.h \
     src/Settings/BrandImageSettings.h \
@@ -594,51 +527,25 @@ HEADERS += \
     src/Settings/SettingsManager.h \
     src/Settings/UnitsSettings.h \
     src/Settings/VideoSettings.h \
-    src/ShapeFileHelper.h \
-    src/SHPFileHelper.h \
-#    src/Terrain/TerrainQuery.h \
     src/TerrainTile.h \
-    src/Vehicle/CompInfo.h \
-    src/Vehicle/CompInfoParam.h \
-    src/Vehicle/CompInfoVersion.h \
-    src/Vehicle/ComponentInformationManager.h \
-#    src/Vehicle/FTPManager.h \
     src/Vehicle/GPSRTKFactGroup.h \
     src/Vehicle/InitialConnectStateMachine.h \
-#    src/Vehicle/MAVLinkLogManager.h \
     src/Vehicle/MultiVehicleManager.h \
     src/Vehicle/StateMachine.h \
-    src/Vehicle/SysStatusSensorInfo.h \
-#    src/Vehicle/TerrainFactGroup.h \
-#    src/Vehicle/TerrainProtocolHandler.h \
     src/Vehicle/TrajectoryPoints.h \
     src/Vehicle/Vehicle.h \
-    src/Vehicle/VehicleObjectAvoidance.h \
-    src/Vehicle/VehicleBatteryFactGroup.h \
+#    src/Vehicle/VehicleBatteryFactGroup.h \
     src/Vehicle/VehicleClockFactGroup.h \
-    src/Vehicle/VehicleDistanceSensorFactGroup.h \
-    src/Vehicle/VehicleEstimatorStatusFactGroup.h \
     src/Vehicle/VehicleGPSFactGroup.h \
     src/Vehicle/VehicleLinkManager.h \
     src/Vehicle/VehicleSetpointFactGroup.h \
-    src/Vehicle/VehicleTemperatureFactGroup.h \
-    src/Vehicle/VehicleVibrationFactGroup.h \
-    src/Vehicle/VehicleWindFactGroup.h \
-#    src/VehicleSetup/JoystickConfigController.h \
     src/comm/LinkConfiguration.h \
     src/comm/LinkInterface.h \
     src/comm/LinkManager.h \
-    src/comm/LogReplayLink.h \
-#    src/comm/MAVLinkProtocol.h \
     src/comm/QGCMAVLink.h \
     src/comm/TCPLink.h \
     src/comm/UDPLink.h \
     src/comm/UdpIODevice.h \
-#    src/uas/UAS.h \
-#    src/uas/UASInterface.h \
-#    src/uas/UASMessageHandler.h \
-#    src/AnalyzeView/GeoTagController.h \
-#    src/AnalyzeView/ExifParser.h \
 
 contains (DEFINES, QGC_ENABLE_PAIRING) {
     HEADERS += \
@@ -649,7 +556,6 @@ DebugBuild {
 HEADERS += \
 #    src/comm/MockLink.h \
 #    src/comm/MockLinkFTP.h \
-#    src/comm/MockLinkMissionItemHandler.h \
 }
 
 WindowsBuild {
@@ -664,12 +570,6 @@ contains(DEFINES, QGC_ENABLE_BLUETOOTH) {
     src/comm/BluetoothLink.h \
 }
 
-contains (DEFINES, QGC_ENABLE_PAIRING) {
-    contains(DEFINES, QGC_ENABLE_QTNFC) {
-        HEADERS += \
-            src/PairingManager/QtNFC.h
-    }
-}
 
 !NoSerialBuild {
 HEADERS += \
@@ -679,51 +579,18 @@ HEADERS += \
 
 !MobileBuild {
 HEADERS += \
-#    src/GPS/Drivers/src/gps_helper.h \
-#    src/GPS/Drivers/src/rtcm.h \
-#    src/GPS/Drivers/src/ashtech.h \
-#    src/GPS/Drivers/src/ubx.h \
-#    src/GPS/Drivers/src/sbf.h \
-#    src/GPS/GPSManager.h \
-#    src/GPS/GPSPositionMessage.h \
-#    src/GPS/GPSProvider.h \
-#    src/GPS/RTCM/RTCMMavlink.h \
-#    src/GPS/definitions.h \
-#    src/GPS/satellite_info.h \
-#    src/GPS/vehicle_gps_position.h \
-#    src/Joystick/JoystickSDL.h \
     src/RunGuard.h \
 }
 
 SOURCES += \
     src/Audio/AudioOutput.cc \
-    src/Camera/QGCCameraControl.cc \
-    src/Camera/QGCCameraIO.cc \
-    src/Camera/QGCCameraManager.cc \
     src/CmdLineOptParser.cc \
     src/JsonHelper.cc \
-    src/KMLDomDocument.cc \
-    src/KMLHelper.cc \
-    src/LogCompressor.cc \
-#    src/MissionManager/CameraCalc.cc \
-#    src/MissionManager/CameraSection.cc \
-#    src/MissionManager/CameraSpec.cc \
-#    src/MissionManager/ComplexMissionItem.cc \
-#    src/MissionManager/CorridorScanComplexItem.cc \
-#    src/MissionManager/CorridorScanPlanCreator.cc \
     src/MissionManager/BlankPlanCreator.cc \
-#    src/MissionManager/FixedWingLandingComplexItem.cc \
     src/MissionManager/GeoFenceController.cc \
     src/MissionManager/GeoFenceManager.cc \
-#    src/MissionManager/KMLPlanDomDocument.cc \
-#    src/MissionManager/LandingComplexItem.cc \
-#    src/MissionManager/MissionCommandList.cc \
-#    src/MissionManager/MissionCommandTree.cc \
-#    src/MissionManager/MissionCommandUIInfo.cc \
     src/MissionManager/MissionController.cc \
-#    src/MissionManager/MissionItem.cc \
     src/MissionManager/MissionManager.cc \
-#    src/MissionManager/MissionSettingsItem.cc \
     src/MissionManager/PlanElementController.cc \
     src/MissionManager/PlanCreator.cc \
     src/MissionManager/PlanManager.cc \
@@ -733,19 +600,7 @@ SOURCES += \
     src/MissionManager/QGCMapCircle.cc \
     src/MissionManager/QGCMapPolygon.cc \
     src/MissionManager/QGCMapPolyline.cc \
-#    src/MissionManager/RallyPoint.cc \
-#    src/MissionManager/RallyPointController.cc \
-#    src/MissionManager/RallyPointManager.cc \
-#    src/MissionManager/SimpleMissionItem.cc \
-#    src/MissionManager/SpeedSection.cc \
-#    src/MissionManager/StructureScanComplexItem.cc \
-#    src/MissionManager/StructureScanPlanCreator.cc \
-#    src/MissionManager/SurveyComplexItem.cc \
 #    src/MissionManager/SurveyPlanCreator.cc \
-#    src/MissionManager/TakeoffMissionItem.cc \
-#    src/MissionManager/TransectStyleComplexItem.cc \
-#    src/MissionManager/VisualMissionItem.cc \
-#    src/MissionManager/VTOLLandingComplexItem.cc \
     src/PositionManager/PositionManager.cpp \
     src/PositionManager/SimulatedPosition.cc \
     src/Geo/QGCGeo.cc \
@@ -778,14 +633,11 @@ SOURCES += \
     src/QmlControls/QGroundControlQmlGlobal.cc \
     src/QmlControls/QmlObjectListModel.cc \
     src/QmlControls/QGCGeoBoundingCube.cc \
-#    src/QmlControls/RCChannelMonitorController.cc \
     src/QmlControls/RCToParamDialogController.cc \
     src/QmlControls/ScreenToolsController.cc \
-#    src/QmlControls/TerrainProfile.cc \
     src/QmlControls/ToolStripAction.cc \
     src/QmlControls/ToolStripActionList.cc \
     src/QtLocationPlugin/QMLControl/QGCMapEngineManager.cc \
-#    src/Settings/ADSBVehicleManagerSettings.cc \
     src/Settings/AppSettings.cc \
     src/Settings/AutoConnectSettings.cc \
     src/Settings/BrandImageSettings.cc \
@@ -799,51 +651,26 @@ SOURCES += \
     src/Settings/SettingsManager.cc \
     src/Settings/UnitsSettings.cc \
     src/Settings/VideoSettings.cc \
-    src/ShapeFileHelper.cc \
-    src/SHPFileHelper.cc \
-#    src/Terrain/TerrainQuery.cc \
     src/TerrainTile.cc\
-    src/Vehicle/CompInfo.cc \
-    src/Vehicle/CompInfoParam.cc \
-    src/Vehicle/CompInfoVersion.cc \
-    src/Vehicle/ComponentInformationManager.cc \
-#    src/Vehicle/FTPManager.cc \
     src/Vehicle/GPSRTKFactGroup.cc \
     src/Vehicle/InitialConnectStateMachine.cc \
-#    src/Vehicle/MAVLinkLogManager.cc \
     src/Vehicle/MultiVehicleManager.cc \
     src/Vehicle/StateMachine.cc \
-    src/Vehicle/SysStatusSensorInfo.cc \
-#    src/Vehicle/TerrainFactGroup.cc \
-#    src/Vehicle/TerrainProtocolHandler.cc \
     src/Vehicle/TrajectoryPoints.cc \
     src/Vehicle/Vehicle.cc \
-    src/Vehicle/VehicleObjectAvoidance.cc \
-    src/Vehicle/VehicleBatteryFactGroup.cc \
+#    src/Vehicle/VehicleBatteryFactGroup.cc \
     src/Vehicle/VehicleClockFactGroup.cc \
-    src/Vehicle/VehicleDistanceSensorFactGroup.cc \
-    src/Vehicle/VehicleEstimatorStatusFactGroup.cc \
     src/Vehicle/VehicleGPSFactGroup.cc \
     src/Vehicle/VehicleLinkManager.cc \
     src/Vehicle/VehicleSetpointFactGroup.cc \
-    src/Vehicle/VehicleTemperatureFactGroup.cc \
-    src/Vehicle/VehicleVibrationFactGroup.cc \
-    src/Vehicle/VehicleWindFactGroup.cc \
-#    src/VehicleSetup/JoystickConfigController.cc \
     src/comm/LinkConfiguration.cc \
     src/comm/LinkInterface.cc \
     src/comm/LinkManager.cc \
-    src/comm/LogReplayLink.cc \
-#    src/comm/MAVLinkProtocol.cc \
     src/comm/QGCMAVLink.cc \
     src/comm/TCPLink.cc \
     src/comm/UDPLink.cc \
     src/comm/UdpIODevice.cc \
     src/main.cc \
-#    src/uas/UAS.cc \
-#    src/uas/UASMessageHandler.cc \
-#    src/AnalyzeView/GeoTagController.cc \
-#    src/AnalyzeView/ExifParser.cc \
 
 contains (DEFINES, QGC_ENABLE_PAIRING) {
     SOURCES += \
@@ -854,7 +681,6 @@ DebugBuild {
 SOURCES += \
 #    src/comm/MockLink.cc \
 #    src/comm/MockLinkFTP.cc \
-#    src/comm/MockLinkMissionItemHandler.cc \
 }
 
 !NoSerialBuild {
@@ -866,13 +692,6 @@ SOURCES += \
 contains(DEFINES, QGC_ENABLE_BLUETOOTH) {
     SOURCES += \
     src/comm/BluetoothLink.cc \
-}
-
-contains (DEFINES, QGC_ENABLE_PAIRING) {
-    contains(DEFINES, QGC_ENABLE_QTNFC) {
-        SOURCES += \
-        src/PairingManager/QtNFC.cc
-    }
 }
 
 !MobileBuild {

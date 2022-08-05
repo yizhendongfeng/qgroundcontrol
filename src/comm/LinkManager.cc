@@ -23,7 +23,7 @@
 #include "UDPLink.h"
 #include "TCPLink.h"
 #include "SettingsManager.h"
-#include "LogReplayLink.h"
+//#include "LogReplayLink.h"
 #ifdef QGC_ENABLE_BLUETOOTH
 #include "BluetoothLink.h"
 #endif
@@ -123,9 +123,6 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr& config, bool i
         link = std::make_shared<BluetoothLink>(config);
         break;
 #endif
-    case LinkConfiguration::TypeLogReplay:
-        link = std::make_shared<LogReplayLink>(config);
-        break;
     case LinkConfiguration::TypeLast:
         break;
     default:
@@ -146,7 +143,6 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr& config, bool i
         config->setLink(link);
 
         connect(link.get(), &LinkInterface::communicationError,  _app,                &QGCApplication::criticalMessageBoxOnMainThread);
-//        connect(link.get(), &LinkInterface::bytesReceived,       _mavlinkProtocol,    &MAVLinkProtocol::receiveBytes);
         connect(link.get(), &LinkInterface::bytesReceived,       _shenHangProtocol,   &ShenHangProtocol::receiveBytes);
         connect(link.get(), &LinkInterface::disconnected,        this,                &LinkManager::_linkDisconnected);
 
@@ -191,11 +187,9 @@ void LinkManager::_linkDisconnected(void)
     }
 
     disconnect(link, &LinkInterface::communicationError,  _app,                &QGCApplication::criticalMessageBoxOnMainThread);
-//    disconnect(link, &LinkInterface::bytesReceived,       _mavlinkProtocol,    &MAVLinkProtocol::receiveBytes);
     disconnect(link, &LinkInterface::bytesReceived,       _shenHangProtocol,   &ShenHangProtocol::receiveBytes);
     disconnect(link, &LinkInterface::disconnected,        this,                &LinkManager::_linkDisconnected);
 
-    link->_freeMavlinkChannel();
     link->_freeShenHangProtocolChannel();
     for (int i=0; i<_rgLinks.count(); i++) {
         if (_rgLinks[i].get() == link) {
@@ -305,9 +299,6 @@ void LinkManager::loadLinkConfigurationList()
                                 link = new BluetoothConfiguration(name);
                                 break;
 #endif
-                            case LinkConfiguration::TypeLogReplay:
-                                link = new LogReplayLinkConfiguration(name);
-                                break;
                             case LinkConfiguration::TypeLast:
                                 break;
                             default:
@@ -722,31 +713,15 @@ void LinkManager::_fixUnnamed(LinkConfiguration* config)
                     config->setName(
                                 QString("TCP Link %1:%2").arg(tconfig->address().toString()).arg(static_cast<int>(tconfig->port())));
                 }
-            }
                 break;
-#ifdef QGC_ENABLE_BLUETOOTH
-            case LinkConfiguration::TypeBluetooth: {
-                BluetoothConfiguration* tconfig = dynamic_cast<BluetoothConfiguration*>(config);
-                if(tconfig) {
-                    config->setName(QString("%1 (Bluetooth Device)").arg(tconfig->device().name));
-                }
             }
-                break;
-#endif
-            case LinkConfiguration::TypeLogReplay: {
-                LogReplayLinkConfiguration* tconfig = dynamic_cast<LogReplayLinkConfiguration*>(config);
-                if(tconfig) {
-                    config->setName(QString("Log Replay %1").arg(tconfig->logFilenameShort()));
-                }
-            }
-                break;
 #ifdef QT_DEBUG
-            case LinkConfiguration::TypeMock:
-                config->setName(QString("Mock Link"));
-                break;
+//            case LinkConfiguration::TypeMock:
+//                config->setName(QString("Mock Link"));
+//                break;
 #endif
-            case LinkConfiguration::TypeLast:
-                break;
+//            case LinkConfiguration::TypeLast:
+//                break;
             }
         }
     } else {
@@ -813,24 +788,6 @@ void LinkManager::startAutoConnectedLinks(void)
     }
 }
 
-uint8_t LinkManager::allocateMavlinkChannel(void)
-{
-    // Find a mavlink channel to use for this link
-    for (uint8_t mavlinkChannel = 0; mavlinkChannel < MAVLINK_COMM_NUM_BUFFERS; mavlinkChannel++) {
-        if (!(_mavlinkChannelsUsedBitMask & 1 << mavlinkChannel)) {
-            mavlink_reset_channel_status(mavlinkChannel);
-            // Start the channel on Mav 1 protocol
-            mavlink_status_t* mavlinkStatus = mavlink_get_channel_status(mavlinkChannel);
-            mavlinkStatus->flags |= MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
-            _mavlinkChannelsUsedBitMask |= 1 << mavlinkChannel;
-            qCDebug(LinkManagerLog) << "allocateMavlinkChannel" << mavlinkChannel;
-            return mavlinkChannel;
-        }
-    }
-    qWarning(LinkManagerLog) << "allocateMavlinkChannel: all channels reserved!";
-    return invalidMavlinkChannel();   // All channels reserved
-}
-
 uint8_t LinkManager::allocateShenHangProtocolChannel()
 {
     // Find a mavlink channel to use for this link
@@ -866,19 +823,6 @@ void LinkManager::freeShenHangProtocolChannel(uint8_t channel)
     _shenHangProtocolChannelsUsedBitMask &= ~(1 << channel);
 }
 
-LogReplayLink* LinkManager::startLogReplay(const QString& logFile)
-{
-    LogReplayLinkConfiguration* linkConfig = new LogReplayLinkConfiguration(tr("Log Replay"));
-    linkConfig->setLogFilename(logFile);
-    linkConfig->setName(linkConfig->logFilenameShort());
-
-    SharedLinkConfigurationPtr sharedConfig = addConfiguration(linkConfig);
-    if (createConnectedLink(sharedConfig)) {
-        return qobject_cast<LogReplayLink*>(sharedConfig->link());
-    } else {
-        return nullptr;
-    }
-}
 
 bool LinkManager::_isSerialPortConnected(void)
 {

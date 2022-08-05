@@ -994,8 +994,8 @@ size_t FactMetaData::typeToSize(ValueType_t type)
     case valueTypeDouble:
         return 8;
 
-    case valueTypeCustom:
-        return MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN;
+//    case valueTypeCustom:
+//        return MAVLINK_MSG_PARAM_EXT_SET_FIELD_PARAM_VALUE_LEN;
 
     default:
         qWarning() << "Unsupported fact value type" << type;

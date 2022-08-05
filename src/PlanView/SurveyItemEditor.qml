@@ -1,4 +1,4 @@
-import QtQuick          2.3
+﻿import QtQuick          2.3
 import QtQuick.Controls 1.2
 import QtQuick.Dialogs  1.2
 import QtQuick.Extras   1.4
@@ -403,16 +403,4 @@ Rectangle {
         }
     }
 
-    KMLOrSHPFileDialog {
-        id:             kmlOrSHPLoadDialog
-        title:          qsTr("Select Polygon File")
-        selectExisting: true
-
-        onAcceptedForLoad: {
-            _missionItem.surveyAreaPolygon.loadKMLOrSHPFile(file)
-            _missionItem.resetState = false
-            //editorMap.mapFitFunctions.fitMapViewportTo_missionItems()
-            close()
-        }
-    }
 } // Rectangle

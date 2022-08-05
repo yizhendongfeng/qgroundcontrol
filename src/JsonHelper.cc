@@ -10,7 +10,7 @@
 #include "JsonHelper.h"
 #include "QGCQGeoCoordinate.h"
 #include "QmlObjectListModel.h"
-#include "MissionCommandList.h"
+//#include "MissionCommandList.h"
 #include "FactMetaData.h"
 #include "QGCApplication.h"
 

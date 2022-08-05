@@ -44,7 +44,6 @@ public:
     Q_PROPERTY(bool             autoDisconnect              MEMBER _autoDisconnect                                              NOTIFY autoDisconnectChanged)
 
     bool                    primaryLinkIsPX4Flow        (void) const;
-    void                    mavlinkMessageReceived      (LinkInterface* link, mavlink_message_t message);
     void                    shenHangMessageReceived     (LinkInterface* link, ShenHangProtocolMessage message);
     bool                    containsLink                (LinkInterface* link);
     WeakLinkInterfacePtr    primaryLink                 (void) { return _primaryLink; }

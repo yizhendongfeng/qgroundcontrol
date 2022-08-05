@@ -20,7 +20,7 @@
 #include "QGCToolbox.h"
 #include "ShenHangProtocol.h"
 #if !defined(__mobile__)
-#include "LogReplayLink.h"
+//#include "LogReplayLink.h"
 #include "UdpIODevice.h"
 #endif
 #include "QmlObjectListModel.h"
@@ -35,7 +35,6 @@ Q_DECLARE_LOGGING_CATEGORY(LinkManagerVerboseLog)
 class QGCApplication;
 class UDPConfiguration;
 class AutoConnectSettings;
-class LogReplayLink;
 
 /// @brief Manage communication links
 ///
@@ -68,8 +67,6 @@ public:
 
     // Called to signal app shutdown. Disconnects all links while turning off auto-connect.
     Q_INVOKABLE void shutdown(void);
-
-    Q_INVOKABLE LogReplayLink* startLogReplay(const QString& logFile);
 
     // Property accessors
 
@@ -115,10 +112,6 @@ public:
 
     static constexpr uint8_t invalidMavlinkChannel(void) { return std::numeric_limits<uint8_t>::max(); }
     static constexpr uint8_t invalidShenHangProtocolChannel(void) { return std::numeric_limits<uint8_t>::max(); }
-
-    /// Allocates a mavlink channel for use
-    /// @return Mavlink channel index, invalidMavlinkChannel() for no channels available
-    uint8_t allocateMavlinkChannel(void);
 
     /**
      * @brief allocateShenHangProtocolChannel 分配一个通信通道给沈航通信，通信通道包含

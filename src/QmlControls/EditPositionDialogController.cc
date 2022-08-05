@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -22,13 +22,13 @@ const char*  EditPositionDialogController::_mgrsFactName =          "MGRS";
 QMap<QString, FactMetaData*> EditPositionDialogController::_metaDataMap;
 
 EditPositionDialogController::EditPositionDialogController(void)
-    : _latitudeFact     (0, _latitudeFactName,      FactMetaData::valueTypeDouble)
-    , _longitudeFact    (0, _longitudeFactName,     FactMetaData::valueTypeDouble)
-    , _zoneFact         (0, _zoneFactName,          FactMetaData::valueTypeUint8)
-    , _hemisphereFact   (0, _hemisphereFactName,    FactMetaData::valueTypeUint8)
-    , _eastingFact      (0, _eastingFactName,       FactMetaData::valueTypeDouble)
-    , _northingFact     (0, _northingFactName,      FactMetaData::valueTypeDouble)
-    , _mgrsFact         (0, _mgrsFactName,          FactMetaData::valueTypeString)
+    : _latitudeFact     (_latitudeFactName,      FactMetaData::valueTypeDouble)
+    , _longitudeFact    (_longitudeFactName,     FactMetaData::valueTypeDouble)
+    , _zoneFact         (_zoneFactName,          FactMetaData::valueTypeUint8)
+    , _hemisphereFact   (_hemisphereFactName,    FactMetaData::valueTypeUint8)
+    , _eastingFact      (_eastingFactName,       FactMetaData::valueTypeDouble)
+    , _northingFact     (_northingFactName,      FactMetaData::valueTypeDouble)
+    , _mgrsFact         (_mgrsFactName,          FactMetaData::valueTypeString)
 {
     if (_metaDataMap.isEmpty()) {
         _metaDataMap = FactMetaData::createMapFromJsonFile(QStringLiteral(":/json/EditPositionDialog.FactMetaData.json"), nullptr /* QObject parent */);

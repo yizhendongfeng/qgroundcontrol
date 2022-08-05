@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -21,15 +21,15 @@ const char* GPSRTKFactGroup::_numSatellitesFactName =            "numSatellites"
 
 GPSRTKFactGroup::GPSRTKFactGroup(QObject* parent)
     : FactGroup             (1000, ":/json/Vehicle/GPSRTKFact.json", parent)
-    , _connected            (0, _connectedFactName,         FactMetaData::valueTypeBool)
-    , _currentDuration      (0, _currentDurationFactName,   FactMetaData::valueTypeDouble)
-    , _currentAccuracy      (0, _currentAccuracyFactName,   FactMetaData::valueTypeDouble)
-    , _currentLatitude      (0, _currentLatitudeFactName,   FactMetaData::valueTypeDouble)
-    , _currentLongitude     (0, _currentLongitudeFactName,  FactMetaData::valueTypeDouble)
-    , _currentAltitude      (0, _currentAltitudeFactName,   FactMetaData::valueTypeFloat)
-    , _valid                (0, _validFactName,             FactMetaData::valueTypeBool)
-    , _active               (0, _activeFactName,            FactMetaData::valueTypeBool)
-    , _numSatellites        (0, _numSatellitesFactName,     FactMetaData::valueTypeInt32)
+    , _connected            (_connectedFactName,         FactMetaData::valueTypeBool)
+    , _currentDuration      (_currentDurationFactName,   FactMetaData::valueTypeDouble)
+    , _currentAccuracy      (_currentAccuracyFactName,   FactMetaData::valueTypeDouble)
+    , _currentLatitude      (_currentLatitudeFactName,   FactMetaData::valueTypeDouble)
+    , _currentLongitude     (_currentLongitudeFactName,  FactMetaData::valueTypeDouble)
+    , _currentAltitude      (_currentAltitudeFactName,   FactMetaData::valueTypeFloat)
+    , _valid                (_validFactName,             FactMetaData::valueTypeBool)
+    , _active               (_activeFactName,            FactMetaData::valueTypeBool)
+    , _numSatellites        (_numSatellitesFactName,     FactMetaData::valueTypeInt32)
 {
     _addFact(&_connected,          _connectedFactName);
     _addFact(&_currentDuration,    _currentDurationFactName);

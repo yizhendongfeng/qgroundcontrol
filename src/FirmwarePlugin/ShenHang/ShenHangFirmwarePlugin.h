@@ -27,13 +27,13 @@ public:
     // Overrides from FirmwarePlugin
 
     QList<VehicleComponent*> componentsForVehicle(AutoPilotPlugin* vehicle) override;
-    QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) override;
+//    QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) override;
 
     AutoPilotPlugin*    autopilotPlugin                 (Vehicle* vehicle) override;
     bool                isCapable                       (const Vehicle *vehicle, FirmwareCapabilities capabilities) override;
     QStringList         flightModes                     (Vehicle* vehicle) override;
-    QString             flightMode                      (uint8_t base_mode, uint32_t custom_mode) const override;
-    bool                setFlightMode                   (const QString& flightMode, uint8_t* base_mode, uint32_t* custom_mode) override;
+//    QString             flightMode                      (uint8_t base_mode, uint32_t custom_mode) const override;
+//    bool                setFlightMode                   (const QString& flightMode, uint8_t* base_mode, uint32_t* custom_mode) override;
     void                setGuidedMode                   (Vehicle* vehicle, bool guidedMode) override;
     QString             pauseFlightMode                 (void) const override { return _holdFlightMode; }
     QString             missionFlightMode               (void) const override { return _missionFlightMode; }
@@ -63,18 +63,16 @@ public:
      */
     FactMetaData*       _getMetaDataForFact             (QObject* parameterMetaData, const QString& name, FactMetaData::ValueType_t type, MAV_TYPE vehicleType) override;
 
-    FactMetaData*       _getMetaDataForFactByIndexes    (QObject* parameterMetaData, uint8_t idGroup, uint16_t addrOffset, MAV_TYPE vehicleType) override;
+    FactMetaData*       _getMetaDataForFactByIndexes    (QObject* parameterMetaData, uint8_t idGroup, uint16_t addrOffset);
 
     QString             _internalParameterMetaDataFile  (Vehicle* vehicle) override { Q_UNUSED(vehicle); return QString(":/FirmwarePlugin/ShenHang/ShenHangParameterFactMetaData.xml"); }
     void                _getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion) override;
     QObject*            _loadParameterMetaData          (const QString& metaDataFile) final;
-    bool                adjustIncomingMavlinkMessage    (Vehicle* vehicle, mavlink_message_t* message) override;
     QString             offlineEditingParamFile         (Vehicle* vehicle) override { Q_UNUSED(vehicle); return QStringLiteral(":/FirmwarePlugin/ShenHang/ShenHang.OfflineEditing.params"); }
     QString             brandImageIndoor                (const Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("/qmlimages/ShenHang/BrandImage"); }
     QString             brandImageOutdoor               (const Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("/qmlimages/ShenHang/BrandImage"); }
     QString             autoDisarmParameter             (Vehicle* vehicle) override { Q_UNUSED(vehicle); return QStringLiteral("COM_DISARM_LAND"); }
     uint32_t            highLatencyCustomModeTo32Bits   (uint16_t hlCustomMode) override;
-    bool                supportsNegativeThrust          (Vehicle *vehicle) override;
 
 protected:
     typedef struct {
@@ -111,10 +109,9 @@ protected:
     QString _orbitFlightMode;
 
 private slots:
-    void _mavCommandResult(int vehicleId, int component, int command, int result, bool noReponseFromVehicle);
+//    void _mavCommandResult(int vehicleId, int component, int command, int result, bool noReponseFromVehicle);
 
 private:
-    void    _handleAutopilotVersion         (Vehicle* vehicle, mavlink_message_t* message);
 
     QString _getLatestVersionFileUrl        (Vehicle* vehicle) override;
     QString _versionRegex                   () override;

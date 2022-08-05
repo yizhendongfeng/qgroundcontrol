@@ -40,7 +40,7 @@ Rectangle {
     property var    _pipOrWindowItem
     property alias  _windowContentItem: window.contentItem
     property bool   _isExpanded:        true
-    property real   _pipSize:           parent.width * 0.2
+    property real   _pipSize:           parent.width * 0.24
     property real   _maxSize:           0.75                // Percentage of parent control size
     property real   _minSize:           0.10
     property bool   _componentComplete: false
@@ -306,29 +306,28 @@ Rectangle {
                         anchors.fill: parent
                     }
 
-                    FlyViewToolStrip {
-                        id:                     toolStrip1
-                        anchors.top:            parent.top
-                        anchors.right:           parent.right
-                        anchors.topMargin:      _toolsMargin * 2    //_toolsMargin + parentToolInsets.topEdgeLeftInset
-                        anchors.rightMargin:    _toolsMargin * 2    //_toolsMargin + parentToolInsets.leftEdgeCenterInset
-                        //            z:                      videoControl.z + 1
-                        maxHeight:              parent.height / 2   //parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
-                        //        maxWidth:               parent.width - x - instrumentPanel.width - _toolsMargin//parentToolInsets.bottomEdgeLeftInset - _toolsMargin
-                        visible:                !QGroundControl.videoManager.fullScreen
-                        radius:                 ScreenTools.defaultFontPixelWidth / 2
-                        showActionText:         false
-                        onDisplayPreFlightChecklist: mainWindow.showPopupDialogFromComponent(preFlightChecklistPopup)
-                        property real leftInset: x + width
-
-                    }
-
                     PhotoVideoControl {
                         id:                     photoVideoControl1
                         anchors.margins:        _toolsMargin * 2
                         anchors.right:          parent.right
                         anchors.verticalCenter: parent.verticalCenter
                     }
+
+                    TelemetryValuesBar {
+                        id:                       valueArea
+//                        width:                    parent.width
+                        anchors.bottom:           parent.bottom
+                        anchors.horizontalCenter: parent.horizontalCenter
+//                        userSettingsGroup:        telemetryBarUserSettingsGroup
+//                        defaultSettingsGroup:     telemetryBarDefaultSettingsGroup
+
+//                        QGCMouseArea {
+//                            anchors.fill:   parent
+//                            visible:        !parent.settingsUnlocked
+//                            onClicked:      parent.settingsUnlocked = true
+//                        }
+                    }
+
                     Component.onCompleted: console.log("videoControl.visible:", videoControl1.visible)
                 }
                 MouseArea {
@@ -340,18 +339,18 @@ Rectangle {
                         if (videoControl1.pipState.state === videoControl1.pipState.pipState) {
                             videoControl1.pipState.state = videoControl1.pipState.fullState
                             item1.pipState.state = mapControl.pipState.pipState
-                            toolStrip1.showActionText = true
+//                            toolStrip1.showActionText = true
                             videoControl1.parent = _root.parent
                             item1.parent = delegateItem
                         } else {//if (videoControl1.state === videoControl1.pipState.fullState) {
                             videoControl1.pipState.state = videoControl1.pipState.pipState
                             item1.pipState.state = mapControl.pipState.fullState
-                            toolStrip1.showActionText = false
+//                            toolStrip1.showActionText = false
                             videoControl1.parent = delegateItem
                             item1.parent = _root.parent
                         }
 
-                        console.log("double clicked componentFlyViewVideo index:", index, "videoControl1.state:", videoControl1.pipState.state, gridViewVideo.currentIndex, "toolStrip1.showActionText:", toolStrip1.showActionText)
+//                        console.log("double clicked componentFlyViewVideo index:", index, "videoControl1.state:", videoControl1.pipState.state, gridViewVideo.currentIndex, "toolStrip1.showActionText:", toolStrip1.showActionText)
                     }
                 }
                 onFocusChanged: {
@@ -366,4 +365,5 @@ Rectangle {
             console.log("onCurrentItemChanged,", gridViewVideo.currentIndex)
         }
     }
+
 }

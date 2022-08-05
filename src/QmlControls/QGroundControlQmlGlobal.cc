@@ -115,15 +115,6 @@ bool QGroundControlQmlGlobal::singleVehicleSupport(void)
     return false;
 }
 
-bool QGroundControlQmlGlobal::px4ProFirmwareSupported()
-{
-    return _firmwarePluginManager->supportedFirmwareClasses().contains(QGCMAVLink::FirmwareClassPX4);
-}
-
-bool QGroundControlQmlGlobal::apmFirmwareSupported()
-{
-    return _firmwarePluginManager->supportedFirmwareClasses().contains(QGCMAVLink::FirmwareClassArduPilot);
-}
 
 bool QGroundControlQmlGlobal::linesIntersect(QPointF line1A, QPointF line1B, QPointF line2A, QPointF line2B)
 {

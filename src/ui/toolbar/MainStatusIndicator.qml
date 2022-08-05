@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -97,16 +97,16 @@ RowLayout {
         height:                 1
     }
 
-    QGCColoredImage {
-        id:         flightModeIcon
-        width:      ScreenTools.defaultFontPixelWidth * 2
-        height:     ScreenTools.defaultFontPixelHeight * 0.75
-        fillMode:   Image.PreserveAspectFit
-        mipmap:     true
-        color:      qgcPal.text
-        source:     "/qmlimages/FlightModesComponentIcon.png"
-        visible:    flightModeMenu.visible
-    }
+//    QGCColoredImage {
+//        id:         flightModeIcon
+//        width:      ScreenTools.defaultFontPixelWidth * 2
+//        height:     ScreenTools.defaultFontPixelHeight * 0.75
+//        fillMode:   Image.PreserveAspectFit
+//        mipmap:     true
+//        color:      qgcPal.text
+//        source:     "/qmlimages/FlightModesComponentIcon.png"
+//        visible:    flightModeMenu.visible
+//    }
 
     Item {
         Layout.preferredWidth:  ScreenTools.defaultFontPixelWidth / 2
@@ -119,7 +119,7 @@ RowLayout {
         Layout.preferredHeight: _root.height
         verticalAlignment:      Text.AlignVCenter
         font.pointSize:         _vehicleInAir ?  ScreenTools.largeFontPointSize : ScreenTools.defaultFontPointSize
-        mouseAreaLeftMargin:    -(flightModeMenu.x - flightModeIcon.x)
+        mouseAreaLeftMargin:    -(flightModeMenu.x /*- flightModeIcon.x*/)
         visible:                _activeVehicle
     }
 
@@ -199,11 +199,11 @@ RowLayout {
                     GridLayout {
                         rowSpacing:     _spacing
                         columnSpacing:  _spacing
-                        rows:           _activeVehicle.sysStatusSensorInfo.sensorNames.length
+                        rows:           0
                         flow:           GridLayout.TopToBottom
 
                         Repeater {
-                            model: _activeVehicle.sysStatusSensorInfo.sensorNames
+                            model: null//_activeVehicle.sysStatusSensorInfo.sensorNames
 
                             QGCLabel {
                                 text: modelData
@@ -211,7 +211,7 @@ RowLayout {
                         }
 
                         Repeater {
-                            model: _activeVehicle.sysStatusSensorInfo.sensorStatus
+                            model: null//_activeVehicle.sysStatusSensorInfo.sensorStatus
 
                             QGCLabel {
                                 text: modelData

@@ -23,7 +23,7 @@
 
 #include "QGCMAVLink.h"
 #include "LinkConfiguration.h"
-#include "MavlinkMessagesTimer.h"
+//#include "MavlinkMessagesTimer.h"
 
 class LinkManager;
 
@@ -81,17 +81,6 @@ protected:
 
     SharedLinkConfigurationPtr _config;
 
-    ///
-    /// \brief _allocateMavlinkChannel
-    ///     Called by the LinkManager during LinkInterface construction
-    /// instructing the link to setup channels.
-    ///
-    /// Default implementation allocates a single channel. But some link types
-    /// (such as MockLink) need more than one.
-    ///
-    virtual bool _allocateMavlinkChannel();
-    virtual void _freeMavlinkChannel    ();
-
     virtual bool _allocateShenHangProtocolChannel();
     virtual void _freeShenHangProtocolChannel    ();
 
@@ -109,7 +98,7 @@ private:
 
     mutable QMutex _writeBytesMutex;
 
-    QMap<int /* vehicle id */, MavlinkMessagesTimer*> _mavlinkMessagesTimers;
+//    QMap<int /* vehicle id */, MavlinkMessagesTimer*> _mavlinkMessagesTimers;
 };
 
 typedef std::shared_ptr<LinkInterface>  SharedLinkInterfacePtr;

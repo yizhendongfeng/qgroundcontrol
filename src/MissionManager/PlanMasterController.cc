@@ -234,14 +234,14 @@ void PlanMasterController::_loadMissionComplete(void)
     if (!_flyView && _loadGeoFence) {
         _loadGeoFence = false;
         _loadRallyPoints = true;
-        if (_geoFenceController.supported()) {
-            qCDebug(PlanMasterControllerLog) << "PlanMasterController::_loadMissionComplete calling _geoFenceController.loadFromVehicle";
-            _geoFenceController.loadFromVehicle();
-        } else {
-            qCDebug(PlanMasterControllerLog) << "PlanMasterController::_loadMissionComplete GeoFence not supported skipping";
-            _geoFenceController.removeAll();
-            _loadGeoFenceComplete();
-        }
+//        if (_geoFenceController.supported()) {
+//            qCDebug(PlanMasterControllerLog) << "PlanMasterController::_loadMissionComplete calling _geoFenceController.loadFromVehicle";
+//            _geoFenceController.loadFromVehicle();
+//        } else {
+//            qCDebug(PlanMasterControllerLog) << "PlanMasterController::_loadMissionComplete GeoFence not supported skipping";
+//            _geoFenceController.removeAll();
+//            _loadGeoFenceComplete();
+//        }
         setDirty(false);
     }
 }
@@ -272,13 +272,13 @@ void PlanMasterController::_sendMissionComplete(void)
     if (_sendGeoFence) {
         _sendGeoFence = false;
         _sendRallyPoints = true;
-        if (_geoFenceController.supported()) {
-            qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle start GeoFence sendToVehicle";
-            _geoFenceController.sendToVehicle();
-        } else {
-            qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle GeoFence not supported skipping";
-            _sendGeoFenceComplete();
-        }
+//        if (_geoFenceController.supported()) {
+//            qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle start GeoFence sendToVehicle";
+//            _geoFenceController.sendToVehicle();
+//        } else {
+//            qCDebug(PlanMasterControllerLog) << "PlanMasterController::sendToVehicle GeoFence not supported skipping";
+//            _sendGeoFenceComplete();
+//        }
         setDirty(false);
     }
 }
@@ -481,9 +481,9 @@ void PlanMasterController::removeAllFromVehicle(void)
 {
     if (!offline()) {
         _missionController.removeAllFromVehicle();
-        if (_geoFenceController.supported()) {
-            _geoFenceController.removeAllFromVehicle();
-        }
+//        if (_geoFenceController.supported()) {
+//            _geoFenceController.removeAllFromVehicle();
+//        }
 
         setDirty(false);
     } else {

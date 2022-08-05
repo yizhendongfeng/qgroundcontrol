@@ -21,7 +21,7 @@
 #include "VideoReceiver.h"
 #endif
 #include "QGCLoggingCategory.h"
-#include "QGCCameraManager.h"
+//#include "QGCCameraManager.h"
 #include "HorizontalFactValueGrid.h"
 #include "InstrumentValueData.h"
 
@@ -276,9 +276,9 @@ void QGCCorePlugin::factValueGridCreateDefaultSettings(const QString& defaultSet
 {
     HorizontalFactValueGrid factValueGrid(defaultSettingsGroup);
 
-    bool        includeFWValues = factValueGrid.vehicleClass() == QGCMAVLink::VehicleClassFixedWing || factValueGrid.vehicleClass() == QGCMAVLink::VehicleClassVTOL || factValueGrid.vehicleClass() == QGCMAVLink::VehicleClassAirship;
+    bool includeFWValues = factValueGrid.vehicleClass() == QGCMAVLink::VehicleClassFixedWing || factValueGrid.vehicleClass() == QGCMAVLink::VehicleClassTiltRotor;
 
-    factValueGrid.setFontSize(FactValueGrid::LargeFontSize);
+    factValueGrid.setFontSize(FactValueGrid::MediumFontSize);
 
     factValueGrid.appendColumn();
     factValueGrid.appendColumn();
@@ -361,15 +361,6 @@ QQmlApplicationEngine* QGCCorePlugin::createQmlApplicationEngine(QObject* parent
 void QGCCorePlugin::createRootWindow(QQmlApplicationEngine* qmlEngine)
 {
     qmlEngine->load(QUrl(QStringLiteral("qrc:/qml/MainRootWindow.qml")));
-}
-
-bool QGCCorePlugin::mavlinkMessage(Vehicle* vehicle, LinkInterface* link, mavlink_message_t message)
-{
-    Q_UNUSED(vehicle);
-    Q_UNUSED(link);
-    Q_UNUSED(message);
-
-    return true;
 }
 
 QmlObjectListModel* QGCCorePlugin::customMapItems()

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -16,12 +16,12 @@ import QGroundControl.Vehicle       1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.Palette       1.0
 
-Rectangle {
+Item {
     id:                 telemetryPanel
-    height:             telemetryLayout.height + (_toolsMargin * 2)
+    height:             Math.min(telemetryLayout.height + (_toolsMargin * 2), parent.width)
     width:              telemetryLayout.width + (_toolsMargin * 2)
-    color:              qgcPal.window
-    radius:             ScreenTools.defaultFontPixelWidth / 2
+//    color:              qgcPal.window
+//    radius:             ScreenTools.defaultFontPixelWidth / 2
 
     DeadMouseArea { anchors.fill: parent }
 
@@ -43,10 +43,10 @@ Rectangle {
             }
         }
 
-        GuidedActionConfirm {
-            Layout.fillWidth:   true
-            guidedController:   _guidedController
-            altitudeSlider:     _guidedAltSlider
-        }
+//        GuidedActionConfirm {
+//            Layout.fillWidth:   true
+//            guidedController:   _guidedController
+//            altitudeSlider:     _guidedAltSlider
+//        }
     }
 }

@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -19,7 +19,6 @@ import QGroundControl.ScreenTools       1.0
 import QGroundControl.Palette           1.0
 import QGroundControl.Controls          1.0
 import QGroundControl.FlightMap         1.0
-import QGroundControl.ShapeFileHelper   1.0
 
 /// QGCMapPolygon map visuals
 Item {
@@ -190,7 +189,7 @@ Item {
 
     Connections {
         target: mapPolygon
-        onTraceModeChanged: {
+        function onTraceModeChanged() {
             if (mapPolygon.traceMode) {
                 _instructionText = _traceText
                 _objMgrTraceVisuals.createObject(traceMouseAreaComponent, mapControl, false)
@@ -214,18 +213,6 @@ Item {
     QGCDynamicObjectManager { id: _objMgrCircleVisuals }
 
     QGCPalette { id: qgcPal }
-
-    KMLOrSHPFileDialog {
-        id:             kmlOrSHPLoadDialog
-        title:          qsTr("Select Polygon File")
-        selectExisting: true
-
-        onAcceptedForLoad: {
-            mapPolygon.loadKMLOrSHPFile(file)
-            mapFitFunctions.fitMapViewportToMissionItems()
-            close()
-        }
-    }
 
     QGCMenu {
         id: menu
@@ -553,13 +540,6 @@ Item {
                         mapPolygon.clear();
                     }
                 }
-            }
-
-            QGCButton {
-                _horizontalPadding: 0
-                text:               qsTr("Load KML/SHP...")
-                onClicked:          kmlOrSHPLoadDialog.openForLoad()
-                visible:            !mapPolygon.traceMode
             }
         }
     }

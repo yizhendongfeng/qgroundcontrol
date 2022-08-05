@@ -26,7 +26,7 @@
 #include "MultiVehicleManager.h"
 #include "Settings/SettingsManager.h"
 #include "Vehicle.h"
-#include "QGCCameraManager.h"
+//#include "QGCCameraManager.h"
 
 #if defined(QGC_GST_STREAMING)
 #include "GStreamer.h"
@@ -376,13 +376,13 @@ VideoManager::grabImage(const QString& imageFile)
 //-----------------------------------------------------------------------------
 double VideoManager::aspectRatio()
 {
-    if(_activeVehicle && _activeVehicle->cameraManager()) {
-        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->currentStreamInstance();
-        if(pInfo) {
-            qCDebug(VideoManagerLog) << "Primary AR: " << pInfo->aspectRatio();
-            return pInfo->aspectRatio();
-        }
-    }
+//    if(_activeVehicle && _activeVehicle->cameraManager()) {
+//        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->currentStreamInstance();
+//        if(pInfo) {
+//            qCDebug(VideoManagerLog) << "Primary AR: " << pInfo->aspectRatio();
+//            return pInfo->aspectRatio();
+//        }
+//    }
     // FIXME: AV: use _videoReceiver->videoSize() to calculate AR (if AR is not specified in the settings?)
     return _videoSettings->aspectRatio()->rawValue().toDouble();
 }
@@ -390,37 +390,37 @@ double VideoManager::aspectRatio()
 //-----------------------------------------------------------------------------
 double VideoManager::thermalAspectRatio()
 {
-    if(_activeVehicle && _activeVehicle->cameraManager()) {
-        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->thermalStreamInstance();
-        if(pInfo) {
-            qCDebug(VideoManagerLog) << "Thermal AR: " << pInfo->aspectRatio();
-            return pInfo->aspectRatio();
-        }
-    }
+//    if(_activeVehicle && _activeVehicle->cameraManager()) {
+//        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->thermalStreamInstance();
+//        if(pInfo) {
+//            qCDebug(VideoManagerLog) << "Thermal AR: " << pInfo->aspectRatio();
+//            return pInfo->aspectRatio();
+//        }
+//    }
     return 1.0;
 }
 
 //-----------------------------------------------------------------------------
 double VideoManager::hfov()
 {
-    if(_activeVehicle && _activeVehicle->cameraManager()) {
-        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->currentStreamInstance();
-        if(pInfo) {
-            return pInfo->hfov();
-        }
-    }
+//    if(_activeVehicle && _activeVehicle->cameraManager()) {
+//        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->currentStreamInstance();
+//        if(pInfo) {
+//            return pInfo->hfov();
+//        }
+//    }
     return 1.0;
 }
 
 //-----------------------------------------------------------------------------
 double VideoManager::thermalHfov()
 {
-    if(_activeVehicle && _activeVehicle->cameraManager()) {
-        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->thermalStreamInstance();
-        if(pInfo) {
-            return pInfo->aspectRatio();
-        }
-    }
+//    if(_activeVehicle && _activeVehicle->cameraManager()) {
+//        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->thermalStreamInstance();
+//        if(pInfo) {
+//            return pInfo->aspectRatio();
+//        }
+//    }
     return _videoSettings->aspectRatio()->rawValue().toDouble();
 }
 
@@ -428,12 +428,12 @@ double VideoManager::thermalHfov()
 bool
 VideoManager::hasThermal()
 {
-    if(_activeVehicle && _activeVehicle->cameraManager()) {
-        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->thermalStreamInstance();
-        if(pInfo) {
-            return true;
-        }
-    }
+//    if(_activeVehicle && _activeVehicle->cameraManager()) {
+//        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->thermalStreamInstance();
+//        if(pInfo) {
+//            return true;
+//        }
+//    }
     return false;
 }
 
@@ -449,12 +449,12 @@ bool
 VideoManager::autoStreamConfigured()
 {
 #if defined(QGC_GST_STREAMING)
-    if(_activeVehicle && _activeVehicle->cameraManager()) {
-        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->currentStreamInstance();
-        if(pInfo) {
-            return !pInfo->uri().isEmpty();
-        }
-    }
+//    if(_activeVehicle && _activeVehicle->cameraManager()) {
+//        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->currentStreamInstance();
+//        if(pInfo) {
+//            return !pInfo->uri().isEmpty();
+//        }
+//    }
 #endif
     return false;
 }
@@ -628,61 +628,61 @@ VideoManager::_updateSettings(unsigned id)
 
     //-- Auto discovery
 
-    if(_activeVehicle && _activeVehicle->cameraManager()) {
-        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->currentStreamInstance();
-        if(pInfo) {
-            if (id == 0) {
-                qCDebug(VideoManagerLog) << "Configure primary stream:" << pInfo->uri();
-                switch(pInfo->type()) {
-                    case VIDEO_STREAM_TYPE_RTSP:
-                        if ((settingsChanged |= _updateVideoUri(id, pInfo->uri()))) {
-                            _toolbox->settingsManager()->videoSettings()->videoSource()->setRawValue(VideoSettings::videoSourceRTSP);
-                        }
-                        break;
-                    case VIDEO_STREAM_TYPE_TCP_MPEG:
-                        if ((settingsChanged |= _updateVideoUri(id, pInfo->uri()))) {
-                            _toolbox->settingsManager()->videoSettings()->videoSource()->setRawValue(VideoSettings::videoSourceTCP);
-                        }
-                        break;
-                    case VIDEO_STREAM_TYPE_RTPUDP:
-                        if ((settingsChanged |= _updateVideoUri(id, QStringLiteral("udp://0.0.0.0:%1").arg(pInfo->uri())))) {
-                            _toolbox->settingsManager()->videoSettings()->videoSource()->setRawValue(VideoSettings::videoSourceUDPH264);
-                        }
-                        break;
-                    case VIDEO_STREAM_TYPE_MPEG_TS_H264:
-                        if ((settingsChanged |= _updateVideoUri(id, QStringLiteral("mpegts://0.0.0.0:%1").arg(pInfo->uri())))) {
-                            _toolbox->settingsManager()->videoSettings()->videoSource()->setRawValue(VideoSettings::videoSourceMPEGTS);
-                        }
-                        break;
-                    default:
-                        settingsChanged |= _updateVideoUri(id, pInfo->uri());
-                        break;
-                }
-            }
-            else if (id == 1) { //-- Thermal stream (if any)
-                QGCVideoStreamInfo* pTinfo = _activeVehicle->cameraManager()->thermalStreamInstance();
-                if (pTinfo) {
-                    qCDebug(VideoManagerLog) << "Configure secondary stream:" << pTinfo->uri();
-                    switch(pTinfo->type()) {
-                        case VIDEO_STREAM_TYPE_RTSP:
-                        case VIDEO_STREAM_TYPE_TCP_MPEG:
-                            settingsChanged |= _updateVideoUri(id, pTinfo->uri());
-                            break;
-                        case VIDEO_STREAM_TYPE_RTPUDP:
-                            settingsChanged |= _updateVideoUri(id, QStringLiteral("udp://0.0.0.0:%1").arg(pTinfo->uri()));
-                            break;
-                        case VIDEO_STREAM_TYPE_MPEG_TS_H264:
-                            settingsChanged |= _updateVideoUri(id, QStringLiteral("mpegts://0.0.0.0:%1").arg(pTinfo->uri()));
-                            break;
-                        default:
-                            settingsChanged |= _updateVideoUri(id, pTinfo->uri());
-                            break;
-                    }
-                }
-            }
-            return settingsChanged;
-        }
-    }
+//    if(_activeVehicle && _activeVehicle->cameraManager()) {
+//        QGCVideoStreamInfo* pInfo = _activeVehicle->cameraManager()->currentStreamInstance();
+//        if(pInfo) {
+//            if (id == 0) {
+//                qCDebug(VideoManagerLog) << "Configure primary stream:" << pInfo->uri();
+//                switch(pInfo->type()) {
+//                    case VIDEO_STREAM_TYPE_RTSP:
+//                        if ((settingsChanged |= _updateVideoUri(id, pInfo->uri()))) {
+//                            _toolbox->settingsManager()->videoSettings()->videoSource()->setRawValue(VideoSettings::videoSourceRTSP);
+//                        }
+//                        break;
+//                    case VIDEO_STREAM_TYPE_TCP_MPEG:
+//                        if ((settingsChanged |= _updateVideoUri(id, pInfo->uri()))) {
+//                            _toolbox->settingsManager()->videoSettings()->videoSource()->setRawValue(VideoSettings::videoSourceTCP);
+//                        }
+//                        break;
+//                    case VIDEO_STREAM_TYPE_RTPUDP:
+//                        if ((settingsChanged |= _updateVideoUri(id, QStringLiteral("udp://0.0.0.0:%1").arg(pInfo->uri())))) {
+//                            _toolbox->settingsManager()->videoSettings()->videoSource()->setRawValue(VideoSettings::videoSourceUDPH264);
+//                        }
+//                        break;
+//                    case VIDEO_STREAM_TYPE_MPEG_TS_H264:
+//                        if ((settingsChanged |= _updateVideoUri(id, QStringLiteral("mpegts://0.0.0.0:%1").arg(pInfo->uri())))) {
+//                            _toolbox->settingsManager()->videoSettings()->videoSource()->setRawValue(VideoSettings::videoSourceMPEGTS);
+//                        }
+//                        break;
+//                    default:
+//                        settingsChanged |= _updateVideoUri(id, pInfo->uri());
+//                        break;
+//                }
+//            }
+//            else if (id == 1) { //-- Thermal stream (if any)
+//                QGCVideoStreamInfo* pTinfo = _activeVehicle->cameraManager()->thermalStreamInstance();
+//                if (pTinfo) {
+//                    qCDebug(VideoManagerLog) << "Configure secondary stream:" << pTinfo->uri();
+//                    switch(pTinfo->type()) {
+//                        case VIDEO_STREAM_TYPE_RTSP:
+//                        case VIDEO_STREAM_TYPE_TCP_MPEG:
+//                            settingsChanged |= _updateVideoUri(id, pTinfo->uri());
+//                            break;
+//                        case VIDEO_STREAM_TYPE_RTPUDP:
+//                            settingsChanged |= _updateVideoUri(id, QStringLiteral("udp://0.0.0.0:%1").arg(pTinfo->uri()));
+//                            break;
+//                        case VIDEO_STREAM_TYPE_MPEG_TS_H264:
+//                            settingsChanged |= _updateVideoUri(id, QStringLiteral("mpegts://0.0.0.0:%1").arg(pTinfo->uri()));
+//                            break;
+//                        default:
+//                            settingsChanged |= _updateVideoUri(id, pTinfo->uri());
+//                            break;
+//                    }
+//                }
+//            }
+//            return settingsChanged;
+//        }
+//    }
     QString source = _videoSettings->videoSource()->rawValue().toString();
     if (source == VideoSettings::videoSourceUDPH264)
         settingsChanged |= _updateVideoUri(0, QStringLiteral("udp://0.0.0.0:%1").arg(_videoSettings->udpPort()->rawValue().toInt()));
@@ -806,24 +806,24 @@ VideoManager::_setActiveVehicle(Vehicle* vehicle)
 {
     if(_activeVehicle) {
         disconnect(_activeVehicle->vehicleLinkManager(), &VehicleLinkManager::communicationLostChanged, this, &VideoManager::_communicationLostChanged);
-        if(_activeVehicle->cameraManager()) {
-            QGCCameraControl* pCamera = _activeVehicle->cameraManager()->currentCameraInstance();
-            if(pCamera) {
-                pCamera->stopStream();
-            }
-            disconnect(_activeVehicle->cameraManager(), &QGCCameraManager::streamChanged, this, &VideoManager::_restartAllVideos);
-        }
+//        if(_activeVehicle->cameraManager()) {
+//            QGCCameraControl* pCamera = _activeVehicle->cameraManager()->currentCameraInstance();
+//            if(pCamera) {
+//                pCamera->stopStream();
+//            }
+//            disconnect(_activeVehicle->cameraManager(), &QGCCameraManager::streamChanged, this, &VideoManager::_restartAllVideos);
+//        }
     }
     _activeVehicle = vehicle;
     if(_activeVehicle) {
         connect(_activeVehicle->vehicleLinkManager(), &VehicleLinkManager::communicationLostChanged, this, &VideoManager::_communicationLostChanged);
-        if(_activeVehicle->cameraManager()) {
-            connect(_activeVehicle->cameraManager(), &QGCCameraManager::streamChanged, this, &VideoManager::_restartAllVideos);
-            QGCCameraControl* pCamera = _activeVehicle->cameraManager()->currentCameraInstance();
-            if(pCamera) {
-                pCamera->resumeStream();
-            }
-        }
+//        if(_activeVehicle->cameraManager()) {
+//            connect(_activeVehicle->cameraManager(), &QGCCameraManager::streamChanged, this, &VideoManager::_restartAllVideos);
+//            QGCCameraControl* pCamera = _activeVehicle->cameraManager()->currentCameraInstance();
+//            if(pCamera) {
+//                pCamera->resumeStream();
+//            }
+//        }
     } else {
         //-- Disable full screen video if vehicle is gone
         setfullScreen(false);

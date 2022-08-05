@@ -38,10 +38,10 @@ ParameterEditorController::~ParameterEditorController()
 
 void ParameterEditorController::_buildListsForComponent(int compId)
 {
-    QMap<int /* comp id */, QMap<uint8_t /* groupId */, QMap<uint16_t /* addrOffset */, Fact*>>> compGroupId2FactMap =_parameterMgr->getCompGroupId2FactMap();
-    for (const uint8_t groupId: compGroupId2FactMap[compId].keys()) {
-        for (const uint16_t addrOffset: compGroupId2FactMap[compId][groupId].keys()) {
-            Fact* fact = _parameterMgr->getParameter(compId, groupId, addrOffset);
+    QMap<uint8_t /* groupId */, QMap<uint16_t /* addrOffset */, Fact*>> groupId2FactMap =_parameterMgr->getCompGroupId2FactMap();
+    for (const uint8_t groupId: groupId2FactMap.keys()) {
+        for (const uint16_t addrOffset: groupId2FactMap[groupId].keys()) {
+            Fact* fact = _parameterMgr->getParameter(groupId, addrOffset);
 
             ParameterEditorCategory* category = nullptr;
             if (_mapCategoryName2Category.contains(fact->category())) {
@@ -63,6 +63,7 @@ void ParameterEditorController::_buildListsForComponent(int compId)
                 group->groupId      = fact->groupId();
                 category->mapGroupName2Group[fact->group()] = group;
                 category->groups.append(group);
+                _groups.append(group);
             }
 
             group->facts.append(fact);
@@ -73,7 +74,7 @@ void ParameterEditorController::_buildListsForComponent(int compId)
 void ParameterEditorController::_buildLists(void)
 {
     // Autopilot component should always be first list
-    _buildListsForComponent(MAV_COMP_ID_AUTOPILOT1);
+    _buildListsForComponent(0);
 
     // "Standard" category should always be first
     for (int i=0; i<_categories.count(); i++) {
@@ -98,11 +99,11 @@ void ParameterEditorController::_buildLists(void)
     }
 
     // Now add other random components
-    for (int compId: _parameterMgr->componentIds()) {
-        if (compId != MAV_COMP_ID_AUTOPILOT1) {
-            _buildListsForComponent(compId);
-        }
-    }
+//    for (int compId: _parameterMgr->componentIds()) {
+//        if (compId != MAV_COMP_ID_AUTOPILOT1) {
+//            _buildListsForComponent(compId);
+//        }
+//    }
 
     // Default group should always be last
     for (int i=0; i<_categories.count(); i++) {
@@ -120,7 +121,7 @@ void ParameterEditorController::_buildLists(void)
     }
 }
 
-void ParameterEditorController::_factAdded(int compId, Fact* fact)
+void ParameterEditorController::_factAdded(Fact* fact)
 {
     bool                        inserted = false;
     ParameterEditorCategory*    category = nullptr;
@@ -151,7 +152,6 @@ void ParameterEditorController::_factAdded(int compId, Fact* fact)
         group = category->mapGroupName2Group[fact->group()];
     } else {
         group               = new ParameterEditorGroup(this);
-        group->componentId  = compId;
         group->name         = fact->group();
         category->mapGroupName2Group[fact->group()] = group;
 
@@ -193,7 +193,7 @@ QStringList ParameterEditorController::searchParameters(const QString& searchTex
         if (searchText.isEmpty()) {
             list += paramName;
         } else {
-            Fact* fact = _parameterMgr->getParameter(_vehicle->defaultComponentId(), paramName);
+            Fact* fact = _parameterMgr->getParameter( paramName);
 
             if (searchInName && fact->name().contains(searchText, Qt::CaseInsensitive)) {
                 list += paramName;
@@ -250,101 +250,101 @@ void ParameterEditorController::sendDiff(void)
                                                          paramDiff->addrOffset, paramDiff->valueType,
                                                          paramDiff->fileValueVar);
             } else {
-                Fact* fact = _parameterMgr->getParameter(paramDiff->componentId, paramDiff->name);
+                Fact* fact = _parameterMgr->getParameter(paramDiff->name);
                 fact->setRawValue(paramDiff->fileValueVar);
             }
         }
     }
 }
 
-bool ParameterEditorController::buildDiffFromFile(const QString& filename)
-{
-    QFile file(filename);
+//bool ParameterEditorController::buildDiffFromFile(const QString& filename)
+//{
+//    QFile file(filename);
 
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qgcApp()->showAppMessage(tr("Unable to open file: %1").arg(filename));
-        return false;
-    }
+//    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+//        qgcApp()->showAppMessage(tr("Unable to open file: %1").arg(filename));
+//        return false;
+//    }
 
-    clearDiff();
+//    clearDiff();
 
-    QTextStream stream(&file);
+//    QTextStream stream(&file);
 
-    int firstComponentId = -1;
-    while (!stream.atEnd()) {
-        QString line = stream.readLine();
-        if (!line.startsWith("#")) {
-            QStringList wpParams = line.split("\t");
-            if (wpParams.size() == 5) {
-                int         vehicleId       = wpParams.at(0).toInt();
-                int         componentId     = wpParams.at(1).toInt();
-                QString     paramName       = wpParams.at(2);
-                QString     fileValueStr    = wpParams.at(3);
-                int         mavParamType    = wpParams.at(4).toInt();
-                QString     vehicleValueStr;
-                QString     units;
-                QVariant    fileValueVar    = fileValueStr;
-                bool        noVehicleValue   = false;
+//    int firstComponentId = -1;
+//    while (!stream.atEnd()) {
+//        QString line = stream.readLine();
+//        if (!line.startsWith("#")) {
+//            QStringList wpParams = line.split("\t");
+//            if (wpParams.size() == 5) {
+//                int         vehicleId       = wpParams.at(0).toInt();
+//                int         componentId     = wpParams.at(1).toInt();
+//                QString     paramName       = wpParams.at(2);
+//                QString     fileValueStr    = wpParams.at(3);
+//                int         mavParamType    = wpParams.at(4).toInt();
+//                QString     vehicleValueStr;
+//                QString     units;
+//                QVariant    fileValueVar    = fileValueStr;
+//                bool        noVehicleValue   = false;
 
-                if (_vehicle->id() != vehicleId) {
-                    _diffOtherVehicle = true;
-                }
-                if (firstComponentId == -1) {
-                    firstComponentId = componentId;
-                } else if (firstComponentId != componentId) {
-                    _diffMultipleComponents = true;
-                }
+//                if (_vehicle->id() != vehicleId) {
+//                    _diffOtherVehicle = true;
+//                }
+//                if (firstComponentId == -1) {
+//                    firstComponentId = componentId;
+//                } else if (firstComponentId != componentId) {
+//                    _diffMultipleComponents = true;
+//                }
 
-                if (_parameterMgr->parameterExists(componentId, paramName)) {
-                    Fact*           vehicleFact         = _parameterMgr->getParameter(componentId, paramName);
-                    FactMetaData*   vehicleFactMetaData = vehicleFact->metaData();
-                    Fact*           fileFact            = new Fact(vehicleFact->componentId(), vehicleFact->name(), vehicleFact->type(), this);
+//                if (_parameterMgr->parameterExists(componentId, paramName)) {
+//                    Fact*           vehicleFact         = _parameterMgr->getParameter(componentId, paramName);
+//                    FactMetaData*   vehicleFactMetaData = vehicleFact->metaData();
+//                    Fact*           fileFact            = new Fact(vehicleFact->componentId(), vehicleFact->name(), vehicleFact->type(), this);
 
-                    // Turn off reboot messaging before setting value in fileFact
-                    bool vehicleRebootRequired = vehicleFactMetaData->vehicleRebootRequired();
-                    vehicleFactMetaData->setVehicleRebootRequired(false);
-                    fileFact->setMetaData(vehicleFact->metaData());
-                    fileFact->setRawValue(fileValueStr);
-                    vehicleFactMetaData->setVehicleRebootRequired(vehicleRebootRequired);
+//                    // Turn off reboot messaging before setting value in fileFact
+//                    bool vehicleRebootRequired = vehicleFactMetaData->vehicleRebootRequired();
+//                    vehicleFactMetaData->setVehicleRebootRequired(false);
+//                    fileFact->setMetaData(vehicleFact->metaData());
+//                    fileFact->setRawValue(fileValueStr);
+//                    vehicleFactMetaData->setVehicleRebootRequired(vehicleRebootRequired);
 
-                    if (vehicleFact->rawValue() == fileFact->rawValue()) {
-                        continue;
-                    }
-                    fileValueStr    = fileFact->enumOrValueString();
-                    fileValueVar    = fileFact->rawValue();
-                    vehicleValueStr = vehicleFact->enumOrValueString();
-                    units           = vehicleFact->cookedUnits();
-                } else {
-                    noVehicleValue = true;
-                }
+//                    if (vehicleFact->rawValue() == fileFact->rawValue()) {
+//                        continue;
+//                    }
+//                    fileValueStr    = fileFact->enumOrValueString();
+//                    fileValueVar    = fileFact->rawValue();
+//                    vehicleValueStr = vehicleFact->enumOrValueString();
+//                    units           = vehicleFact->cookedUnits();
+//                } else {
+//                    noVehicleValue = true;
+//                }
 
-                ParameterEditorDiff* paramDiff = new ParameterEditorDiff(this);
+//                ParameterEditorDiff* paramDiff = new ParameterEditorDiff(this);
 
-                paramDiff->componentId      = componentId;
-                paramDiff->name             = paramName;
-                paramDiff->valueType        = ParameterManager::mavTypeToFactType(static_cast<MAV_PARAM_TYPE>(mavParamType));
-                paramDiff->fileValue        = fileValueStr;
-                paramDiff->fileValueVar     = fileValueVar;
-                paramDiff->vehicleValue     = vehicleValueStr;
-                paramDiff->noVehicleValue   = noVehicleValue;
-                paramDiff->units            = units;
+//                paramDiff->componentId      = componentId;
+//                paramDiff->name             = paramName;
+//                paramDiff->valueType        = ParameterManager::mavTypeToFactType(static_cast<MAV_PARAM_TYPE>(mavParamType));
+//                paramDiff->fileValue        = fileValueStr;
+//                paramDiff->fileValueVar     = fileValueVar;
+//                paramDiff->vehicleValue     = vehicleValueStr;
+//                paramDiff->noVehicleValue   = noVehicleValue;
+//                paramDiff->units            = units;
 
-                _diffList.append(paramDiff);
-            }
-        }
-    }
+//                _diffList.append(paramDiff);
+//            }
+//        }
+//    }
 
-    file.close();
+//    file.close();
 
-    emit diffOtherVehicleChanged(_diffOtherVehicle);
-    emit diffMultipleComponentsChanged(_diffMultipleComponents);
+//    emit diffOtherVehicleChanged(_diffOtherVehicle);
+//    emit diffMultipleComponentsChanged(_diffMultipleComponents);
 
-    return true;
-}
+//    return true;
+//}
 
 void ParameterEditorController::refresh(void)
 {
-    _parameterMgr->refreshGroupParameters(MAV_COMP_ID_ALL, 0xff);
+//    _parameterMgr->refreshGroupParameters(MAV_COMP_ID_ALL, 0xff);
 }
 
 void ParameterEditorController::resetAllToDefaults(void)
@@ -390,7 +390,7 @@ void ParameterEditorController::_searchTextChanged(void)
         _searchParameters.clear();
 
         for (const QString &paraName: _parameterMgr->parameterNames(_vehicle->defaultComponentId())) {
-            Fact* fact = _parameterMgr->getParameter(_vehicle->defaultComponentId(), paraName);
+            Fact* fact = _parameterMgr->getParameter(paraName);
             bool matched = _shouldShow(fact);
             // All of the search items must match in order for the parameter to be added to the list
             if (matched) {

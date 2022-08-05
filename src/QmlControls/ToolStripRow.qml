@@ -76,6 +76,20 @@ Rectangle {
                 visible:                title != ""
             }
 
+            Column {
+                QGCRadioButton {
+                    id:             radioCurrentVehicle
+                    text:           qsTr("Current")
+                    checked:        true
+                    textColor:      mapPal.text
+                }
+
+                QGCRadioButton {
+                    text:           qsTr("All")
+                    textColor:      mapPal.text
+                }
+            }
+
             Repeater {
                 id: repeater
 

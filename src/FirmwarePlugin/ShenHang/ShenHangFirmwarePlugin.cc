@@ -15,7 +15,7 @@
 //#include "ShenHangSimpleFlightModesController.h"
 //#include "ShenHangAirframeComponentController.h"
 //#include "ShenHangRadioComponentController.h"
-#include "QGCCameraManager.h"
+//#include "QGCCameraManager.h"
 #include "QGCFileDownload.h"
 #include "SettingsManager.h"
 #include "PlanViewSettings.h"
@@ -159,60 +159,60 @@ QStringList ShenHangFirmwarePlugin::flightModes(Vehicle* vehicle)
     return flightModes;
 }
 
-QString ShenHangFirmwarePlugin::flightMode(uint8_t base_mode, uint32_t custom_mode) const
-{
-    QString flightMode = "Unknown";
+//QString ShenHangFirmwarePlugin::flightMode(uint8_t base_mode, uint32_t custom_mode) const
+//{
+//    QString flightMode = "Unknown";
 
-    if (base_mode & MAV_MODE_FLAG_CUSTOM_MODE_ENABLED) {
-        union px4_custom_mode px4_mode;
-        px4_mode.data = custom_mode;
+//    if (base_mode & MAV_MODE_FLAG_CUSTOM_MODE_ENABLED) {
+//        union px4_custom_mode px4_mode;
+//        px4_mode.data = custom_mode;
 
-        bool found = false;
-        foreach (const FlightModeInfo_t& info, _flightModeInfoList) {
-            if (info.main_mode == px4_mode.main_mode && info.sub_mode == px4_mode.sub_mode) {
-                flightMode = *info.name;
-                found = true;
-                break;
-            }
-        }
+//        bool found = false;
+//        foreach (const FlightModeInfo_t& info, _flightModeInfoList) {
+//            if (info.main_mode == px4_mode.main_mode && info.sub_mode == px4_mode.sub_mode) {
+//                flightMode = *info.name;
+//                found = true;
+//                break;
+//            }
+//        }
 
-        if (!found) {
-            qWarning() << "Unknown flight mode" << custom_mode;
-            return tr("Unknown %1:%2").arg(base_mode).arg(custom_mode);
-        }
-    }
+//        if (!found) {
+//            qWarning() << "Unknown flight mode" << custom_mode;
+//            return tr("Unknown %1:%2").arg(base_mode).arg(custom_mode);
+//        }
+//    }
 
-    return flightMode;
-}
+//    return flightMode;
+//}
 
-bool ShenHangFirmwarePlugin::setFlightMode(const QString& flightMode, uint8_t* base_mode, uint32_t* custom_mode)
-{
-    *base_mode = 0;
-    *custom_mode = 0;
+//bool ShenHangFirmwarePlugin::setFlightMode(const QString& flightMode, uint8_t* base_mode, uint32_t* custom_mode)
+//{
+//    *base_mode = 0;
+//    *custom_mode = 0;
 
-    bool found = false;
-    foreach (const FlightModeInfo_t& info, _flightModeInfoList) {
-        if (flightMode.compare(info.name, Qt::CaseInsensitive) == 0) {
-            union px4_custom_mode px4_mode;
+//    bool found = false;
+//    foreach (const FlightModeInfo_t& info, _flightModeInfoList) {
+//        if (flightMode.compare(info.name, Qt::CaseInsensitive) == 0) {
+//            union px4_custom_mode px4_mode;
 
-            px4_mode.data = 0;
-            px4_mode.main_mode = info.main_mode;
-            px4_mode.sub_mode = info.sub_mode;
+//            px4_mode.data = 0;
+//            px4_mode.main_mode = info.main_mode;
+//            px4_mode.sub_mode = info.sub_mode;
 
-            *base_mode = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
-            *custom_mode = px4_mode.data;
+//            *base_mode = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
+//            *custom_mode = px4_mode.data;
 
-            found = true;
-            break;
-        }
-    }
+//            found = true;
+//            break;
+//        }
+//    }
 
-    if (!found) {
-        qWarning() << "Unknown flight Mode" << flightMode;
-    }
+//    if (!found) {
+//        qWarning() << "Unknown flight Mode" << flightMode;
+//    }
 
-    return found;
-}
+//    return found;
+//}
 
 bool ShenHangFirmwarePlugin::isCapable(const Vehicle *vehicle, FirmwareCapabilities capabilities)
 {
@@ -252,7 +252,7 @@ FactMetaData* ShenHangFirmwarePlugin::_getMetaDataForFact(QObject* parameterMeta
     return nullptr;
 }
 
-FactMetaData* ShenHangFirmwarePlugin::_getMetaDataForFactByIndexes(QObject* parameterMetaData, uint8_t idGroup, uint16_t addrOffset, MAV_TYPE vehicleType)
+FactMetaData* ShenHangFirmwarePlugin::_getMetaDataForFactByIndexes(QObject* parameterMetaData, uint8_t idGroup, uint16_t addrOffset)
 {
     ShenHangParameterMetaData* shenHangMetaData = qobject_cast<ShenHangParameterMetaData*>(parameterMetaData);
 
@@ -270,73 +270,74 @@ void ShenHangFirmwarePlugin::_getParameterMetaDataVersionInfo(const QString& met
     return ShenHangParameterMetaData::getParameterMetaDataVersionInfo(metaDataFile, majorVersion, minorVersion);
 }
 
-QList<MAV_CMD> ShenHangFirmwarePlugin::supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass)
-{
-    QList<MAV_CMD> supportedCommands = {
-        MAV_CMD_NAV_WAYPOINT,
-        MAV_CMD_NAV_LOITER_UNLIM, MAV_CMD_NAV_LOITER_TIME,
-        MAV_CMD_NAV_RETURN_TO_LAUNCH,
-        MAV_CMD_DO_JUMP,
-        MAV_CMD_DO_DIGICAM_CONTROL,
-        MAV_CMD_DO_SET_CAM_TRIGG_DIST,
-        MAV_CMD_DO_SET_SERVO,
-        MAV_CMD_DO_CHANGE_SPEED,
-        MAV_CMD_DO_LAND_START,
-        MAV_CMD_DO_SET_ROI_LOCATION, MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET, MAV_CMD_DO_SET_ROI_NONE,
-        MAV_CMD_DO_MOUNT_CONFIGURE,
-        MAV_CMD_DO_MOUNT_CONTROL,
-        MAV_CMD_SET_CAMERA_MODE,
-        MAV_CMD_IMAGE_START_CAPTURE, MAV_CMD_IMAGE_STOP_CAPTURE, MAV_CMD_VIDEO_START_CAPTURE, MAV_CMD_VIDEO_STOP_CAPTURE,
-        MAV_CMD_NAV_DELAY,
-        MAV_CMD_CONDITION_YAW,
-        MAV_CMD_NAV_LOITER_TO_ALT,
-    };
+//QList<MAV_CMD> ShenHangFirmwarePlugin::supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass)
+//{
+//    QList<MAV_CMD> supportedCommands = {
+//        MAV_CMD_NAV_WAYPOINT,
+//        MAV_CMD_NAV_LOITER_UNLIM, MAV_CMD_NAV_LOITER_TIME,
+//        MAV_CMD_NAV_RETURN_TO_LAUNCH,
+//        MAV_CMD_DO_JUMP,
+//        MAV_CMD_DO_DIGICAM_CONTROL,
+//        MAV_CMD_DO_SET_CAM_TRIGG_DIST,
+//        MAV_CMD_DO_SET_SERVO,
+//        MAV_CMD_DO_CHANGE_SPEED,
+//        MAV_CMD_DO_LAND_START,
+//        MAV_CMD_DO_SET_ROI_LOCATION, MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET, MAV_CMD_DO_SET_ROI_NONE,
+//        MAV_CMD_DO_MOUNT_CONFIGURE,
+//        MAV_CMD_DO_MOUNT_CONTROL,
+//        MAV_CMD_SET_CAMERA_MODE,
+//        MAV_CMD_IMAGE_START_CAPTURE, MAV_CMD_IMAGE_STOP_CAPTURE, MAV_CMD_VIDEO_START_CAPTURE, MAV_CMD_VIDEO_STOP_CAPTURE,
+//        MAV_CMD_NAV_DELAY,
+//        MAV_CMD_CONDITION_YAW,
+//        MAV_CMD_NAV_LOITER_TO_ALT,
+//    };
 
-    QList<MAV_CMD> vtolCommands = {
-        MAV_CMD_DO_VTOL_TRANSITION, MAV_CMD_NAV_VTOL_TAKEOFF, MAV_CMD_NAV_VTOL_LAND,
-    };
+//    QList<MAV_CMD> vtolCommands = {
+//        MAV_CMD_DO_VTOL_TRANSITION, MAV_CMD_NAV_VTOL_TAKEOFF, MAV_CMD_NAV_VTOL_LAND,
+//    };
 
-    QList<MAV_CMD> flightCommands = {
-        MAV_CMD_NAV_LAND, MAV_CMD_NAV_TAKEOFF,
-    };
+//    QList<MAV_CMD> flightCommands = {
+//        MAV_CMD_NAV_LAND, MAV_CMD_NAV_TAKEOFF,
+//    };
 
-    if (vehicleClass == QGCMAVLink::VehicleClassGeneric) {
-        supportedCommands   += vtolCommands;
-        supportedCommands   += flightCommands;
-    }
-    if (vehicleClass == QGCMAVLink::VehicleClassVTOL) {
-        supportedCommands += vtolCommands;
-        supportedCommands += flightCommands;
-    } else if (vehicleClass == QGCMAVLink::VehicleClassFixedWing || vehicleClass == QGCMAVLink::VehicleClassMultiRotor) {
-        supportedCommands += flightCommands;
-    }
+//    if (vehicleClass == QGCMAVLink::VehicleClassGeneric) {
+//        supportedCommands   += vtolCommands;
+//        supportedCommands   += flightCommands;
+//    }
+//    if (vehicleClass == QGCMAVLink::VehicleClassVTOL) {
+//        supportedCommands += vtolCommands;
+//        supportedCommands += flightCommands;
+//    } else if (vehicleClass == QGCMAVLink::VehicleClassFixedWing || vehicleClass == QGCMAVLink::VehicleClassMultiRotor) {
+//        supportedCommands += flightCommands;
+//    }
 
-    if (qgcApp()->toolbox()->settingsManager()->planViewSettings()->useConditionGate()->rawValue().toBool()) {
-        supportedCommands.append(MAV_CMD_CONDITION_GATE);
-    }
+//    if (qgcApp()->toolbox()->settingsManager()->planViewSettings()->useConditionGate()->rawValue().toBool()) {
+//        supportedCommands.append(MAV_CMD_CONDITION_GATE);
+//    }
 
-    return supportedCommands;
-}
+//    return supportedCommands;
+//}
 
 QString ShenHangFirmwarePlugin::missionCommandOverrides(QGCMAVLink::VehicleClass_t vehicleClass) const
 {
-    switch (vehicleClass) {
-    case QGCMAVLink::VehicleClassGeneric:
-        return QStringLiteral(":/json/ShenHang-MavCmdInfoCommon.json");
-    case QGCMAVLink::VehicleClassFixedWing:
-        return QStringLiteral(":/json/ShenHang-MavCmdInfoFixedWing.json");
-    case QGCMAVLink::VehicleClassMultiRotor:
-        return QStringLiteral(":/json/ShenHang-MavCmdInfoMultiRotor.json");
-    case QGCMAVLink::VehicleClassVTOL:
-        return QStringLiteral(":/json/ShenHang-MavCmdInfoVTOL.json");
-    case QGCMAVLink::VehicleClassSub:
-        return QStringLiteral(":/json/ShenHang-MavCmdInfoSub.json");
-    case QGCMAVLink::VehicleClassRoverBoat:
-        return QStringLiteral(":/json/ShenHang-MavCmdInfoRover.json");
-    default:
-        qWarning() << "ShenHangFirmwarePlugin::missionCommandOverrides called with bad VehicleClass_t:" << vehicleClass;
-        return QString();
-    }
+//    switch (vehicleClass) {
+//    case QGCMAVLink::VehicleClassGeneric:
+//        return QStringLiteral(":/json/ShenHang-MavCmdInfoCommon.json");
+//    case QGCMAVLink::VehicleClassFixedWing:
+//        return QStringLiteral(":/json/ShenHang-MavCmdInfoFixedWing.json");
+//    case QGCMAVLink::VehicleClassMultiRotor:
+//        return QStringLiteral(":/json/ShenHang-MavCmdInfoMultiRotor.json");
+//    case QGCMAVLink::VehicleClassVTOL:
+//        return QStringLiteral(":/json/ShenHang-MavCmdInfoVTOL.json");
+//    case QGCMAVLink::VehicleClassSub:
+//        return QStringLiteral(":/json/ShenHang-MavCmdInfoSub.json");
+//    case QGCMAVLink::VehicleClassRoverBoat:
+//        return QStringLiteral(":/json/ShenHang-MavCmdInfoRover.json");
+//    default:
+//        qWarning() << "ShenHangFirmwarePlugin::missionCommandOverrides called with bad VehicleClass_t:" << vehicleClass;
+//        return QString();
+//    }
+    return QString();
 }
 
 QObject* ShenHangFirmwarePlugin::_loadParameterMetaData(const QString& metaDataFile)
@@ -364,35 +365,35 @@ void ShenHangFirmwarePlugin::guidedModeLand(Vehicle* vehicle)
     _setFlightModeAndValidate(vehicle, _landingFlightMode);
 }
 
-void ShenHangFirmwarePlugin::_mavCommandResult(int vehicleId, int component, int command, int result, bool noReponseFromVehicle)
-{
-    Q_UNUSED(vehicleId);
-    Q_UNUSED(component);
-    Q_UNUSED(noReponseFromVehicle);
+//void ShenHangFirmwarePlugin::_mavCommandResult(int vehicleId, int component, int command, int result, bool noReponseFromVehicle)
+//{
+//    Q_UNUSED(vehicleId);
+//    Q_UNUSED(component);
+//    Q_UNUSED(noReponseFromVehicle);
 
-    auto* vehicle = qobject_cast<Vehicle*>(sender());
-    if (!vehicle) {
-        qWarning() << "Dynamic cast failed!";
-        return;
-    }
+//    auto* vehicle = qobject_cast<Vehicle*>(sender());
+//    if (!vehicle) {
+//        qWarning() << "Dynamic cast failed!";
+//        return;
+//    }
 
-    if (command == MAV_CMD_NAV_TAKEOFF && result == MAV_RESULT_ACCEPTED) {
-        // Now that we are in takeoff mode we can arm the vehicle which will cause it to takeoff.
-        // We specifically don't retry arming if it fails. This way we don't fight with the user if
-        // They are trying to disarm.
-        disconnect(vehicle, &Vehicle::mavCommandResult, this, &ShenHangFirmwarePlugin::_mavCommandResult);
-        if (!vehicle->armed()) {
-            vehicle->setArmedShowError(true);
-        }
-    }
-}
+//    if (command == MAV_CMD_NAV_TAKEOFF && result == MAV_RESULT_ACCEPTED) {
+//        // Now that we are in takeoff mode we can arm the vehicle which will cause it to takeoff.
+//        // We specifically don't retry arming if it fails. This way we don't fight with the user if
+//        // They are trying to disarm.
+//        disconnect(vehicle, &Vehicle::mavCommandResult, this, &ShenHangFirmwarePlugin::_mavCommandResult);
+//        if (!vehicle->armed()) {
+//            vehicle->setArmedShowError(true);
+//        }
+//    }
+//}
 
 double ShenHangFirmwarePlugin::minimumTakeoffAltitude(Vehicle* vehicle)
 {
     QString takeoffAltParam("MIS_TAKEOFF_ALT");
 
-    if (vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, takeoffAltParam)) {
-        return vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, takeoffAltParam)->rawValue().toDouble();
+    if (vehicle->parameterManager()->parameterExists(takeoffAltParam)) {
+        return vehicle->parameterManager()->getParameter(takeoffAltParam)->rawValue().toDouble();
     } else {
         return FirmwarePlugin::minimumTakeoffAltitude(vehicle);
     }
@@ -411,7 +412,7 @@ void ShenHangFirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double takeoffA
 
     qDebug() << takeoffAltRel << takeoffAltRelFromVehicle << takeoffAltAMSL << vehicleAltitudeAMSL;
 
-    connect(vehicle, &Vehicle::mavCommandResult, this, &ShenHangFirmwarePlugin::_mavCommandResult);
+//    connect(vehicle, &Vehicle::mavCommandResult, this, &ShenHangFirmwarePlugin::_mavCommandResult);
 //    vehicle->sendMavCommand(
 //        vehicle->defaultComponentId(),
 //        MAV_CMD_NAV_TAKEOFF,
@@ -545,63 +546,6 @@ bool ShenHangFirmwarePlugin::isGuidedMode(const Vehicle* vehicle) const
             || vehicle->flightMode() == _landingFlightMode);
 }
 
-bool ShenHangFirmwarePlugin::adjustIncomingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message)
-{
-    //-- Don't process messages to/from UDP Bridge. It doesn't suffer from these issues
-    if (message->compid == MAV_COMP_ID_UDP_BRIDGE) {
-        return true;
-    }
-
-    switch (message->msgid) {
-    case MAVLINK_MSG_ID_AUTOPILOT_VERSION:
-        _handleAutopilotVersion(vehicle, message);
-        break;
-    }
-
-    return true;
-}
-
-void ShenHangFirmwarePlugin::_handleAutopilotVersion(Vehicle* vehicle, mavlink_message_t* message)
-{
-    Q_UNUSED(vehicle);
-
-    auto* instanceData = qobject_cast<ShenHangFirmwarePluginInstanceData*>(vehicle->firmwarePluginInstanceData());
-    if (!instanceData->versionNotified) {
-        bool notifyUser = false;
-        int supportedMajorVersion = 1;
-        int supportedMinorVersion = 4;
-        int supportedPatchVersion = 1;
-
-        mavlink_autopilot_version_t version;
-        mavlink_msg_autopilot_version_decode(message, &version);
-
-        if (version.flight_sw_version != 0) {
-            int majorVersion, minorVersion, patchVersion;
-
-            majorVersion = (version.flight_sw_version >> (8*3)) & 0xFF;
-            minorVersion = (version.flight_sw_version >> (8*2)) & 0xFF;
-            patchVersion = (version.flight_sw_version >> (8*1)) & 0xFF;
-
-            if (majorVersion < supportedMajorVersion) {
-                notifyUser = true;
-            } else if (majorVersion == supportedMajorVersion) {
-                if (minorVersion < supportedMinorVersion) {
-                    notifyUser = true;
-                } else if (minorVersion == supportedMinorVersion) {
-                    notifyUser = patchVersion < supportedPatchVersion;
-                }
-            }
-        } else {
-            notifyUser = true;
-        }
-
-        if (notifyUser) {
-            instanceData->versionNotified = true;
-            qgcApp()->showAppMessage(tr("QGroundControl supports ShenHang Pro firmware Version %1.%2.%3 and above. You are using a version prior to that which will lead to unpredictable results. Please upgrade your firmware.").arg(supportedMajorVersion).arg(supportedMinorVersion).arg(supportedPatchVersion));
-        }
-    }
-}
-
 uint32_t ShenHangFirmwarePlugin::highLatencyCustomModeTo32Bits(uint16_t hlCustomMode)
 {
     union px4_custom_mode px4_cm;
@@ -618,9 +562,4 @@ QString ShenHangFirmwarePlugin::_getLatestVersionFileUrl(Vehicle* vehicle){
 
 QString ShenHangFirmwarePlugin::_versionRegex() {
     return QStringLiteral("v([0-9,\\.]*) Stable");
-}
-
-bool ShenHangFirmwarePlugin::supportsNegativeThrust(Vehicle* vehicle)
-{
-    return vehicle->vehicleType() == MAV_TYPE_GROUND_ROVER;
 }

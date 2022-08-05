@@ -10,6 +10,7 @@
 #include "LinkInterface.h"
 #include "LinkManager.h"
 #include "QGCApplication.h"
+#include "qqmlengine.h"
 
 QGC_LOGGING_CATEGORY(LinkInterfaceLog, "LinkInterfaceLog")
 
@@ -58,37 +59,6 @@ uint8_t LinkInterface::shenHangProtocolChannel() const
 bool LinkInterface::shenHangProtocolChannelIsSet() const
 {
     return (LinkManager::invalidShenHangProtocolChannel() != _shenHangProtocolChannel);
-}
-
-bool LinkInterface::_allocateMavlinkChannel()
-{
-    // should only be called by the LinkManager during setup
-    Q_ASSERT(!mavlinkChannelIsSet());
-    if (mavlinkChannelIsSet()) {
-        qCWarning(LinkInterfaceLog) << "_allocateMavlinkChannel already have " << _mavlinkChannel;
-        return true;
-    }
-
-    auto mgr = qgcApp()->toolbox()->linkManager();
-    _mavlinkChannel = mgr->allocateMavlinkChannel();
-    if (!mavlinkChannelIsSet()) {
-        qCWarning(LinkInterfaceLog) << "_allocateMavlinkChannel failed";
-        return false;
-    }
-    qCDebug(LinkInterfaceLog) << "_allocateMavlinkChannel" << _mavlinkChannel;
-    return true;
-}
-
-void LinkInterface::_freeMavlinkChannel()
-{
-    qCDebug(LinkInterfaceLog) << "_freeMavlinkChannel" << _mavlinkChannel;
-    if (LinkManager::invalidMavlinkChannel() == _mavlinkChannel) {
-        return;
-    }
-
-    auto mgr = qgcApp()->toolbox()->linkManager();
-    mgr->freeMavlinkChannel(_mavlinkChannel);
-    _mavlinkChannel = LinkManager::invalidMavlinkChannel();
 }
 
 bool LinkInterface::_allocateShenHangProtocolChannel()

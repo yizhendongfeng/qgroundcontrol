@@ -14,9 +14,9 @@
 
 QGC_LOGGING_CATEGORY(PlanManagerLog, "PlanManagerLog")
 
-PlanManager::PlanManager(Vehicle* vehicle, MAV_MISSION_TYPE planType)
+PlanManager::PlanManager(Vehicle* vehicle, MISSION_TYPE_SHENHANG planType)
     : _vehicle                  (vehicle)
-    , _planType                 (planType)
+//    , _planType                 (planType)
     , _ackTimeoutTimer          (nullptr)
     , _expectedAck              (AckNone)
     , _transactionInProgress    (TransactionNone)
@@ -119,7 +119,7 @@ void PlanManager::writeInfoSlots(const QMap<uint16_t, SingleBankInfo*>& bankInfo
     }
 
     if (inProgress()) {
-        qCDebug(PlanManagerLog) << QStringLiteral("writeMissionItems %1 called while transaction in progress").arg(_planTypeString());
+        qCDebug(PlanManagerLog) << QStringLiteral("writeMissionItems called while transaction in progress");
         return;
     }
 
@@ -135,10 +135,10 @@ void PlanManager::loadFromVehicle(void)
         return;
     }
 
-    qCDebug(PlanManagerLog) << QStringLiteral("loadFromVehicle %1 read sequence").arg(_planTypeString());
+    qCDebug(PlanManagerLog) << QStringLiteral("loadFromVehicle read sequence");
 
     if (inProgress()) {
-        qCDebug(PlanManagerLog) << QStringLiteral("loadFromVehicle %1 called while transaction in progress").arg(_planTypeString());
+        qCDebug(PlanManagerLog) << QStringLiteral("loadFromVehicle called while transaction in progress");
         return;
     }
 
@@ -166,7 +166,7 @@ void PlanManager::_ackTimeout()
 
     switch (_expectedAckShenHang) {
     case ACK_NONE:
-        qCWarning(PlanManagerLog) << QStringLiteral("_ackTimeout %1 timeout with AckNone").arg(_planTypeString());
+        qCWarning(PlanManagerLog) << QStringLiteral("_ackTimeout timeout with AckNone");
         _sendError(InternalError, tr("Internal error occurred during Mission Item communication: _ackTimeOut:_expectedAckShenHang == ACK_NONE"));
         break;
     case ACK_QUERY_ALL_BANK:
@@ -175,7 +175,7 @@ void PlanManager::_ackTimeout()
             _finishTransaction(false);
         } else {
             _retryCount++;
-            qCDebug(PlanManagerLog) << tr("Retrying %1 query all bank info retry Count").arg(_planTypeString()) << _retryCount;
+            qCDebug(PlanManagerLog) << tr("Retrying query all bank info retry Count") << _retryCount;
             _queryAllBanks();
         }
         break;
@@ -185,7 +185,7 @@ void PlanManager::_ackTimeout()
             _finishTransaction(false);
         } else {
             _retryCount++;
-            qCDebug(PlanManagerLog) << tr("Retrying %1 query single bank retry Count").arg(_planTypeString()) << _retryCount;
+            qCDebug(PlanManagerLog) << tr("Retrying query single bank retry Count") << _retryCount;
             switch (_transactionInProgress) {
             case TransactionRead:
                 _querySingleBankInfo(_lastBankIdRead);
@@ -204,7 +204,7 @@ void PlanManager::_ackTimeout()
             _finishTransaction(false);
         } else {
             _retryCount++;
-            qCDebug(PlanManagerLog) << QStringLiteral("Retrying %1 MISSION_COUNT retry Count").arg(_planTypeString()) << _retryCount;
+            qCDebug(PlanManagerLog) << QStringLiteral("Retrying MISSION_COUNT retry Count") << _retryCount;
             switch (_transactionInProgress) {
             case TransactionRead:
                 _querySingleInfoSlot(_lastBankIdRead, _lastInfoSlotIdRead);
@@ -225,7 +225,7 @@ void PlanManager::_ackTimeout()
             _finishTransaction(false);
         } else {
             _retryCount++;
-            qCDebug(PlanManagerLog) << QStringLiteral("Retrying %1 MISSION_COUNT retry Count").arg(_planTypeString()) << _retryCount;
+            qCDebug(PlanManagerLog) << QStringLiteral("Retrying MISSION_COUNT retry Count") << _retryCount;
             SingleBankInfo* bankInfo = _mapBankInfosToWrite[_lastBankIdWrite];
             _refactorInfoSlots(bankInfo->idBank, bankInfo->nWp, bankInfo->nInfoSlot);
         }
@@ -237,7 +237,7 @@ void PlanManager::_ackTimeout()
             _finishTransaction(false);
         } else {
             _retryCount++;
-            qCDebug(PlanManagerLog) << tr("Retrying %1 MISSION_CLEAR_ALL retry Count").arg(_planTypeString()) << _retryCount;
+            qCDebug(PlanManagerLog) << tr("Retrying MISSION_CLEAR_ALL retry Count") << _retryCount;
             _removeAllWorker();
         }
         break;
@@ -307,19 +307,7 @@ void PlanManager::_readTransactionComplete(void)
     
     WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
     if (!weakLink.expired()) {
-//        SharedLinkInterfacePtr  sharedLink = weakLink.lock();
-//        mavlink_message_t       message;
 
-//        mavlink_msg_mission_ack_pack_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
-//                                          qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
-//                                          sharedLink->mavlinkChannel(),
-//                                          &message,
-//                                          _vehicle->id(),
-//                                          MAV_COMP_ID_AUTOPILOT1,
-//                                          MAV_MISSION_ACCEPTED,
-//                                          _planType);
-
-//        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), message);
     }
 
     _finishTransaction(true);
@@ -571,7 +559,7 @@ void PlanManager::_handleSingleBankInfo(const ShenHangProtocolMessage& message)
 
 void PlanManager::_sendError(ErrorCode_t errorCode, const QString& errorMsg)
 {
-    qCDebug(PlanManagerLog) << QStringLiteral("Sending error - _planTypeString(%1) errorCode(%2) errorMsg(%4)").arg(_planTypeString()).arg(errorCode).arg(errorMsg);
+    qCDebug(PlanManagerLog) << QStringLiteral("Sending error - errorCode(%2) errorMsg(%4)").arg(errorCode).arg(errorMsg);
 
     emit error(errorCode, errorMsg);
 }
@@ -603,69 +591,69 @@ QString PlanManager::_ackTypeToString(AckCommandBank ackType)
     return QString("");
 }
 
-QString PlanManager::_missionResultToString(MAV_MISSION_RESULT result)
-{
-    QString error;
+//QString PlanManager::_missionResultToString(MAV_MISSION_RESULT result)
+//{
+//    QString error;
 
-    switch (result) {
-    case MAV_MISSION_ACCEPTED:
-        error = tr("Mission accepted.");
-        break;
-    case MAV_MISSION_ERROR:
-        error = tr("Unspecified error.");
-        break;
-    case MAV_MISSION_UNSUPPORTED_FRAME:
-        error = tr("Coordinate frame is not supported.");
-        break;
-    case MAV_MISSION_UNSUPPORTED:
-        error = tr("Command is not supported.");
-        break;
-    case MAV_MISSION_NO_SPACE:
-        error = tr("Mission item exceeds storage space.");
-        break;
-    case MAV_MISSION_INVALID:
-        error = tr("One of the parameters has an invalid value.");
-        break;
-    case MAV_MISSION_INVALID_PARAM1:
-        error = tr("Param 1 invalid value.");
-        break;
-    case MAV_MISSION_INVALID_PARAM2:
-        error = tr("Param 2 invalid value.");
-        break;
-    case MAV_MISSION_INVALID_PARAM3:
-        error = tr("Param 3 invalid value.");
-        break;
-    case MAV_MISSION_INVALID_PARAM4:
-        error = tr("Param 4 invalid value.");
-        break;
-    case MAV_MISSION_INVALID_PARAM5_X:
-        error = tr("Param 5 invalid value.");
-        break;
-    case MAV_MISSION_INVALID_PARAM6_Y:
-        error = tr("Param 6 invalid value.");
-        break;
-    case MAV_MISSION_INVALID_PARAM7:
-        error = tr("Param 7 invalid value.");
-        break;
-    case MAV_MISSION_INVALID_SEQUENCE:
-        error = tr("Received mission item out of sequence.");
-        break;
-    case MAV_MISSION_DENIED:
-        error = tr("Not accepting any mission commands.");
-        break;
-    default:
-        qWarning(PlanManagerLog) << QStringLiteral("Fell off end of switch statement %1 %2").arg(_planTypeString()).arg(result);
-        error = tr("Unknown error: %1.").arg(result);
-        break;
-    }
+//    switch (result) {
+//    case MAV_MISSION_ACCEPTED:
+//        error = tr("Mission accepted.");
+//        break;
+//    case MAV_MISSION_ERROR:
+//        error = tr("Unspecified error.");
+//        break;
+//    case MAV_MISSION_UNSUPPORTED_FRAME:
+//        error = tr("Coordinate frame is not supported.");
+//        break;
+//    case MAV_MISSION_UNSUPPORTED:
+//        error = tr("Command is not supported.");
+//        break;
+//    case MAV_MISSION_NO_SPACE:
+//        error = tr("Mission item exceeds storage space.");
+//        break;
+//    case MAV_MISSION_INVALID:
+//        error = tr("One of the parameters has an invalid value.");
+//        break;
+//    case MAV_MISSION_INVALID_PARAM1:
+//        error = tr("Param 1 invalid value.");
+//        break;
+//    case MAV_MISSION_INVALID_PARAM2:
+//        error = tr("Param 2 invalid value.");
+//        break;
+//    case MAV_MISSION_INVALID_PARAM3:
+//        error = tr("Param 3 invalid value.");
+//        break;
+//    case MAV_MISSION_INVALID_PARAM4:
+//        error = tr("Param 4 invalid value.");
+//        break;
+//    case MAV_MISSION_INVALID_PARAM5_X:
+//        error = tr("Param 5 invalid value.");
+//        break;
+//    case MAV_MISSION_INVALID_PARAM6_Y:
+//        error = tr("Param 6 invalid value.");
+//        break;
+//    case MAV_MISSION_INVALID_PARAM7:
+//        error = tr("Param 7 invalid value.");
+//        break;
+//    case MAV_MISSION_INVALID_SEQUENCE:
+//        error = tr("Received mission item out of sequence.");
+//        break;
+//    case MAV_MISSION_DENIED:
+//        error = tr("Not accepting any mission commands.");
+//        break;
+//    default:
+//        qWarning(PlanManagerLog) << QStringLiteral("Fell off end of switch statement %1 %2").arg(_planTypeString()).arg(result);
+//        error = tr("Unknown error: %1.").arg(result);
+//        break;
+//    }
 
-    QString lastRequestString/* = _lastMissionReqestString(result)*/;
-    if (!lastRequestString.isEmpty()) {
-        error += QStringLiteral(" ") + lastRequestString;
-    }
+//    QString lastRequestString/* = _lastMissionReqestString(result)*/;
+//    if (!lastRequestString.isEmpty()) {
+//        error += QStringLiteral(" ") + lastRequestString;
+//    }
 
-    return error;
-}
+//    return error;
+//}
 
 void PlanManager::_finishTransaction(bool success, bool apmGuidedItemWrite)
 {
@@ -692,12 +680,10 @@ void PlanManager::_finishTransaction(bool success, bool apmGuidedItemWrite)
     case TransactionWrite:
         if (success) {
             // Write succeeded, update internal list to be current
-            if (_planType == MAV_MISSION_TYPE_MISSION) {
-                _currentMissionIndex = -1;
-                _lastCurrentIndex = -1;
-                emit currentIndexChanged(-1);
-                emit lastCurrentIndexChanged(-1);
-            }
+            _currentMissionIndex = -1;
+            _lastCurrentIndex = -1;
+            emit currentIndexChanged(-1);
+            emit lastCurrentIndexChanged(-1);
         }
         _clearAndDeleteWriteInfoSlots();
         emit sendComplete(!success /* error */);
@@ -734,17 +720,7 @@ void PlanManager::_removeAllWorker(void)
 
     WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
     if (!weakLink.expired()) {
-//        mavlink_message_t       message;
-//        SharedLinkInterfacePtr  sharedLink = weakLink.lock();
 
-//        mavlink_msg_mission_clear_all_pack_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
-//                                                qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
-//                                                sharedLink->mavlinkChannel(),
-//                                                &message,
-//                                                _vehicle->id(),
-//                                                MAV_COMP_ID_AUTOPILOT1,
-//                                                _planType);
-//        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), message);
     }
 //    _startAckTimeout(AckMissionClearAll);
 }
@@ -754,14 +730,12 @@ void PlanManager::removeAll(void)
     if (inProgress()) {
         return;
     }
-    qCDebug(PlanManagerLog) << QStringLiteral("removeAll %1").arg(_planTypeString());
+    qCDebug(PlanManagerLog) << QStringLiteral("removeAll");
     _clearAndDeleteReadInfoSlots();
-    if (_planType == MAV_MISSION_TYPE_MISSION) {
-        _currentMissionIndex = -1;
-        _lastCurrentIndex = -1;
-        emit currentIndexChanged(-1);
-        emit lastCurrentIndexChanged(-1);
-    }
+    _currentMissionIndex = -1;
+    _lastCurrentIndex = -1;
+    emit currentIndexChanged(-1);
+    emit lastCurrentIndexChanged(-1);
     _retryCount = 0;
     _setTransactionInProgress(TransactionRemoveAll);
     _removeAllWorker();
@@ -914,20 +888,20 @@ void PlanManager::_handleShenHangBankMessage(const ShenHangProtocolMessage& msg)
     }
 }
 
-QString PlanManager::_planTypeString(void)
-{
-    switch (_planType) {
-    case MAV_MISSION_TYPE_MISSION:
-        return QStringLiteral("T:Mission");
-    case MAV_MISSION_TYPE_FENCE:
-        return QStringLiteral("T:GeoFence");
-    case MAV_MISSION_TYPE_RALLY:
-        return QStringLiteral("T:Rally");
-    default:
-        qWarning() << "Unknown plan type" << _planType;
-        return QStringLiteral("T:Unknown");
-    }
-}
+//QString PlanManager::_planTypeString(void)
+//{
+//    switch (_planType) {
+//    case MAV_MISSION_TYPE_MISSION:
+//        return QStringLiteral("T:Mission");
+//    case MAV_MISSION_TYPE_FENCE:
+//        return QStringLiteral("T:GeoFence");
+//    case MAV_MISSION_TYPE_RALLY:
+//        return QStringLiteral("T:Rally");
+//    default:
+//        qWarning() << "Unknown plan type" << _planType;
+//        return QStringLiteral("T:Unknown");
+//    }
+//}
 
 void PlanManager::_queryAllBanks()
 {
@@ -1011,7 +985,7 @@ void PlanManager::_setSingleInfoSlot(WaypointInfoSlot *infoSlot)
 void PlanManager::_setTransactionInProgress(TransactionType_t type)
 {
     if (_transactionInProgress  != type) {
-        qCDebug(PlanManagerLog) << "_setTransactionInProgress" << _planTypeString() << type;
+        qCDebug(PlanManagerLog) << "_setTransactionInProgress" << type;
         _transactionInProgress = type;
         emit inProgressChanged(inProgress());
     }

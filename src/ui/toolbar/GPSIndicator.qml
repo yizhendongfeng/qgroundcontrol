@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -62,12 +62,14 @@ Item {
 
                     QGCLabel { text: qsTr("GPS Count:") }
                     QGCLabel { text: _activeVehicle ? _activeVehicle.gps.count.valueString : qsTr("N/A", "No data to display") }
-                    QGCLabel { text: qsTr("GPS Lock:") }
-                    QGCLabel { text: _activeVehicle ? _activeVehicle.gps.lock.enumStringValue : qsTr("N/A", "No data to display") }
-                    QGCLabel { text: qsTr("HDOP:") }
-                    QGCLabel { text: _activeVehicle ? _activeVehicle.gps.hdop.valueString : qsTr("--.--", "No data to display") }
-                    QGCLabel { text: qsTr("VDOP:") }
-                    QGCLabel { text: _activeVehicle ? _activeVehicle.gps.vdop.valueString : qsTr("--.--", "No data to display") }
+                    QGCLabel { text: qsTr("GNSS Status:") }
+                    QGCLabel { text: _activeVehicle ? _activeVehicle.gps.status.enumStringValue : qsTr("N/A", "No data to display") }
+                    QGCLabel { text: qsTr("Dual Antenna:") }
+                    QGCLabel { text: _activeVehicle ? _activeVehicle.gps.dualAntenna.enumStringValue : qsTr("--.--", "No data to display") }
+//                    QGCLabel { text: qsTr("HDOP:") }
+//                    QGCLabel { text: _activeVehicle ? _activeVehicle.gps.hdop.valueString : qsTr("--.--", "No data to display") }
+//                    QGCLabel { text: qsTr("VDOP:") }
+//                    QGCLabel { text: _activeVehicle ? _activeVehicle.gps.vdop.valueString : qsTr("--.--", "No data to display") }
                     QGCLabel { text: qsTr("Course Over Ground:") }
                     QGCLabel { text: _activeVehicle ? _activeVehicle.gps.courseOverGround.valueString : qsTr("--.--", "No data to display") }
                 }

@@ -236,27 +236,9 @@ void ShenHangProtocol::HandleMessage(LinkInterface* link, uint8_t channel)
     {
         GeneralStatus generalStatus;
         memcpy(&generalStatus, _shenHangProtocolMessage.payload, sizeof(generalStatus));
-        emit shenHangVehicleTypeInfo(link, _shenHangProtocolMessage.idSource, MAV_COMP_ID_AUTOPILOT1, MAV_AUTOPILOT_SHEN_HANG, generalStatus.tyObj);
+        emit shenHangVehicleTypeInfo(link, _shenHangProtocolMessage.idSource, MAV_AUTOPILOT_SHEN_HANG, generalStatus.tyObj);
     }
     emit shenHangMessageReceived(link, _shenHangProtocolMessage);
-}
-
-void ShenHangProtocol::setVersion(unsigned version)
-{
-    QList<SharedLinkInterfacePtr> sharedLinks = _linkMgr->links();
-
-    for (int i = 0; i < sharedLinks.length(); i++) {
-        mavlink_status_t* mavlinkStatus = mavlink_get_channel_status(sharedLinks[i].get()->mavlinkChannel());
-
-        // Set flags for version
-        if (version < 200) {
-            mavlinkStatus->flags |= MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
-        } else {
-            mavlinkStatus->flags &= ~MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
-        }
-    }
-
-    _current_version = version;
 }
 
 void ShenHangProtocol::setToolbox(QGCToolbox *toolbox)
@@ -265,8 +247,6 @@ void ShenHangProtocol::setToolbox(QGCToolbox *toolbox)
 
    _linkMgr =               _toolbox->linkManager();
    _multiVehicleManager =   _toolbox->multiVehicleManager();
-
-   qRegisterMetaType<mavlink_message_t>("mavlink_message_t");
 
    loadSettings();
 
@@ -452,12 +432,6 @@ int ShenHangProtocol::getSystemId()
 void ShenHangProtocol::setSystemId(int id)
 {
     systemId = id;
-}
-
-/** @return Component id of this application */
-int ShenHangProtocol::getComponentId()
-{
-    return MAV_COMP_ID_MISSIONPLANNER;
 }
 
 void ShenHangProtocol::enableVersionCheck(bool enabled)

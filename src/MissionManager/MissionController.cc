@@ -13,7 +13,7 @@
 #include "FlightPathSegment.h"
 #include "FirmwarePlugin.h"
 #include "QGCApplication.h"
-#include "SimpleMissionItem.h"
+//#include "SimpleMissionItem.h"
 #include "ItemInfoSlot.h"
 #include "JsonHelper.h"
 #include "ParameterManager.h"
@@ -525,7 +525,7 @@ bool MissionController::_loadJsonMissionFile(const QJsonObject& json, QMap<uint1
     AppSettings* appSettings = qgcApp()->toolbox()->settingsManager()->appSettings();
 
     // Get the firmware/vehicle type from the plan file
-    MAV_AUTOPILOT   planFileFirmwareType =  static_cast<MAV_AUTOPILOT>(json[_jsonKeyFirmwareType].toInt());
+//    MAV_AUTOPILOT   planFileFirmwareType =  static_cast<MAV_AUTOPILOT>(json[_jsonKeyFirmwareType].toInt());
     MAV_TYPE        planFileVehicleType =   static_cast<MAV_TYPE>     (QGCMAVLink::vehicleClassToMavType(appSettings->offlineEditingVehicleClass()->rawValue().toInt()));
     if (json.contains(_jsonKeyVehicleType)) {
         planFileVehicleType = static_cast<MAV_TYPE>(json[_jsonKeyVehicleType].toInt());
@@ -538,11 +538,6 @@ bool MissionController::_loadJsonMissionFile(const QJsonObject& json, QMap<uint1
             appSettings->offlineEditingVehicleClass()->setRawValue(QGCMAVLink::vehicleClass(planFileVehicleType));
         }
     }
-
-    // The controller vehicle always tracks the Plan file firmware/vehicle types so update it
-    _controllerVehicle->stopTrackingFirmwareVehicleTypeChanges();
-    _controllerVehicle->_offlineFirmwareTypeSettingChanged(planFileFirmwareType);
-    _controllerVehicle->_offlineVehicleTypeSettingChanged(planFileVehicleType);
 
     if (json.contains(_jsonKeyCruiseSpeed)) {
         appSettings->offlineEditingCruiseSpeed()->setRawValue(json[_jsonKeyCruiseSpeed].toDouble());
@@ -737,45 +732,45 @@ void MissionController::save(QJsonObject& json)
     json[_jsonKeyBankInfo] = rgJsonBankInfos;
 }
 
-FlightPathSegment* MissionController::_createFlightPathSegmentWorker(VisualItemPair& pair)
-{
-    // The takeoff goes straight up from ground to alt and then over to specified position at same alt. Which means
-    // that coord 1 altitude is the same as coord altitude.
-    bool                takeoffStraightUp   = pair.second->isTakeoffItem() && !_controllerVehicle->fixedWing();
+//FlightPathSegment* MissionController::_createFlightPathSegmentWorker(VisualItemPair& pair)
+//{
+//    // The takeoff goes straight up from ground to alt and then over to specified position at same alt. Which means
+//    // that coord 1 altitude is the same as coord altitude.
+//    bool                takeoffStraightUp   = pair.second->isTakeoffItem() && !_controllerVehicle->fixedWing();
 
-    QGeoCoordinate      coord1              = pair.first->exitCoordinate();
-    QGeoCoordinate      coord2              = pair.second->coordinate();
-    double              coord2AMSLAlt       = pair.second->amslEntryAlt();
-    double              coord1AMSLAlt       = takeoffStraightUp ? coord2AMSLAlt : pair.first->amslExitAlt();
+//    QGeoCoordinate      coord1              = pair.first->exitCoordinate();
+//    QGeoCoordinate      coord2              = pair.second->coordinate();
+//    double              coord2AMSLAlt       = pair.second->amslEntryAlt();
+//    double              coord1AMSLAlt       = takeoffStraightUp ? coord2AMSLAlt : pair.first->amslExitAlt();
 
-    FlightPathSegment::SegmentType segmentType = FlightPathSegment::SegmentTypeGeneric;
-    if (pair.second->isTakeoffItem()) {
-        segmentType = FlightPathSegment::SegmentTypeTakeoff;
-    } else if (pair.second->isLandCommand()) {
-        segmentType = FlightPathSegment::SegmentTypeLand;
-    }
+//    FlightPathSegment::SegmentType segmentType = FlightPathSegment::SegmentTypeGeneric;
+//    if (pair.second->isTakeoffItem()) {
+//        segmentType = FlightPathSegment::SegmentTypeTakeoff;
+//    } else if (pair.second->isLandCommand()) {
+//        segmentType = FlightPathSegment::SegmentTypeLand;
+//    }
 
-    FlightPathSegment* segment = new FlightPathSegment(segmentType, coord1, coord1AMSLAlt, coord2, coord2AMSLAlt, !_flyView /* queryTerrainData */,  this);
+//    FlightPathSegment* segment = new FlightPathSegment(segmentType, coord1, coord1AMSLAlt, coord2, coord2AMSLAlt, !_flyView /* queryTerrainData */,  this);
 
-    if (takeoffStraightUp) {
-//        connect(pair.second, &VisualMissionItem::amslEntryAltChanged, segment, &FlightPathSegment::setCoord1AMSLAlt);
-    } else {
-//        connect(pair.first, &VisualMissionItem::amslExitAltChanged, segment, &FlightPathSegment::setCoord1AMSLAlt);
-    }
-//    connect(pair.first,  &VisualMissionItem::exitCoordinateChanged, segment,    &FlightPathSegment::setCoordinate1);
-//    connect(pair.second, &VisualMissionItem::coordinateChanged,     segment,    &FlightPathSegment::setCoordinate2);
-//    connect(pair.second, &VisualMissionItem::amslEntryAltChanged,   segment,    &FlightPathSegment::setCoord2AMSLAlt);
+//    if (takeoffStraightUp) {
+////        connect(pair.second, &VisualMissionItem::amslEntryAltChanged, segment, &FlightPathSegment::setCoord1AMSLAlt);
+//    } else {
+////        connect(pair.first, &VisualMissionItem::amslExitAltChanged, segment, &FlightPathSegment::setCoord1AMSLAlt);
+//    }
+////    connect(pair.first,  &VisualMissionItem::exitCoordinateChanged, segment,    &FlightPathSegment::setCoordinate1);
+////    connect(pair.second, &VisualMissionItem::coordinateChanged,     segment,    &FlightPathSegment::setCoordinate2);
+////    connect(pair.second, &VisualMissionItem::amslEntryAltChanged,   segment,    &FlightPathSegment::setCoord2AMSLAlt);
 
-//    connect(pair.second, &VisualMissionItem::coordinateChanged,         this,       &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
+////    connect(pair.second, &VisualMissionItem::coordinateChanged,         this,       &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
 
-    connect(segment,    &FlightPathSegment::totalDistanceChanged,       this,       &MissionController::recalcTerrainProfile,             Qt::QueuedConnection);
-    connect(segment,    &FlightPathSegment::coord1AMSLAltChanged,       this,       &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
-    connect(segment,    &FlightPathSegment::coord2AMSLAltChanged,       this,       &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
-    connect(segment,    &FlightPathSegment::amslTerrainHeightsChanged,  this,       &MissionController::recalcTerrainProfile,             Qt::QueuedConnection);
-    connect(segment,    &FlightPathSegment::terrainCollisionChanged,    this,       &MissionController::recalcTerrainProfile,             Qt::QueuedConnection);
+//    connect(segment,    &FlightPathSegment::totalDistanceChanged,       this,       &MissionController::recalcTerrainProfile,             Qt::QueuedConnection);
+//    connect(segment,    &FlightPathSegment::coord1AMSLAltChanged,       this,       &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
+//    connect(segment,    &FlightPathSegment::coord2AMSLAltChanged,       this,       &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
+//    connect(segment,    &FlightPathSegment::amslTerrainHeightsChanged,  this,       &MissionController::recalcTerrainProfile,             Qt::QueuedConnection);
+//    connect(segment,    &FlightPathSegment::terrainCollisionChanged,    this,       &MissionController::recalcTerrainProfile,             Qt::QueuedConnection);
 
-    return segment;
-}
+//    return segment;
+//}
 
 FlightPathSegment* MissionController::_addFlightPathSegment(FlightPathSegmentHashTable& prevItemPairHashTable, VisualItemPair& pair)
 {
@@ -785,7 +780,7 @@ FlightPathSegment* MissionController::_addFlightPathSegment(FlightPathSegmentHas
         // Pair already exists and connected, just re-use
         _flightPathSegmentHashTable[pair] = segment = prevItemPairHashTable.take(pair);
     } else {
-        segment = _createFlightPathSegmentWorker(pair);
+//        segment = _createFlightPathSegmentWorker(pair);
         _flightPathSegmentHashTable[pair] = segment;
     }
 
@@ -1155,21 +1150,6 @@ void MissionController::_managerRemoveAllComplete(bool error)
     }
 }
 
-bool MissionController::_isROIBeginItem(SimpleMissionItem* simpleItem)
-{
-    return simpleItem->mavCommand() == MAV_CMD_DO_SET_ROI_LOCATION ||
-            simpleItem->mavCommand() == MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET ||
-            (simpleItem->mavCommand() == MAV_CMD_DO_SET_ROI &&
-             static_cast<int>(simpleItem->missionItem().param1()) == MAV_ROI_LOCATION);
-}
-
-bool MissionController::_isROICancelItem(SimpleMissionItem* simpleItem)
-{
-    return simpleItem->mavCommand() == MAV_CMD_DO_SET_ROI_NONE ||
-            (simpleItem->mavCommand() == MAV_CMD_DO_SET_ROI &&
-             static_cast<int>(simpleItem->missionItem().param1()) == MAV_ROI_NONE);
-}
-
 void MissionController::_updateTimeout()
 {
     QGeoCoordinate firstCoordinate;
@@ -1243,16 +1223,12 @@ QString MissionController::surveyComplexItemName(void) const
 
 void MissionController::_allItemsRemoved(void)
 {
-    // When there are no mission items we track changes to firmware/vehicle type. This allows a vehicle connection
-    // to adjust these items.
-    _controllerVehicle->trackFirmwareVehicleTypeChanges();
+
 }
 
 void MissionController::_firstItemAdded(void)
 {
-    // As soon as the first item is added we lock the firmware/vehicle type to current values. So if you then connect a vehicle
-    // it will not affect these values.
-    _controllerVehicle->stopTrackingFirmwareVehicleTypeChanges();
+
 }
 
 MissionController::SendToVehiclePreCheckState MissionController::sendToVehiclePreCheck(void)

@@ -18,15 +18,29 @@
 #include "VehicleComponent.h"
 #include "AutoPilotPlugin.h"
 #include "GeoFenceManager.h"
-#include "RallyPointManager.h"
 
 #include <QList>
 #include <QString>
 #include <QVariantList>
 
 class Vehicle;
-class QGCCameraControl;
-class QGCCameraManager;
+//class QGCCameraControl;
+//class QGCCameraManager;
+
+
+
+typedef enum MAV_MODE_FLAG
+{
+   MAV_MODE_FLAG_CUSTOM_MODE_ENABLED=1, /* 0b00000001 Reserved for future use. | */
+   MAV_MODE_FLAG_TEST_ENABLED=2, /* 0b00000010 system has a test mode enabled. This flag is intended for temporary system tests and should not be used for stable implementations. | */
+   MAV_MODE_FLAG_AUTO_ENABLED=4, /* 0b00000100 autonomous mode enabled, system finds its own goal positions. Guided flag can be set or not, depends on the actual implementation. | */
+   MAV_MODE_FLAG_GUIDED_ENABLED=8, /* 0b00001000 guided mode enabled, system flies waypoints / mission items. | */
+   MAV_MODE_FLAG_STABILIZE_ENABLED=16, /* 0b00010000 system stabilizes electronically its attitude (and optionally position). It needs however further control inputs to move around. | */
+   MAV_MODE_FLAG_HIL_ENABLED=32, /* 0b00100000 hardware in the loop simulation. All motors / actuators are blocked, but internal software is full operational. | */
+   MAV_MODE_FLAG_MANUAL_INPUT_ENABLED=64, /* 0b01000000 remote control input is enabled. | */
+   MAV_MODE_FLAG_SAFETY_ARMED=128, /* 0b10000000 MAV safety set to armed. Motors are enabled / running / can start. Ready to fly. Additional note: this flag is to be ignore when sent in the command MAV_CMD_DO_SET_MODE and MAV_CMD_COMPONENT_ARM_DISARM shall be used instead. The flag can still be used to report the armed state. | */
+   MAV_MODE_FLAG_ENUM_END=129, /*  | */
+} MAV_MODE_FLAG;
 
 /// This is the base class for Firmware specific plugins
 ///
@@ -182,25 +196,6 @@ public:
     /// (CompassMot). Default is true.
     virtual bool supportsMotorInterference(void);
 
-    /// Called before any mavlink message is processed by Vehicle such that the firmwre plugin
-    /// can adjust any message characteristics. This is handy to adjust or differences in mavlink
-    /// spec implementations such that the base code can remain mavlink generic.
-    ///     @param vehicle Vehicle message came from
-    ///     @param message[in,out] Mavlink message to adjust if needed.
-    /// @return false: skip message, true: process message
-    virtual bool adjustIncomingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message);
-
-    /// Called before any mavlink message is sent to the Vehicle so plugin can adjust any message characteristics.
-    /// This is handy to adjust or differences in mavlink spec implementations such that the base code can remain
-    /// mavlink generic.
-    ///
-    /// This method must be thread safe.
-    ///
-    ///     @param vehicle Vehicle message came from
-    ///     @param outgoingLink Link that messae is going out on
-    ///     @param message[in,out] Mavlink message to adjust if needed.
-    virtual void adjustOutgoingMavlinkMessageThreadSafe(Vehicle* vehicle, LinkInterface* outgoingLink, mavlink_message_t* message);
-
     /// Determines how to handle the first item of the mission item list. Internally to QGC the first item
     /// is always the home position.
     /// @return
@@ -231,7 +226,7 @@ public:
 
     virtual FactMetaData* _getMetaDataForFactByIndexes(QObject* /*parameterMetaData*/, uint8_t idGroup, uint16_t addrOffset, MAV_TYPE /*vehicleType*/) { return nullptr; }
     /// List of supported mission commands. Empty list for all commands supported.
-    virtual QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass);
+//    virtual QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass);
 
     /// Returns the name of the mission command json override file for the specified vehicle type.
     ///     @param vehicleClass Vehicle class to return file for, VehicleClassGeneric is a request for overrides for all vehicle types
@@ -282,10 +277,7 @@ public:
     virtual const QVariantList& cameraList(const Vehicle* vehicle);
 
     /// Creates vehicle camera manager.
-    virtual QGCCameraManager* createCameraManager(Vehicle *vehicle);
-
-    /// Camera control.
-    virtual QGCCameraControl* createCameraControl(const mavlink_camera_information_t* info, Vehicle* vehicle, int compID, QObject* parent = nullptr);
+//    virtual QGCCameraManager* createCameraManager(Vehicle *vehicle);
 
     /// Returns a pointer to a dictionary of firmware-specific FactGroups
     virtual QMap<QString, FactGroup*>* factGroups(void);

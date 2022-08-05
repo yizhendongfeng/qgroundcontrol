@@ -241,8 +241,8 @@ FlightMap {
 
         Connections {
             target:                 _activeVehicle ? _activeVehicle.trajectoryPoints : null
-            function onPointAdded()         { trajectoryPolyline.addCoordinate(coordinate) }
-            function onUpdateLastPoint()    { trajectoryPolyline.replaceCoordinate(trajectoryPolyline.pathLength() - 1, coordinate) }
+            function onPointAdded(coordinate)         { trajectoryPolyline.addCoordinate(coordinate) }
+            function onUpdateLastPoint(coordinate)    { trajectoryPolyline.replaceCoordinate(trajectoryPolyline.pathLength() - 1, coordinate) }
             function onPointsCleared()      { trajectoryPolyline.path = [] }
         }
     }
@@ -545,16 +545,16 @@ FlightMap {
         }
     }
 
-    MapScale {
-        id:                 mapScale
-        anchors.margins:    _toolsMargin
-        anchors.left:       parent.left
-        anchors.top:        parent.top
-        mapControl:         _root
-        buttonsOnLeft:      false
-        visible:            !ScreenTools.isTinyScreen && QGroundControl.corePlugin.options.flyView.showMapScale && mapControl.pipState.state === mapControl.pipState.windowState
+//    MapScale {
+//        id:                 mapScale
+//        anchors.margins:    _toolsMargin
+//        anchors.right:      guidedAltSlider.visible ? guidedAltSlider.left : parent.right
+//        anchors.bottom:     parent.bottom
+//        mapControl:         _root
+//        buttonsOnLeft:      true
+//        visible:            true//!ScreenTools.isTinyScreen && QGroundControl.corePlugin.options.flyView.showMapScale && mapControl.pipState.state === mapControl.pipState.windowState
 
-        property real centerInset: visible ? parent.height - y : 0
-    }
+//        property real centerInset: visible ? parent.height - y : 0
+//    }
 
 }

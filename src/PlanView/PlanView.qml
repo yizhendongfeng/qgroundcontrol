@@ -24,7 +24,6 @@ import QGroundControl.FactSystem        1.0
 import QGroundControl.FactControls      1.0
 import QGroundControl.Palette           1.0
 import QGroundControl.Controllers       1.0
-import QGroundControl.ShapeFileHelper   1.0
 
 Item {
     id: _root
@@ -717,39 +716,13 @@ Item {
                         alternateIconSource:    "/qmlimages/MapSyncChanged.svg"
                         dropPanelComponent:     syncDropPanel
                     },
-//                    ToolStripAction {
-//                        text:       qsTr("Takeoff")
-//                        iconSource: "/res/takeoff.svg"
-//                        enabled:    _missionController.isInsertTakeoffValid
-//                        visible:    toolStrip._isMissionLayer && !_planMasterController.controllerVehicle.rover
-//                        onTriggered: {
-//                            toolStrip.allAddClickBoolsOff()
-//                            insertTakeItemAfterCurrent()
-//                        }
-//                    },
                     ToolStripAction {
                         id:                 addWaypointRallyPointAction
-                        text:               _editingLayer == _layerRallyPoints ? qsTr("Rally Point") : qsTr("Waypoint")
+                        text:               qsTr("Waypoint")
                         iconSource:         "/qmlimages/MapAddMission.svg"
-//                        enabled:            toolStrip._isRallyLayer ? true : _missionController.flyThroughCommandsAllowed
-//                        visible:            toolStrip._isRallyLayer || toolStrip._isMissionLayer
+                        enabled:            true
+                        visible:            toolStrip._isMissionLayer
                         checkable:          true
-                    },
-                    ToolStripAction {
-                        text:               _missionController.isROIActive ? qsTr("Cancel ROI") : qsTr("ROI")
-                        iconSource:         "/qmlimages/MapAddMission.svg"
-                        enabled:            !_missionController.onlyInsertTakeoffValid
-                        visible:            toolStrip._isMissionLayer && _planMasterController.controllerVehicle.roiModeSupported
-                        checkable:          !_missionController.isROIActive
-                        onCheckedChanged:   _addROIOnClick = checked
-                        onTriggered: {
-                            if (_missionController.isROIActive) {
-                                toolStrip.allAddClickBoolsOff()
-                                insertCancelROIAfterCurrent()
-                            }
-                        }
-                        property bool myAddROIOnClick: _addROIOnClick
-                        onMyAddROIOnClickChanged: checked = _addROIOnClick
                     },
                     ToolStripAction {
                         text:               _singleComplexItem ? _missionController.complexMissionItemNames[0] : qsTr("Pattern")
@@ -765,16 +738,6 @@ Item {
                         }
                     },
                     ToolStripAction {
-                        text:       _planMasterController.controllerVehicle.multiRotor ? qsTr("Return") : qsTr("Land")
-                        iconSource: "/res/rtl.svg"
-                        enabled:    _missionController.isInsertLandValid
-                        visible:    toolStrip._isMissionLayer
-                        onTriggered: {
-                            toolStrip.allAddClickBoolsOff()
-                            insertLandItemAfterCurrent()
-                        }
-                    },
-                    ToolStripAction {
                         text:               qsTr("Center")
                         iconSource:         "/qmlimages/MapCenter.svg"
                         enabled:            true
@@ -786,6 +749,7 @@ Item {
                         iconSource:         "/qmlimages/Done.svg"
                         enabled:            true
                         visible:            true
+                        checkable:          false
                         dropPanelComponent: null
                         onTriggered: {
                             if (_planMasterController.dirty) {
@@ -859,14 +823,12 @@ Item {
                     id:         layerTabBar
                     Layout.fillWidth:   true
 
-                    visible:    (!planControlColapsed || !_airspaceEnabled) && QGroundControl.corePlugin.options.enablePlanViewSelector
                     Component.onCompleted: currentIndex = 0
                     QGCTabButton {
                         text:       qsTr("Mission")
                     }
                     QGCTabButton {
                         text:       qsTr("Fence")
-                        enabled:    _geoFenceController.supported
                     }
                 }
                 //-------------------------------------------------------
@@ -876,286 +838,284 @@ Item {
                     height: 1
                     color: _splitLineColor
                 }
-                // 航线名
-                TextField {
-                    id: textFieldPlanName
-                    property string fileName: _currentPlanFileName
-                    implicitHeight: 30
-                    implicitWidth: rightControls.width -  20
-                    Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
-                    text: fileName
-                    color: activeFocus ? qgcPal.textFieldText : qgcPal.text
-                    font.pointSize: ScreenTools.defaultFontPointSize * 1.2
-                    selectedTextColor: qgcPal.text
-                    antialiasing:       true
-                    onActiveFocusChanged: selectAllIfActiveFocus()
-                    selectByMouse: true
-                    background: Rectangle {
-                        radius: 2
-                        color: textFieldPlanName.activeFocus ? qgcPal.textField : "transparent"
-                        border.color: color
-                    }
 
-                    onFileNameChanged: {
-                        text = fileName
-                    }
-
-                    onEditingFinished: {
-                        focus = false
-                        if (_currentPlanFileName !== text && text != "") {
-                            var previousPlanFileName = _currentPlanFileName
-                            _currentPlanFileName = text
-                            if (!_planMasterController.renameCurrentFile(text)) {
-                                _currentPlanFileName = previousPlanFileName
-                                text = previousPlanFileName
-                            }
-                        } else if (text == "") {
-                            text = fileName
-                        }
-                    }
-
-                    function selectAllIfActiveFocus() {
-                        if (activeFocus) {
-                            selectAll()
-                        }
-                    }
-                }
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    color: _splitLineColor
-                }
-
-                Item {
-                    id: missionInfo
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 80
-                    anchors.margins: _margin
-                    GridLayout {
-                        id: gridLayoutMissionInfo
-                        columns: 2
-                        rowSpacing: 0
-                        columnSpacing: _margin
-                        Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
-                        anchors.fill: parent
-                        anchors.margins: _margin
-
-                        QGCLabel { text: qsTr("BankCount"); font.pointSize: ScreenTools.defaultFontPointSize}
-                        QGCLabel { text: qsTr("TotalDistance"); font.pointSize: ScreenTools.defaultFontPointSize}
-                        QGCLabel {text: "12"; font.pointSize: ScreenTools.defaultFontPointSize + 4}
-                        QGCLabel {text: "12345"; font.pointSize: ScreenTools.defaultFontPointSize + 4}
-
-                        Item { width: 1; height: 5 }
-                        Item { width: 1; height: 5 }
-
-                        QGCLabel { text: qsTr("EstimatedFlyTime"); font.pointSize: ScreenTools.defaultFontPointSize}
-                        QGCLabel { text: qsTr("WaypointCount"); font.pointSize: ScreenTools.defaultFontPointSize}
-                        QGCLabel {text: "00:23:45"; font.pointSize: ScreenTools.defaultFontPointSize + 4}
-                        QGCLabel {text: "12345"; font.pointSize: ScreenTools.defaultFontPointSize + 4}
-                    }
-                }
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    color: _splitLineColor
-                }
-                // 航线设置与航点设置切换
-                QGCTabBar {
-                    id: tabBarMissionWaypoint
-                    Layout.alignment: Qt.AlignHCenter
-                    contentHeight: 30
-                    Layout.preferredWidth: parent.width * 0.9
-                    Component.onCompleted: currentIndex = 0
-                    QGCTabButton {
-                        text:       qsTr("Banks")
-                    }
-                    QGCTabButton {
-                        text:       qsTr("Waypoint")
-                    }
-                }
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    color: _splitLineColor
-                }
-
-                // 航线与航点界面切换
                 StackLayout {
-                    currentIndex: tabBarMissionWaypoint.currentIndex
                     Layout.fillWidth:   true
                     Layout.fillHeight:  true
-
-                    Item {
-                        id: tabMissionSettingEditor
-                        Layout.fillHeight: true
-                        Layout.fillWidth: true
-
-                        Column {
-                            id: columnBankInfo
+                    currentIndex: layerTabBar.currentIndex
+                    Item {  // mission
+                        Layout.fillWidth:   true
+                        Layout.fillHeight:  true
+                        ColumnLayout {
                             anchors.fill: parent
-                            Item {
-                                id: bankTools
-                                width: parent.width
-                                height: 40
-                                QGCLabel {
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: 10
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: "bank count: " + listViewBank.count
+                            // 航线名
+                            TextField {
+                                id: textFieldPlanName
+                                property string fileName: _currentPlanFileName
+                                implicitHeight: 30
+                                implicitWidth: rightControls.width -  20
+                                Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
+                                text: fileName
+                                color: activeFocus ? qgcPal.textFieldText : qgcPal.text
+                                font.pointSize: ScreenTools.defaultFontPointSize * 1.2
+                                selectedTextColor: qgcPal.text
+                                antialiasing:       true
+                                onActiveFocusChanged: selectAllIfActiveFocus()
+                                selectByMouse: true
+                                background: Rectangle {
+                                    radius: 2
+                                    color: textFieldPlanName.activeFocus ? qgcPal.textField : "transparent"
+                                    border.color: color
                                 }
 
-                                QGCIconButton {
-                                    id: buttonAddBank
-                                    anchors.right: parent.right
-                                    anchors.rightMargin: _margin
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: parent.height * 2 / 3
-                                    iconSource: "/qmlimages/NewFile.svg"
-                                    onClicked: {
-                                        if (_itemCurrentBank && _itemCurrentBank.itemCurrentWaypoint)
-                                            _itemCurrentBank.itemCurrentWaypoint.isCurrentWaypoint = false
-                                        _itemCurrentBank = _missionController.insertNewBank()
-                                        listViewBank.currentIndex = _itemCurrentBank.idBank
-                                        console.log("create new bank ", _itemCurrentBank)
+                                onFileNameChanged: {
+                                    text = fileName
+                                }
+
+                                onEditingFinished: {
+                                    focus = false
+                                    if (_currentPlanFileName !== text && text != "") {
+                                        var previousPlanFileName = _currentPlanFileName
+                                        _currentPlanFileName = text
+                                        if (!_planMasterController.renameCurrentFile(text)) {
+                                            _currentPlanFileName = previousPlanFileName
+                                            text = previousPlanFileName
+                                        }
+                                    } else if (text == "") {
+                                        text = fileName
+                                    }
+                                }
+
+                                function selectAllIfActiveFocus() {
+                                    if (activeFocus) {
+                                        selectAll()
                                     }
                                 }
                             }
                             Rectangle {
-                                width: parent.width
+                                Layout.fillWidth: true
                                 height: 1
                                 color: _splitLineColor
                             }
 
-                            QGCListView {
-                                id: listViewBank
-                                width: parent.width
-                                height: Math.min(contentHeight, columnBankInfo.height - listViewBank.y)
-                                Layout.leftMargin: 10
-                                spacing: 5
-                                focus: true
-                                model: _missionController.itemsBank
-                                delegate: componentBankInfo
-                                onCurrentIndexChanged: {
-                                    if (_itemCurrentBank && _itemCurrentBank.itemCurrentWaypoint)
-                                        _itemCurrentBank.itemCurrentWaypoint.isCurrentWaypoint = false
-                                    _itemCurrentBank = listViewBank.currentIndex < 0 ?
-                                                null : _missionController.itemsBank.get(listViewBank.currentIndex)
+                            Item {
+                                id: missionInfo
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 80
+                                anchors.margins: _margin
+                                GridLayout {
+                                    id: gridLayoutMissionInfo
+                                    columns: 2
+                                    rowSpacing: 0
+                                    columnSpacing: _margin
+                                    Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
+                                    anchors.fill: parent
+                                    anchors.margins: _margin
+
+                                    QGCLabel { text: qsTr("BankCount"); font.pointSize: ScreenTools.defaultFontPointSize}
+                                    QGCLabel { text: qsTr("TotalDistance"); font.pointSize: ScreenTools.defaultFontPointSize}
+                                    QGCLabel {text: "12"; font.pointSize: ScreenTools.defaultFontPointSize + 4}
+                                    QGCLabel {text: "12345"; font.pointSize: ScreenTools.defaultFontPointSize + 4}
+
+                                    Item { width: 1; height: 5 }
+                                    Item { width: 1; height: 5 }
+
+                                    QGCLabel { text: qsTr("EstimatedFlyTime"); font.pointSize: ScreenTools.defaultFontPointSize}
+                                    QGCLabel { text: qsTr("WaypointCount"); font.pointSize: ScreenTools.defaultFontPointSize}
+                                    QGCLabel {text: "00:23:45"; font.pointSize: ScreenTools.defaultFontPointSize + 4}
+                                    QGCLabel {text: "12345"; font.pointSize: ScreenTools.defaultFontPointSize + 4}
                                 }
-                                Component.onCompleted: {
-                                    console.log("listViewBank currentIndex:", currentIndex, "count:" <<  _missionController.itemsBank.count)
-                                    currentIndex = -1
+                            }
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 1
+                                color: _splitLineColor
+                            }
+                            // 航线设置与航点设置切换
+                            QGCTabBar {
+                                id: tabBarMissionWaypoint
+                                Layout.alignment: Qt.AlignHCenter
+                                contentHeight: 30
+                                Layout.preferredWidth: parent.width * 0.9
+                                Component.onCompleted: currentIndex = 0
+                                QGCTabButton {
+                                    text:       qsTr("Banks")
                                 }
+                                QGCTabButton {
+                                    text:       qsTr("Waypoint")
+                                }
+                            }
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 1
+                                color: _splitLineColor
+                            }
+
+                            // 航线与航点界面切换
+                            StackLayout {
+                                currentIndex: tabBarMissionWaypoint.currentIndex
+                                Layout.fillWidth:   true
+                                Layout.fillHeight:  true
+
+                                Item {
+                                    id: tabMissionSettingEditor
+                                    Layout.fillHeight: true
+                                    Layout.fillWidth: true
+
+                                    Column {
+                                        id: columnBankInfo
+                                        anchors.fill: parent
+                                        Item {
+                                            id: bankTools
+                                            width: parent.width
+                                            height: 40
+                                            QGCLabel {
+                                                anchors.left: parent.left
+                                                anchors.leftMargin: 10
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                text: "bank count: " + listViewBank.count
+                                            }
+
+                                            QGCIconButton {
+                                                id: buttonAddBank
+                                                anchors.right: parent.right
+                                                anchors.rightMargin: _margin
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                width: parent.height * 2 / 3
+                                                iconSource: "/qmlimages/NewFile.svg"
+                                                onClicked: {
+                                                    if (_itemCurrentBank && _itemCurrentBank.itemCurrentWaypoint)
+                                                        _itemCurrentBank.itemCurrentWaypoint.isCurrentWaypoint = false
+                                                    _itemCurrentBank = _missionController.insertNewBank()
+                                                    listViewBank.currentIndex = _itemCurrentBank.idBank
+                                                    console.log("create new bank ", _itemCurrentBank)
+                                                }
+                                            }
+                                        }
+                                        Rectangle {
+                                            width: parent.width
+                                            height: 1
+                                            color: _splitLineColor
+                                        }
+
+                                        QGCListView {
+                                            id: listViewBank
+                                            width: parent.width
+                                            height: Math.min(contentHeight, columnBankInfo.height - listViewBank.y)
+                                            Layout.leftMargin: 10
+                                            spacing: 5
+                                            focus: true
+                                            model: _missionController.itemsBank
+                                            delegate: componentBankInfo
+                                            onCurrentIndexChanged: {
+                                                if (_itemCurrentBank && _itemCurrentBank.itemCurrentWaypoint)
+                                                    _itemCurrentBank.itemCurrentWaypoint.isCurrentWaypoint = false
+                                                _itemCurrentBank = listViewBank.currentIndex < 0 ?
+                                                            null : _missionController.itemsBank.get(listViewBank.currentIndex)
+                                            }
+                                            Component.onCompleted: {
+                                                console.log("listViewBank currentIndex:", currentIndex, "count:" <<  _missionController.itemsBank.count)
+                                                currentIndex = -1
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item {
+                                    id: tabWaypointEditor
+                                    Layout.fillHeight: true
+                                    Layout.fillWidth: true
+                                    Layout.margins: ScreenTools.defaultFontPixelHeight * 0.25
+                                    property int indexCurrentWaypoint: _itemCurrentBank ? _itemCurrentBank.indexCurrentWaypoint : -1
+                                    Column {
+                                        id: columnWaypointInfo
+                                        anchors.fill: parent
+                                        Item {
+                                            id:    waypointChange
+                                            width: parent.width
+                                            height: 40
+
+                                            QGCIconButton {
+                                                id: buttonLeftArrow
+                                                anchors.left: parent.left
+                                                anchors.leftMargin: 20
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                width:                  _iconSize
+                                                height:                 width
+                                                sourceSize.height:      _iconSize
+                                                iconSource:            "qrc:/InstrumentValueIcons/cheveron-left.svg"
+                                                enabled: tabWaypointEditor.indexCurrentWaypoint > 0
+                                                onClicked: {
+                                                    _itemCurrentBank.setItemCurrentWaypoint(_itemCurrentBank.indexCurrentWaypoint - 1)
+                                                }
+                                            }
+
+                                            QGCLabel {
+                                                id: waypointIndexLabel
+                                                anchors.centerIn: parent
+                                                text: "bank " + listViewBank.currentIndex +"  Waypoint " + tabWaypointEditor.indexCurrentWaypoint
+                                            }
+
+                                            QGCIconButton {
+                                                id: buttonRightArrow
+                                                anchors.right: parent.right
+                                                anchors.rightMargin: 20
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                width:                  _iconSize
+                                                height:                 width
+                                                iconSource:            "qrc:/InstrumentValueIcons/cheveron-right.svg"
+                                                sourceSize.height:      _iconSize
+                                                enabled: _itemCurrentBank ? tabWaypointEditor.indexCurrentWaypoint < _itemCurrentBank.nWp - 1 : false
+                                                onClicked: {
+                                                    _itemCurrentBank.setItemCurrentWaypoint(_itemCurrentBank.indexCurrentWaypoint + 1)
+                                                }
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width: parent.width
+                                            height: 1
+                                            color: _splitLineColor
+                                        }
+
+                                        QGCListView {
+                                            id: listViewInfoSlot
+                                            property int indexCurrentInfoSlot: _itemCurrentWaypoint ? _itemCurrentWaypoint.indexCurrentInfoSlot : -1
+                                            width: parent.width
+                                            height: Math.min(contentHeight, columnWaypointInfo.height - listViewInfoSlot.y)
+                                            Layout.leftMargin: 10
+                                            spacing: 5
+                                            focus: true
+                                            model: _itemCurrentWaypoint ? _itemCurrentWaypoint.itemsInfoSlot : null
+                                            currentIndex: indexCurrentInfoSlot
+                                            delegate: componentWaypointInfo
+                                            onIndexCurrentInfoSlotChanged: {
+                                                currentIndex = indexCurrentInfoSlot
+                                                console.log("listViewInfoSlot onCurrentIndexChanged", currentIndex, _itemCurrentWaypoint ? _itemCurrentWaypoint.indexCurrentInfoSlot : -1)
+                                            }
+                                        }
+                                    }
+                                }
+
                             }
                         }
                     }
 
                     Item {
-                        id: tabWaypointEditor
-                        Layout.fillHeight: true
-                        Layout.fillWidth: true
-                        Layout.margins: ScreenTools.defaultFontPixelHeight * 0.25
-                        property int indexCurrentWaypoint: _itemCurrentBank ? _itemCurrentBank.indexCurrentWaypoint : -1
-                        Column {
-                            id: columnWaypointInfo
-                            anchors.fill: parent
-                            Item {
-                                id:    waypointChange
-                                width: parent.width
-                                height: 40
-
-                                QGCIconButton {
-                                    id: buttonLeftArrow
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: 20
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width:                  _iconSize
-                                    height:                 width
-                                    sourceSize.height:      _iconSize
-                                    iconSource:            "qrc:/InstrumentValueIcons/cheveron-left.svg"
-                                    enabled: tabWaypointEditor.indexCurrentWaypoint > 0
-                                    onClicked: {
-                                        _itemCurrentBank.setItemCurrentWaypoint(_itemCurrentBank.indexCurrentWaypoint - 1)
-                                    }
-                                }
-
-                                QGCLabel {
-                                    id: waypointIndexLabel
-                                    anchors.centerIn: parent
-                                    text: "bank " + listViewBank.currentIndex +"  Waypoint " + tabWaypointEditor.indexCurrentWaypoint
-                                }
-
-                                QGCIconButton {
-                                    id: buttonRightArrow
-                                    anchors.right: parent.right
-                                    anchors.rightMargin: 20
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width:                  _iconSize
-                                    height:                 width
-                                    iconSource:            "qrc:/InstrumentValueIcons/cheveron-right.svg"
-                                    sourceSize.height:      _iconSize
-                                    enabled: _itemCurrentBank ? tabWaypointEditor.indexCurrentWaypoint < _itemCurrentBank.nWp - 1 : false
-                                    onClicked: {
-                                        _itemCurrentBank.setItemCurrentWaypoint(_itemCurrentBank.indexCurrentWaypoint + 1)
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                width: parent.width
-                                height: 1
-                                color: _splitLineColor
-                            }
-
-                            QGCListView {
-                                id: listViewInfoSlot
-                                property int indexCurrentInfoSlot: _itemCurrentWaypoint ? _itemCurrentWaypoint.indexCurrentInfoSlot : -1
-                                width: parent.width
-                                height: Math.min(contentHeight, columnWaypointInfo.height - listViewInfoSlot.y)
-                                Layout.leftMargin: 10
-                                spacing: 5
-                                focus: true
-                                model: _itemCurrentWaypoint ? _itemCurrentWaypoint.itemsInfoSlot : null
-                                currentIndex: indexCurrentInfoSlot
-                                delegate: componentWaypointInfo
-                                onIndexCurrentInfoSlotChanged: {
-                                    currentIndex = indexCurrentInfoSlot
-                                    console.log("listViewInfoSlot onCurrentIndexChanged", currentIndex, _itemCurrentWaypoint ? _itemCurrentWaypoint.indexCurrentInfoSlot : -1)
-                                }
-                            }
+                        Layout.fillWidth:   true
+                        Layout.fillHeight:  true
+                        GeoFenceEditor { // fence
+                            anchors.top:    parent.top
+                            anchors.left:   parent.left
+                            anchors.right:  parent.right
+                            anchors.margins:        ScreenTools.defaultFontPixelWidth
+                            myGeoFenceController:   _geoFenceController
+                            flightMap:              editorMap
+                            visible:                _editingLayer == _layerGeoFence
                         }
                     }
-//                    Item {
-//                        id: tabWaypointSettingEditor
-//                        //-------------------------------------------------------
-//                        // Mission Item Editor
-//                        MissionItemEditor {
-//                            id:             infoslotEditor
-//                            anchors.left:           parent.left
-//                            anchors.right:          parent.right
-//                            anchors.top:            rightControls.bottom
-//                            anchors.topMargin:      ScreenTools.defaultFontPixelHeight * 0.25
-//                            anchors.bottom:         parent.bottom
-//                            anchors.bottomMargin:   ScreenTools.defaultFontPixelHeight * 0.25
-
-//                            map:            editorMap
-//                            masterController:  _planMasterController
-//            //                missionItem:    _missionController.currentItem
-//                            width:          parent.width
-//                            readOnly:       false
-//                            onClicked:      _missionController.setCurrentPlanViewSeqNum(object.sequenceNumber, false)
-//                            onRemove: {
-//                                var removeVIIndex = index
-//                                _missionController.removeVisualItem(removeVIIndex)
-//                                if (removeVIIndex >= _missionController.visualItems.count) {
-//                                    removeVIIndex--
-//                                }
-//                            }
-//                            onSelectNextNotReadyItem:   selectNextNotReady()
-//                        }
-//                    }
                 }
             }
-
 
 
 
@@ -1198,17 +1158,6 @@ Item {
 //                    }
 //                }
 //            }
-            // GeoFence Editor
-            GeoFenceEditor {
-                anchors.top:            rightControls.bottom
-                anchors.topMargin:      ScreenTools.defaultFontPixelHeight * 0.25
-                anchors.bottom:         parent.bottom
-                anchors.left:           parent.left
-                anchors.right:          parent.right
-                myGeoFenceController:   _geoFenceController
-                flightMap:              editorMap
-                visible:                _editingLayer == _layerGeoFence
-            }
         }
 
         MapScale {

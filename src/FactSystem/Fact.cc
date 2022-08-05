@@ -35,10 +35,9 @@ Fact::Fact(QObject* parent)
     _init();
 }
 
-Fact::Fact(int componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t type, QString name, QObject* parent)
+Fact::Fact(uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t type, QString name, QObject* parent)
     : QObject                   (parent)
     , _name                     (name)
-    , _componentId              (componentId)
     , _groupId                  (groupId)
     , _addrOffset               (addrOffset)
     , _rawValue                 (0)
@@ -55,10 +54,9 @@ Fact::Fact(int componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::
     _init();
 }
 
-Fact::Fact(int componentId, QString name, FactMetaData::ValueType_t type, QObject* parent)
+Fact::Fact(QString name, FactMetaData::ValueType_t type, QObject* parent)
     : QObject                   (parent)
     , _name                     (name)
-    , _componentId              (componentId)
     , _rawValue                 (0)
     , _type                     (type)
     , _metaData                 (nullptr)

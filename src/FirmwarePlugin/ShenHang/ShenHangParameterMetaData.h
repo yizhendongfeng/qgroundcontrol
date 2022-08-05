@@ -41,7 +41,7 @@ public:
     ShenHangParameterMetaData(void);
 
     void            loadParameterFactMetaDataFile   (const QString& metaDataFile);
-    int getFactMetaDataCount();
+    int             getFactMetaDataCount();
     FactMetaData*   getMetaDataForFact              (uint8_t idGroup, uint16_t addrOffset);
     QMap<uint8_t, MetaDataGroup> getMapMetaDataGroup();
     static void getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion);

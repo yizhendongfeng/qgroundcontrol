@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -38,8 +38,6 @@ public:
     GeoFenceManager(Vehicle* vehicle);
     ~GeoFenceManager();
     
-    bool supported(void) const;
-
     /// Signals sendComplete when done
     void sendToVehicle(const QGeoCoordinate&    breachReturn,   ///< Breach return point
                        QmlObjectListModel&      polygons,       ///< List of QGCFencePolygons

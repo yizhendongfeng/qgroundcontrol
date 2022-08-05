@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -63,7 +63,6 @@ public:
     Fact*   breachReturnAltitude(void) { return &_breachReturnAltitudeFact; }
 
     // Overrides from PlanElementController
-    bool supported                  (void) const final;
     void start                      (bool flyView) final;
     void save                       (QJsonObject& json) final;
     bool load                       (const QJsonObject& json, QString& errorString) final;

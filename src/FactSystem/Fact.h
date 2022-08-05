@@ -26,8 +26,8 @@ class Fact : public QObject
     
 public:
     Fact(QObject* parent = nullptr);
-    Fact(int componentId, uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t type, QString name, QObject* parent = nullptr);
-    Fact(int componentId, QString name, FactMetaData::ValueType_t type, QObject* parent = nullptr);
+    Fact(uint8_t groupId, uint16_t addrOffset, FactMetaData::ValueType_t type, QString name, QObject* parent = nullptr);
+    Fact(QString name, FactMetaData::ValueType_t type, QObject* parent = nullptr);
     Fact(const Fact& other, QObject* parent = nullptr);
 
     /// Creates a Fact using the name and type from metaData. Also calls QGCCorePlugin::adjustSettingsMetaData allowing

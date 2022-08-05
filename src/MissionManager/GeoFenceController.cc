@@ -14,7 +14,6 @@
 #include "GeoFenceController.h"
 #include "Vehicle.h"
 #include "FirmwarePlugin.h"
-#include "MAVLinkProtocol.h"
 #include "QGCApplication.h"
 #include "ParameterManager.h"
 #include "JsonHelper.h"
@@ -44,7 +43,7 @@ GeoFenceController::GeoFenceController(PlanMasterController* masterController, Q
     : PlanElementController         (masterController, parent)
     , _managerVehicle               (masterController->managerVehicle())
     , _geoFenceManager              (masterController->managerVehicle()->geoFenceManager())
-    , _breachReturnAltitudeFact     (0, _breachReturnAltitudeFactName, FactMetaData::valueTypeDouble)
+    , _breachReturnAltitudeFact     (_breachReturnAltitudeFactName, FactMetaData::valueTypeDouble)
     , _breachReturnDefaultAltitude  (qgcApp()->toolbox()->settingsManager()->appSettings()->defaultMissionItemAltitude()->rawValue().toDouble())
 {
     if (_metaDataMap.isEmpty()) {
@@ -122,7 +121,7 @@ void GeoFenceController::_managerVehicleChanged(Vehicle* managerVehicle)
     connect(_managerVehicle->parameterManager(), &ParameterManager::parametersReadyChanged, this, &GeoFenceController::_parametersReady);
     _parametersReady();
 
-    emit supportedChanged(supported());
+    emit supportedChanged(true);
 }
 
 bool GeoFenceController::load(const QJsonObject& json, QString& errorString)
@@ -490,19 +489,14 @@ void GeoFenceController::clearAllInteractive(void)
     }
 }
 
-bool GeoFenceController::supported(void) const
-{
-    return (_managerVehicle->capabilityBits() & MAV_PROTOCOL_CAPABILITY_MISSION_FENCE) && (_managerVehicle->maxProtoVersion() >= 200);
-}
-
 // Hack for PX4
 double GeoFenceController::paramCircularFence(void)
 {
-    if (_managerVehicle->isOfflineEditingVehicle() || !_managerVehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, _px4ParamCircularFence)) {
+    if (_managerVehicle->isOfflineEditingVehicle() || !_managerVehicle->parameterManager()->parameterExists( _px4ParamCircularFence)) {
         return 0;
     }
 
-    return _managerVehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, _px4ParamCircularFence)->rawValue().toDouble();
+    return _managerVehicle->parameterManager()->getParameter(_px4ParamCircularFence)->rawValue().toDouble();
 }
 
 void GeoFenceController::_parametersReady(void)
@@ -512,12 +506,12 @@ void GeoFenceController::_parametersReady(void)
         _px4ParamCircularFenceFact = nullptr;
     }
 
-    if (_managerVehicle->isOfflineEditingVehicle() || !_managerVehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, _px4ParamCircularFence)) {
+    if (_managerVehicle->isOfflineEditingVehicle() || !_managerVehicle->parameterManager()->parameterExists(_px4ParamCircularFence)) {
         emit paramCircularFenceChanged();
         return;
     }
 
-    _px4ParamCircularFenceFact = _managerVehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, _px4ParamCircularFence);
+    _px4ParamCircularFenceFact = _managerVehicle->parameterManager()->getParameter(_px4ParamCircularFence);
     connect(_px4ParamCircularFenceFact, &Fact::rawValueChanged, this, &GeoFenceController::paramCircularFenceChanged);
     emit paramCircularFenceChanged();
 }

@@ -152,8 +152,6 @@ public:
     QGCGeoBoundingCube* travelBoundingCube  () { return &_travelBoundingCube; }
     QGeoCoordinate      takeoffCoordinate   () { return _takeoffCoordinate; }
 
-    // Overrides from PlanElementController
-    bool supported                  (void) const final { return true; }
     void start                      (bool flyView) final;
     void save                       (QJsonObject& json) final;
     bool load                       (const QJsonObject& json, QString& errorString) final;
@@ -297,9 +295,7 @@ private:
     void                    _initLoadedVisualItems              (QmlObjectListModel* loadedVisualItems);
     FlightPathSegment*      _addFlightPathSegment               (FlightPathSegmentHashTable& prevItemPairHashTable, VisualItemPair& pair);
     void                    _addTimeDistance                    (bool vtolInHover, double hoverTime, double cruiseTime, double extraTime, double distance, int seqNum);
-    bool                    _isROIBeginItem                     (SimpleMissionItem* simpleItem);
-    bool                    _isROICancelItem                    (SimpleMissionItem* simpleItem);
-    FlightPathSegment*      _createFlightPathSegmentWorker      (VisualItemPair& pair);
+//    FlightPathSegment*      _createFlightPathSegmentWorker      (VisualItemPair& pair);
     void                    _allItemsRemoved                    (void);
     void                    _firstItemAdded                     (void);
 

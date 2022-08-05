@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -54,7 +54,7 @@ public:
 
     /// Loads a polyline from a KML file
     /// @return true: success
-    Q_INVOKABLE bool loadKMLFile(const QString& kmlFile);
+//    Q_INVOKABLE bool loadKMLFile(const QString& kmlFile);
 
     Q_INVOKABLE void beginReset (void);
     Q_INVOKABLE void endReset   (void);

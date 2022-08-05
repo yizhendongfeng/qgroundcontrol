@@ -13,17 +13,14 @@ import QGroundControl               1.0
 import QGroundControl.Controls      1.0
 import QGroundControl.FlightDisplay 1.0
 
-ToolStripColumn {
+ToolStripRow {
     id:     _root
 //    title:  qsTr("Fly")
 
-    signal displayPreFlightChecklist
-
     FlyViewToolStripActionList {
         id: flyViewToolStripActionList
-
         onDisplayPreFlightChecklist: _root.displayPreFlightChecklist()
     }
 
-    model: flyViewToolStripActionList.model
+    model:     flyViewToolStripActionList.model
 }

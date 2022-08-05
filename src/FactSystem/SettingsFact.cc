@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -11,6 +11,7 @@
 #include "SettingsFact.h"
 #include "QGCCorePlugin.h"
 #include "QGCApplication.h"
+#include "qqmlengine.h"
 
 #include <QSettings>
 
@@ -21,7 +22,7 @@ SettingsFact::SettingsFact(QObject* parent)
 }
 
 SettingsFact::SettingsFact(QString settingsGroup, FactMetaData* metaData, QObject* parent)
-    : Fact          (0, metaData->name(), metaData->type(), parent)
+    : Fact          (metaData->name(), metaData->type(), parent)
     , _settingsGroup(settingsGroup)
     , _visible      (true)
 {

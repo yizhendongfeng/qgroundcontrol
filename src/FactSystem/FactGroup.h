@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -50,9 +50,6 @@ public:
     QStringList factGroupNames      (void) const { return _nameToFactGroupMap.keys(); }
     bool        telemetryAvailable  (void) const { return _telemetryAvailable; }
     const QMap<QString, FactGroup*>& factGroups() const { return _nameToFactGroupMap; }
-
-    /// Allows a FactGroup to parse incoming messages and fill in values
-    virtual void handleMessage(Vehicle* vehicle, mavlink_message_t& message);
 
 signals:
     void factNamesChanged           (void);

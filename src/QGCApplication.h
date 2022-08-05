@@ -22,7 +22,6 @@
 #include <private/qobject_p.h>
 
 #include "LinkConfiguration.h"
-#include "MAVLinkProtocol.h"
 #include "FlightMapSettings.h"
 #include "FirmwarePluginManager.h"
 #include "MultiVehicleManager.h"
@@ -72,7 +71,7 @@ public:
 
     /// Used to report a missing Parameter. Warning will be displayed to user. Method may be called
     /// multiple times.
-    void reportMissingParameter(int componentId, const QString& name);
+    void reportMissingParameter(const QString& name);
 
     /// Show non-modal vehicle message to the user
     Q_SLOT void showCriticalVehicleMessage(const QString& message);
@@ -186,7 +185,7 @@ private:
     bool                        _runningUnitTests;                                  ///< true: running unit tests, false: normal app
     static const int            _missingParamsDelayedDisplayTimerTimeout = 1000;    ///< Timeout to wait for next missing fact to come in before display
     QTimer                      _missingParamsDelayedDisplayTimer;                  ///< Timer use to delay missing fact display
-    QList<QPair<int,QString>>   _missingParams;                                     ///< List of missing parameter component id:name
+    QStringList                 _missingParams;                                     ///< List of missing parameter component id:name
 
     QQmlApplicationEngine* _qmlAppEngine        = nullptr;
     bool                _logOutput              = false;    ///< true: Log Qt debug output to file

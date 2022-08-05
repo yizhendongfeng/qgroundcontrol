@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -35,7 +35,7 @@ QGCMapCircle::QGCMapCircle(const QGeoCoordinate& center, double radius, bool sho
     : QObject           (parent)
     , _dirty            (false)
     , _center           (center)
-    , _radius           (FactSystem::defaultComponentId, _radiusFactName, FactMetaData::valueTypeDouble)
+    , _radius           (_radiusFactName, FactMetaData::valueTypeDouble)
     , _interactive      (false)
     , _showRotation     (showRotation)
     , _clockwiseRotation(clockwiseRotation)
@@ -48,7 +48,7 @@ QGCMapCircle::QGCMapCircle(const QGCMapCircle& other, QObject* parent)
     : QObject           (parent)
     , _dirty            (false)
     , _center           (other._center)
-    , _radius           (FactSystem::defaultComponentId, _radiusFactName, FactMetaData::valueTypeDouble)
+    , _radius           (_radiusFactName, FactMetaData::valueTypeDouble)
     , _interactive      (false)
     , _showRotation     (other._showRotation)
     , _clockwiseRotation(other._clockwiseRotation)

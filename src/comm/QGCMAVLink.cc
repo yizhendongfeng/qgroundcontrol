@@ -12,17 +12,16 @@
 #include <QtGlobal>
 #include <QDebug>
 
-constexpr QGCMAVLink::FirmwareClass_t QGCMAVLink::FirmwareClassPX4;
-constexpr QGCMAVLink::FirmwareClass_t QGCMAVLink::FirmwareClassArduPilot;
 constexpr QGCMAVLink::FirmwareClass_t QGCMAVLink::FirmwareClassGeneric;
+constexpr QGCMAVLink::FirmwareClass_t QGCMAVLink::FirmwareClassShenHang;
 
-constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassAirship;
-constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassFixedWing;
-constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassRoverBoat;
-constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassSub;
-constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassMultiRotor;
-constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassVTOL;
 constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassGeneric;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassHelicopter;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassFixedWing;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassMultiRotor;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassTandemVector;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassJustaposedVector;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassTiltRotor;
 
 QGCMAVLink::QGCMAVLink(QObject* parent)
     : QObject(parent)
@@ -33,35 +32,29 @@ QGCMAVLink::QGCMAVLink(QObject* parent)
 QList<QGCMAVLink::FirmwareClass_t> QGCMAVLink::allFirmwareClasses(void)
 {
     static const QList<QGCMAVLink::FirmwareClass_t> classes = {
-        FirmwareClassPX4,
-        FirmwareClassArduPilot,
-        FirmwareClassGeneric
+        FirmwareClassGeneric,
+        FirmwareClassShenHang,
     };
-
     return classes;
 }
 
 QList<QGCMAVLink::VehicleClass_t> QGCMAVLink::allVehicleClasses(void)
 {
     static const QList<QGCMAVLink::VehicleClass_t> classes = {
-        VehicleClassFixedWing,
-        VehicleClassRoverBoat,
-        VehicleClassSub,
-        VehicleClassMultiRotor,
-        VehicleClassVTOL,
         VehicleClassGeneric,
+        VehicleClassHelicopter,
+        VehicleClassFixedWing,
+        VehicleClassMultiRotor,
+        VehicleClassTandemVector,
+        VehicleClassJustaposedVector,
+        VehicleClassTiltRotor,
     };
-
     return classes;
 }
 
 QGCMAVLink::FirmwareClass_t QGCMAVLink::firmwareClass(MAV_AUTOPILOT autopilot)
 {
-    if (isPX4FirmwareClass(autopilot)) {
-        return FirmwareClassPX4;
-    } else if (isArduPilotFirmwareClass(autopilot)) {
-        return FirmwareClassArduPilot;
-    } else if (isShenHangFirmwareClass(autopilot)) {
+    if (isShenHangFirmwareClass(autopilot)) {
         return FirmwareClassShenHang;
     }
     else {
@@ -72,20 +65,18 @@ QGCMAVLink::FirmwareClass_t QGCMAVLink::firmwareClass(MAV_AUTOPILOT autopilot)
 QString QGCMAVLink::firmwareClassToString(FirmwareClass_t firmwareClass)
 {
     switch (firmwareClass) {
-    case FirmwareClassPX4:
-        return QT_TRANSLATE_NOOP("Firmware Class", "PX4 Pro");
-    case FirmwareClassArduPilot:
-        return QT_TRANSLATE_NOOP("Firmware Class", "ArduPilot");
-    case FirmwareClassGeneric:
+    case MAV_AUTOPILOT_SHEN_HANG:
+        return QT_TRANSLATE_NOOP("Firmware Class", "ShenHang");
+   case FirmwareClassGeneric:
         return QT_TRANSLATE_NOOP("Firmware Class", "Generic");
     default:
         return QT_TRANSLATE_NOOP("Firmware Class", "Unknown");
     }
 }
 
-bool QGCMAVLink::isAirship(MAV_TYPE mavType)
+bool QGCMAVLink::isHelicopter(MAV_TYPE mavType)
 {
-    return vehicleClass(mavType) == VehicleClassAirship;
+    return vehicleClass(mavType) == VehicleClassHelicopter;
 }
 
 bool QGCMAVLink::isFixedWing(MAV_TYPE mavType)
@@ -93,75 +84,69 @@ bool QGCMAVLink::isFixedWing(MAV_TYPE mavType)
     return vehicleClass(mavType) == VehicleClassFixedWing;
 }
 
-bool QGCMAVLink::isRoverBoat(MAV_TYPE mavType)
-{
-    return vehicleClass(mavType) == VehicleClassRoverBoat;
-}
-
-bool QGCMAVLink::isSub(MAV_TYPE mavType)
-{
-    return vehicleClass(mavType) == VehicleClassSub;
-}
-
 bool QGCMAVLink::isMultiRotor(MAV_TYPE mavType)
 {
     return vehicleClass(mavType) == VehicleClassMultiRotor;
 }
 
-bool QGCMAVLink::isVTOL(MAV_TYPE mavType)
+bool QGCMAVLink::isTandemVector(MAV_TYPE mavType)
 {
-    return vehicleClass(mavType) == VehicleClassVTOL;
+    return vehicleClass(mavType) == VehicleClassTandemVector;
+}
+
+
+bool QGCMAVLink::isJustaposedVector(MAV_TYPE mavType)
+{
+    return vehicleClass(mavType) == VehicleClassJustaposedVector;
+}
+
+bool QGCMAVLink::TiltRotor(MAV_TYPE mavType)
+{
+    return vehicleClass(mavType) == VehicleClassTiltRotor;
 }
 
 QGCMAVLink::VehicleClass_t QGCMAVLink::vehicleClass(MAV_TYPE mavType)
 {
     switch (mavType) {
-    case MAV_TYPE_GROUND_ROVER:
-    case MAV_TYPE_SURFACE_BOAT:
-        return VehicleClassRoverBoat;
-    case MAV_TYPE_SUBMARINE:
-        return VehicleClassSub;
-    case MAV_TYPE_QUADROTOR:
-    case MAV_TYPE_COAXIAL:
     case MAV_TYPE_HELICOPTER:
-    case MAV_TYPE_HEXAROTOR:
-    case MAV_TYPE_OCTOROTOR:
-    case MAV_TYPE_TRICOPTER:
-        return VehicleClassMultiRotor;
-    case MAV_TYPE_VTOL_DUOROTOR:
-    case MAV_TYPE_VTOL_QUADROTOR:
-    case MAV_TYPE_VTOL_TILTROTOR:
-    case MAV_TYPE_VTOL_RESERVED2:
-    case MAV_TYPE_VTOL_RESERVED3:
-    case MAV_TYPE_VTOL_RESERVED4:
-    case MAV_TYPE_VTOL_RESERVED5:
-        return VehicleClassVTOL;
+        return VehicleClassHelicopter;
     case MAV_TYPE_FIXED_WING:
         return VehicleClassFixedWing;
-    case MAV_TYPE_AIRSHIP:
-        return VehicleClassAirship;
+    case MAV_TYPE_TANDEM_VECTOR:
+        return VehicleClassMultiRotor;
+    case MAV_TYPE_JUXTAPOSED_VECTOR:
+        return VehicleClassTandemVector;
+    case MAV_TYPE_TILT_ROTOR:
+        return VehicleClassTiltRotor;
     default:
         return VehicleClassGeneric;
     }
 }
 
+
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassGeneric;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassHelicopter;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassFixedWing;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassMultiRotor;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassTandemVector;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassJustaposedVector;
+constexpr QGCMAVLink::VehicleClass_t QGCMAVLink::VehicleClassTiltRotor;
+
 QString QGCMAVLink::vehicleClassToString(VehicleClass_t vehicleClass)
 {
     switch (vehicleClass) {
-    case VehicleClassAirship:
-        return QT_TRANSLATE_NOOP("Vehicle Class", "Airship");
-    case VehicleClassFixedWing:
-        return QT_TRANSLATE_NOOP("Vehicle Class", "Fixed Wing");
-    case VehicleClassRoverBoat:
-        return QT_TRANSLATE_NOOP("Vehicle Class", "Rover-Boat");
-    case VehicleClassSub:
-        return QT_TRANSLATE_NOOP("Vehicle Class", "Sub");
-    case VehicleClassMultiRotor:
-        return QT_TRANSLATE_NOOP("Vehicle Class", "Multi-Rotor");
-    case VehicleClassVTOL:
-        return QT_TRANSLATE_NOOP("Vehicle Class", "VTOL");
     case VehicleClassGeneric:
         return QT_TRANSLATE_NOOP("Vehicle Class", "Generic");
+    case VehicleClassHelicopter:
+        return QT_TRANSLATE_NOOP("Vehicle Class", "Helicopter");
+    case VehicleClassFixedWing:
+        return QT_TRANSLATE_NOOP("Vehicle Class", "Fixed Wing");
+    case VehicleClassMultiRotor:
+        return QT_TRANSLATE_NOOP("Vehicle Class", "Multi-Rotor");
+    case VehicleClassTandemVector:
+        return QT_TRANSLATE_NOOP("Vehicle Class", "Tandem Vector");
+    case VehicleClassJustaposedVector:
+        return QT_TRANSLATE_NOOP("Vehicle Class", "Justaposed Vector");
     default:
         return QT_TRANSLATE_NOOP("Vehicle Class", "Unknown");
     }
@@ -239,77 +224,77 @@ QString QGCMAVLink::mavSysStatusSensorToString(MAV_SYS_STATUS_SENSOR sysStatusSe
     return QT_TRANSLATE_NOOP("MAVLink unknown SYS_STATUS_SENSOR value", "Unknown sensor");
 }
 
-QString MavlinkFTP::opCodeToString(OpCode_t opCode)
-{
-    switch (opCode) {
-    case kCmdNone:
-        return "None";
-    case kCmdTerminateSession:
-        return "Terminate Session";
-    case kCmdResetSessions:
-        return "Reset Sessions";
-    case kCmdListDirectory:
-        return "List Directory";
-    case kCmdOpenFileRO:
-        return "Open File RO";
-    case kCmdReadFile:
-        return "Read File";
-    case kCmdCreateFile:
-        return "Create File";
-    case kCmdWriteFile:
-        return "Write File";
-    case kCmdRemoveFile:
-        return "Remove File";
-    case kCmdCreateDirectory:
-        return "Create Directory";
-    case kCmdRemoveDirectory:
-        return "Remove Directory";
-    case kCmdOpenFileWO:
-        return "Open File WO";
-    case kCmdTruncateFile:
-        return "Truncate File";
-    case kCmdRename:
-        return "Rename";
-    case kCmdCalcFileCRC32:
-        return "Calc File CRC32";
-    case kCmdBurstReadFile:
-        return "Burst Read File";
-    case kRspAck:
-        return "Ack";
-    case kRspNak:
-        return "Nak";
-    }
+//QString MavlinkFTP::opCodeToString(OpCode_t opCode)
+//{
+//    switch (opCode) {
+//    case kCmdNone:
+//        return "None";
+//    case kCmdTerminateSession:
+//        return "Terminate Session";
+//    case kCmdResetSessions:
+//        return "Reset Sessions";
+//    case kCmdListDirectory:
+//        return "List Directory";
+//    case kCmdOpenFileRO:
+//        return "Open File RO";
+//    case kCmdReadFile:
+//        return "Read File";
+//    case kCmdCreateFile:
+//        return "Create File";
+//    case kCmdWriteFile:
+//        return "Write File";
+//    case kCmdRemoveFile:
+//        return "Remove File";
+//    case kCmdCreateDirectory:
+//        return "Create Directory";
+//    case kCmdRemoveDirectory:
+//        return "Remove Directory";
+//    case kCmdOpenFileWO:
+//        return "Open File WO";
+//    case kCmdTruncateFile:
+//        return "Truncate File";
+//    case kCmdRename:
+//        return "Rename";
+//    case kCmdCalcFileCRC32:
+//        return "Calc File CRC32";
+//    case kCmdBurstReadFile:
+//        return "Burst Read File";
+//    case kRspAck:
+//        return "Ack";
+//    case kRspNak:
+//        return "Nak";
+//    }
 
-    return "Unknown OpCode";
-}
+//    return "Unknown OpCode";
+//}
 
-QString MavlinkFTP::errorCodeToString(ErrorCode_t errorCode)
-{
-    switch (errorCode) {
-    case kErrNone:
-        return "None";
-    case kErrFail:
-        return "Fail";
-    case kErrFailErrno:
-        return "Fail Errorno";
-    case kErrInvalidDataSize:
-        return "Invalid Data Size";
-    case kErrInvalidSession:
-        return "Invalid Session";
-    case kErrNoSessionsAvailable:
-        return "No Sessions Available";
-    case kErrEOF:
-        return "EOF";
-    case kErrUnknownCommand:
-        return "Unknown Command";
-    case kErrFailFileExists:
-        return "File Already Exists";
-    case kErrFailFileProtected:
-        return "File Protected";
-    case kErrFailFileNotFound:
-        return "File Not Found";
-    }
+//QString MavlinkFTP::errorCodeToString(ErrorCode_t errorCode)
+//{
+//    switch (errorCode) {
+//    case kErrNone:
+//        return "None";
+//    case kErrFail:
+//        return "Fail";
+//    case kErrFailErrno:
+//        return "Fail Errorno";
+//    case kErrInvalidDataSize:
+//        return "Invalid Data Size";
+//    case kErrInvalidSession:
+//        return "Invalid Session";
+//    case kErrNoSessionsAvailable:
+//        return "No Sessions Available";
+//    case kErrEOF:
+//        return "EOF";
+//    case kErrUnknownCommand:
+//        return "Unknown Command";
+//    case kErrFailFileExists:
+//        return "File Already Exists";
+//    case kErrFailFileProtected:
+//        return "File Protected";
+//    case kErrFailFileNotFound:
+//        return "File Not Found";
+//    }
 
-    return "Unknown Error";
-}
+//    return "Unknown Error";
+//}
 

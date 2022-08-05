@@ -190,10 +190,11 @@ struct GpsRawInt {
  int32_t alt; /*< [mm] Altitude (MSL). Positive for up. Note that virtually all GPS modules provide the MSL altitude in addition to the WGS84 altitude.*/
  uint16_t eph; /*<  GPS HDOP horizontal dilution of position (unitless). If unknown, set to: UINT16_MAX*/
  uint16_t epv; /*<  GPS VDOP vertical dilution of position (unitless). If unknown, set to: UINT16_MAX*/
- uint16_t vel; /*< [cm/s] GPS ground speed. If unknown, set to: UINT16_MAX*/
+ uint16_t velG; /*< [cm/s] GPS ground speed. If unknown, set to: UINT16_MAX*/
+ uint16_t velV; /*< [cm/s] GPS vertical speed. If unknown, set to: UINT16_MAX*/
  int16_t cog; /*< [cdeg] Course over ground (NOT heading, but direction of movement) in degrees * 100, 0.0..359.99 degrees. If unknown, set to: UINT16_MAX*/
- uint8_t fixType; /*<  GPS fix type.*/
- uint8_t doubleAntenna; /*<  双天线状态*/
+ uint8_t status; /*<  Gnss status.*/
+ uint8_t dualAntenna; /*<  双天线状态*/
  uint8_t satellitesUsed; /*<  Number of satellites used. If unknown, set to 255*/
  int32_t altEllipsoid; /*< [mm] Altitude (above WGS84, EGM96 ellipsoid). Positive for up.*/
  int16_t yaw; /*< [cdeg] Yaw in earth frame from north. Use 0 if this GPS does not provide yaw. Use 65535 if this GPS is configured to provide yaw and is currently unable to provide it. Use 36000 for north.*/

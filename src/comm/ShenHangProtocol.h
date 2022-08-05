@@ -106,17 +106,12 @@ public:
     QString getName();
     /** @brief Get the system id of this application */
     int getSystemId();
-    /** @brief Get the component id of this application */
-    int getComponentId();
     
     /** @brief Get protocol version check state */
     bool versionCheckEnabled() const {
         return m_enable_version_check;
     }
-    /** @brief Get the protocol version */
-    int getVersion() {
-        return MAVLINK_VERSION;
-    }
+
     /** @brief Get the currently configured protocol version */
     unsigned getCurrentVersion() {
         return _current_version;
@@ -174,10 +169,8 @@ protected:
 
 signals:
     /// Heartbeat received on link
-    void shenHangVehicleTypeInfo(LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType);
+    void shenHangVehicleTypeInfo(LinkInterface* link, int vehicleId, int vehicleFirmwareType, int vehicleType);
 
-    /** @brief Message received and directly copied via signal */
-    void messageReceived(LinkInterface* link, mavlink_message_t message);
     /** @brief Message received and directly copied via signal */
     void shenHangMessageReceived(LinkInterface* link, ShenHangProtocolMessage message);
     /** @brief Emitted if version check is enabled / disabled */

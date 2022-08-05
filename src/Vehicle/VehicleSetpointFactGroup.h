@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -32,9 +32,6 @@ public:
     Fact* rollRate  () { return &_rollRateFact; }
     Fact* pitchRate () { return &_pitchRateFact; }
     Fact* yawRate   () { return &_yawRateFact; }
-
-    // Overrides from FactGroup
-    void handleMessage(Vehicle* vehicle, mavlink_message_t& message) override;
 
     static const char* _rollFactName;
     static const char* _pitchFactName;

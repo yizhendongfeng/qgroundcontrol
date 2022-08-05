@@ -46,7 +46,7 @@ protected:
     bool _allParametersExists(int componentId, QStringList names);
 
     /// Report a missing parameter
-    void _reportMissingParameter(int componentId, const QString& name);
+    void _reportMissingParameter(const QString& name);
 
     Vehicle*            _vehicle    = nullptr;
     UASInterface*       _uas        = nullptr;
