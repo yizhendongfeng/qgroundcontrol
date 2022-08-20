@@ -104,7 +104,6 @@ ShenHangProtocol::ShenHangProtocol(QGCApplication* app, QGCToolbox* toolbox)
 
 ShenHangProtocol::~ShenHangProtocol()
 {
-    qDebug() << "delete _toolBox 12 ~ShenHangProtocol()";
     storeSettings();
     _closeLogFile();
 }

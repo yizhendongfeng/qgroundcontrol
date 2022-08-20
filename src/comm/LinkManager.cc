@@ -70,10 +70,8 @@ LinkManager::~LinkManager()
 {
 #ifndef __mobile__
 #ifndef NO_SERIAL_LINK
-    qDebug() << "delete _toolBox 1 _nmeaPort" << _nmeaPort;
     delete _nmeaPort;
     _nmeaPort = nullptr;
-    qDebug() << "delete _toolBox 1 _nmeaPort" << _nmeaPort;
 #endif
 #endif
 }

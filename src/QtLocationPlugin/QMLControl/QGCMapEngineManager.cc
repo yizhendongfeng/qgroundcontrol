@@ -52,7 +52,6 @@ QGCMapEngineManager::QGCMapEngineManager(QGCApplication* app, QGCToolbox* toolbo
 //-----------------------------------------------------------------------------
 QGCMapEngineManager::~QGCMapEngineManager()
 {
-    qDebug() << "delete _toolBox 8 ~QGCMapEngineManager()";
     _tileSets.clear();
 }
 

@@ -65,7 +65,6 @@ VideoManager::VideoManager(QGCApplication* app, QGCToolbox* toolbox)
 //-----------------------------------------------------------------------------
 VideoManager::~VideoManager()
 {
-    qCDebug(VideoManagerLog) << "delete _toolBox 10 ~VideoManager()";
     for (int i = 0; i < 2; i++) {
         if (_videoReceiver[i] != nullptr) {
             delete _videoReceiver[i];

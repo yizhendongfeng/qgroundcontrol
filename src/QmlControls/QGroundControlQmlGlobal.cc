@@ -39,7 +39,6 @@ QGroundControlQmlGlobal::QGroundControlQmlGlobal(QGCApplication* app, QGCToolbox
 
 QGroundControlQmlGlobal::~QGroundControlQmlGlobal()
 {
-    qDebug() << "delete _toolBox 7 ~QGroundControlQmlGlobal()";
 }
 
 void QGroundControlQmlGlobal::setToolbox(QGCToolbox* toolbox)

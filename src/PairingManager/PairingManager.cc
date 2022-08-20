@@ -54,7 +54,6 @@ PairingManager::PairingManager(QGCApplication* app, QGCToolbox* toolbox)
 //-----------------------------------------------------------------------------
 PairingManager::~PairingManager()
 {
-    qDebug() << "delete _toolBox 6 ~PairingManager()";
 }
 
 //-----------------------------------------------------------------------------

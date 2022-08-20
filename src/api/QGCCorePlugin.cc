@@ -96,13 +96,10 @@ public:
 
 QGCCorePlugin::~QGCCorePlugin()
 {
-    qDebug() << "delete _toolBox 3 QGCCorePlugin _p" << _p;
-
     if(_p) {
         delete _p;
     }
     _p = nullptr;
-    qDebug() << "delete _toolBox 3 QGCCorePlugin _p" << _p;
 }
 
 QGCCorePlugin::QGCCorePlugin(QGCApplication *app, QGCToolbox* toolbox)

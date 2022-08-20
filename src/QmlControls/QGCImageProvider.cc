@@ -30,7 +30,6 @@ QGCImageProvider::QGCImageProvider(QGCApplication *app, QGCToolbox* toolbox)
 
 QGCImageProvider::~QGCImageProvider()
 {
-    qDebug() << "delete _toolBox 7 ~QGCImageProvider()";
 }
 
 void QGCImageProvider::setToolbox(QGCToolbox *toolbox)

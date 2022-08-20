@@ -23,10 +23,8 @@ FirmwarePluginManager::FirmwarePluginManager(QGCApplication* app, QGCToolbox* to
 
 FirmwarePluginManager::~FirmwarePluginManager()
 {
-    qDebug() << "delete _toolBox 0 _genericFirmwarePlugin" << _genericFirmwarePlugin;
     delete _genericFirmwarePlugin;
     _genericFirmwarePlugin = nullptr;
-    qDebug() << "delete _toolBox 0 _genericFirmwarePlugin" << _genericFirmwarePlugin;
 }
 
 QList<QGCMAVLink::FirmwareClass_t> FirmwarePluginManager::supportedFirmwareClasses(void)
