@@ -169,8 +169,7 @@ Item {
         anchors.bottom:     parent.bottom
         mapControl:         mapControl
         buttonsOnLeft:      false
-        visible:            true//!ScreenTools.isTinyScreen && QGroundControl.corePlugin.options.flyView.showMapScale && mapControl.pipState.state === mapControl.pipState.windowState
-
+        visible:            true
         property real centerInset: visible ? parent.height - y : 0
     }
 //    FlyViewVideo {

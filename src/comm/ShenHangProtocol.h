@@ -84,24 +84,25 @@ public:
     }
 
     static uint8_t CaculateCrc8(uint8_t buf[], uint16_t len);
-    /**
-     * @brief Decode 从接收的数据中解析消息
-     * @param bufferRsv
-     * @param length
-     * @param msg
-     * @param lengthLeft 缓冲区剩余字节数
-     * @return
-     */
-    void Decode(LinkInterface* link, uint8_t channel, QByteArray bytesReceived, ShenHangProtocolMessage& msg, ShenHangProtocolStatus* shenHangProtocolStatus);
 
     /**
-     * @brief Encode 数据打包
+     * @brief eecode 从接收的数据中解析消息
+     * @param link 链接
+     * @param channel 通道
+     * @param bytesReceived 接收的字节
+     * @param msg 解析后的消息
+     * @param shenHangProtocolStatus
+     */
+    void decode(LinkInterface* link, uint8_t channel, QByteArray bytesReceived, ShenHangProtocolMessage& msg, ShenHangProtocolStatus* shenHangProtocolStatus);
+
+    /**
+     * @brief encode 数据打包
      * @param msg
      * @param buf 打包后缓冲区地址
      * @return 打包后的数据长度
      */
-    uint16_t Encode(ShenHangProtocolMessage msg, uint8_t* buf);
-    void HandleMessage(LinkInterface* link, uint8_t channel);
+    uint16_t encode(ShenHangProtocolMessage msg, uint8_t* buf);
+    void handleMessage(LinkInterface* link, uint8_t channel);
     /** @brief Get the human-friendly name of this protocol */
     QString getName();
     /** @brief Get the system id of this application */
@@ -180,7 +181,6 @@ signals:
     /** @brief Emitted if a new system ID was set */
     void systemIdChanged(int systemId);
 
-    void mavlinkMessageStatus(int uasId, uint64_t totalSent, uint64_t totalReceived, uint64_t totalLoss, float lossPercent);
     void shenHangMessageStatus(int uasId, uint64_t totalSent, uint64_t totalReceived, uint64_t totalLoss, float lossPercent);
 
     /**

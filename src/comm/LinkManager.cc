@@ -128,10 +128,6 @@ bool LinkManager::createConnectedLink(SharedLinkConfigurationPtr& config, bool i
     }
 
     if (link) {
-//        if (false == link->_allocateMavlinkChannel() ) {
-//            qCWarning(LinkManagerLog) << "Link failed to setup mavlink channels";
-//            return false;
-//        }
         if (false == link->_allocateShenHangProtocolChannel() ) {
             qCWarning(LinkManagerLog) << "Link failed to setup ShenHangProtocol channels";
             return false;

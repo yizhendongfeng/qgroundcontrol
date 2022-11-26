@@ -140,7 +140,7 @@ void ShenHangParameterMetaData::loadParameterFactMetaDataFile(const QString& met
                 factGroup = xml.attributes().value("name").toString();
                 MetaDataGroup metaDataGroup;
                 metaDataGroup.groupName = factGroup;
-                _metaDataGroups[++_groupId] = (metaDataGroup);
+                _metaDataGroups[++_groupId] = metaDataGroup;
                 _addrOffset = 0;
                 qCDebug(ShenHangParameterMetaDataLog) << "Found group: " << factGroup;
                 
@@ -156,9 +156,9 @@ void ShenHangParameterMetaData::loadParameterFactMetaDataFile(const QString& met
                     return;
                 }
                 
-                QString tag = xml.attributes().value("tag").toString();
-                QString name = xml.attributes().value("name").toString();
-                QString type = xml.attributes().value("val_type").toString();
+                QString strTag = xml.attributes().value("tag").toString();
+                QString strName = xml.attributes().value("name").toString();
+                QString strType = xml.attributes().value("val_type").toString();
                 QString strDefault = xml.attributes().value("val_dflt").toString();
                 QString strMax = xml.attributes().value("val_max").toString();
                 QString strMin = xml.attributes().value("val_min").toString();
@@ -186,24 +186,25 @@ void ShenHangParameterMetaData::loadParameterFactMetaDataFile(const QString& met
                     }
                 }
 
-                qCDebug(ShenHangParameterMetaDataLog) << "Found parameter name:" << name << " type:" << type << " default:" << strDefault;
+                qCDebug(ShenHangParameterMetaDataLog) << "Found parameter name:" << strName << " type:" << strType << " default:" << strDefault;
 
                 // Convert type from string to FactMetaData::ValueType_t
                 bool unknownType;
-                FactMetaData::ValueType_t foundType = FactMetaData::stringToType(type, unknownType);
+                FactMetaData::ValueType_t foundType = FactMetaData::stringToType(strType, unknownType);
                 if (unknownType) {
-                    qWarning() << "Parameter meta data with bad type:" << type << " name:" << name;
+                    qWarning() << "Parameter meta data with bad type:" << strType << " name:" << strName;
                     return;
                 }
                 
                 // Now that we know type we can create meta data object and add it to the system
                 metaData = new FactMetaData(foundType, this);
-                _metaDataGroups[_groupId].mapMetaData[++_addrOffset] = metaData;
+                _metaDataGroups[_groupId].mapMetaData[_addrOffset] = metaData;
+                _addrOffset += FactMetaData::typeToSize(foundType);
                 _metaDataCount++;
 
-                _mapParameterName2FactMetaData[name] = metaData;
-                metaData->setTag(tag);
-                metaData->setName(name);
+                _mapParameterName2FactMetaData[strName] = metaData;
+                metaData->setTag(strTag);
+                metaData->setName(strName);
                 metaData->setCategory(category);
                 metaData->setGroup(factGroup);
                 metaData->setReadOnly(readOnly);
@@ -214,7 +215,7 @@ void ShenHangParameterMetaData::loadParameterFactMetaDataFile(const QString& met
                     if (metaData->convertAndValidateRaw(strDefault, false, varDefault, errorString)) {
                         metaData->setRawDefaultValue(varDefault);
                     } else {
-                        qCWarning(ShenHangParameterMetaDataLog) << "Invalid default value, name:" << name << " type:" << type << " val_dflt:" << strDefault << " error:" << errorString;
+                        qCWarning(ShenHangParameterMetaDataLog) << "Invalid default value, name:" << strName << " type:" << strType << " val_dflt:" << strDefault << " error:" << errorString;
                     }
                 }
                 if (xml.attributes().hasAttribute("val_max") && !strMax.isEmpty()) {
@@ -223,7 +224,7 @@ void ShenHangParameterMetaData::loadParameterFactMetaDataFile(const QString& met
                     if (metaData->convertAndValidateRaw(strMax, false, varMax, errorString)) {
                         metaData->setRawMax(varMax);
                     } else {
-                        qCWarning(ShenHangParameterMetaDataLog) << "Invalid default value, name:" << name << " type:" << type << "foundType:" << foundType << " val_max:" << strMax << " error:" << errorString;
+                        qCWarning(ShenHangParameterMetaDataLog) << "Invalid default value, name:" << strName << " type:" << strType << "foundType:" << foundType << " val_max:" << strMax << " error:" << errorString;
                     }
                 }
                 if (xml.attributes().hasAttribute("val_Min") && !strMin.isEmpty()) {
@@ -232,7 +233,7 @@ void ShenHangParameterMetaData::loadParameterFactMetaDataFile(const QString& met
                     if (metaData->convertAndValidateRaw(strMin, false, varMin, errorString)) {
                         metaData->setRawDefaultValue(varMin);
                     } else {
-                        qCWarning(ShenHangParameterMetaDataLog) << "Invalid default value, name:" << name << " type:" << type << " val_Min:" << strMin << " error:" << errorString;
+                        qCWarning(ShenHangParameterMetaDataLog) << "Invalid default value, name:" << strName << " type:" << strType << " val_Min:" << strMin << " error:" << errorString;
                     }
                 }
                 qCDebug(ShenHangParameterMetaDataLog) << "Unit:" << strUnit;
@@ -451,16 +452,16 @@ void ShenHangParameterMetaData::_generateParameterJson()
 }
 #endif
 
-FactMetaData* ShenHangParameterMetaData::getMetaDataForFact(uint8_t idGroup, uint16_t addrOffset)
+FactMetaData* ShenHangParameterMetaData::getMetaDataForFact(uint8_t groupId, uint16_t addrOffset)
 {
-    if (_metaDataGroups.contains(idGroup) && _metaDataGroups[idGroup].mapMetaData.contains(addrOffset))
+    if (_metaDataGroups.contains(groupId) && _metaDataGroups[groupId].mapMetaData.contains(addrOffset))
     {
 //        FactMetaData* metaData = new FactMetaData(type, this);
 //        _mapParameterName2FactMetaData[idGroup] = metaData;
 //        _metaDataGroups[idGroup].mapMetaData.append(metaData);
-        return _metaDataGroups[idGroup].mapMetaData[addrOffset];
+        return _metaDataGroups[groupId].mapMetaData[addrOffset];
     }
-    qCDebug(ShenHangParameterMetaDataLog) << "No metaData for group" << idGroup << "using generic metadata addrOffset" << addrOffset;
+    qCDebug(ShenHangParameterMetaDataLog) << "No metaData for group" << groupId << "using generic metadata addrOffset" << addrOffset;
     return nullptr;       //_mapParameterName2FactMetaData[idGroup];
 }
 

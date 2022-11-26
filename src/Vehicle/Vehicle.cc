@@ -442,9 +442,6 @@ void Vehicle::_shenHangMessageReceived(LinkInterface* link, ShenHangProtocolMess
     /******************** 回复报文编号 ********************/
     case ACK_COMMAND_VEHICLE:
         break;
-    case ACK_COMMAND_PARAM:
-        HandleAckCommandParam(message);
-        break;
     case ACK_COMMAND_BANK:
         HandleAckCommandBank(message);
         break;
@@ -649,7 +646,7 @@ bool Vehicle::sendShenHangMessageOnLinkThreadSafe(LinkInterface* link, ShenHangP
     // Write message into buffer, prepending start sign
     message.idSource = idSource;
     message.idTarget = idTarget;
-    uint16_t len = _shenHangProtocol->Encode(message, bufferSend);
+    uint16_t len = _shenHangProtocol->encode(message, bufferSend);
 
     link->writeBytesThreadSafe((const char*)bufferSend, len);
     _messagesSent++;
@@ -1463,21 +1460,21 @@ void Vehicle::_setupAutoDisarmSignalling()
 {
     QString param = _firmwarePlugin->autoDisarmParameter(this);
 
-    if (!param.isEmpty() && _parameterManager->parameterExists(param)) {
-        Fact* fact = _parameterManager->getParameter(param);
-        connect(fact, &Fact::rawValueChanged, this, &Vehicle::autoDisarmChanged);
-        emit autoDisarmChanged();
-    }
+//    if (!param.isEmpty() && _parameterManager->parameterExists(param)) {
+//        Fact* fact = _parameterManager->getParameter(param);
+//        connect(fact, &Fact::rawValueChanged, this, &Vehicle::autoDisarmChanged);
+//        emit autoDisarmChanged();
+//    }
 }
 
 bool Vehicle::autoDisarm()
 {
     QString param = _firmwarePlugin->autoDisarmParameter(this);
 
-    if (!param.isEmpty() && _parameterManager->parameterExists(param)) {
-        Fact* fact = _parameterManager->getParameter(param);
-        return fact->rawValue().toDouble() > 0;
-    }
+//    if (!param.isEmpty() && _parameterManager->parameterExists(param)) {
+//        Fact* fact = _parameterManager->getParameter(param);
+//        return fact->rawValue().toDouble() > 0;
+//    }
 
     return false;
 }
@@ -1553,21 +1550,21 @@ void Vehicle::sendPlan(QString planFile)
 
 QString Vehicle::hobbsMeter()
 {
-    static const char* HOOBS_HI = "LND_FLIGHT_T_HI";
-    static const char* HOOBS_LO = "LND_FLIGHT_T_LO";
+//    static const char* HOOBS_HI = "LND_FLIGHT_T_HI";
+//    static const char* HOOBS_LO = "LND_FLIGHT_T_LO";
     //-- TODO: Does this exist on non PX4?
-    if (_parameterManager->parameterExists(HOOBS_HI) &&
-            _parameterManager->parameterExists(HOOBS_LO)) {
-        Fact* factHi = _parameterManager->getParameter(HOOBS_HI);
-        Fact* factLo = _parameterManager->getParameter(HOOBS_LO);
-        uint64_t hobbsTimeSeconds = ((uint64_t)factHi->rawValue().toUInt() << 32 | (uint64_t)factLo->rawValue().toUInt()) / 1000000;
-        int hours   = hobbsTimeSeconds / 3600;
-        int minutes = (hobbsTimeSeconds % 3600) / 60;
-        int seconds = hobbsTimeSeconds % 60;
-        QString timeStr = QString::asprintf("%04d:%02d:%02d", hours, minutes, seconds);
-        qCDebug(VehicleLog) << "Hobbs Meter:" << timeStr << "(" << factHi->rawValue().toUInt() << factLo->rawValue().toUInt() << ")";
-        return timeStr;
-    }
+//    if (_parameterManager->parameterExists(HOOBS_HI) &&
+//            _parameterManager->parameterExists(HOOBS_LO)) {
+//        Fact* factHi = _parameterManager->getParameter(HOOBS_HI);
+//        Fact* factLo = _parameterManager->getParameter(HOOBS_LO);
+//        uint64_t hobbsTimeSeconds = ((uint64_t)factHi->rawValue().toUInt() << 32 | (uint64_t)factLo->rawValue().toUInt()) / 1000000;
+//        int hours   = hobbsTimeSeconds / 3600;
+//        int minutes = (hobbsTimeSeconds % 3600) / 60;
+//        int seconds = hobbsTimeSeconds % 60;
+//        QString timeStr = QString::asprintf("%04d:%02d:%02d", hours, minutes, seconds);
+//        qCDebug(VehicleLog) << "Hobbs Meter:" << timeStr << "(" << factHi->rawValue().toUInt() << factLo->rawValue().toUInt() << ")";
+//        return timeStr;
+//    }
     return QString("0000:00:00");
 }
 
@@ -1748,56 +1745,6 @@ void Vehicle::HandleAckReset(ShenHangProtocolMessage& msg)
 
 }
 
-void Vehicle::HandleAckCommandParam(ShenHangProtocolMessage& msg)
-{
-    uint8_t idCfgGroup0;
-    uint8_t execuateState;
-
-    // 单个参数查询返回（ty_msg0=193,ty_msg1=3）；单个参数设置返回（ty_msg0=193,ty_msg1=4）
-    uint8_t lenCfg;         // 查询的设置参数的字节数，根据xml文件确定
-    uint16_t addrOffset;    // 查询的设置参数在对应组内的偏移地址，根据xml文件确定
-    uint8_t data[16];       // 具体设置值，按内存顺序排列，低字节在前，高字节在后
-
-    // 错误信息返回（ty_msg0=193,ty_msg1=255）
-    uint8_t errTyMsg1;      // 出错的命令对应的ty_msg1编号
-    uint8_t dgnCode;        // 错误编码，2：编号超界，4：无效指令，其他：保留
-    switch (msg.tyMsg1)
-    {
-    case ACK_RESET_PARAM:
-        idCfgGroup0 = msg.payload[0];
-        execuateState = msg.payload[1];
-        break;
-    case ACK_LOAD_PARAM:
-        idCfgGroup0 = msg.payload[0];
-        execuateState = msg.payload[1];
-        break;
-    case ACK_SAVE_PARAM:
-        idCfgGroup0 = msg.payload[0];
-        execuateState = msg.payload[1];
-        break;
-    case ACK_QUERY_PARAM:
-        idCfgGroup0 = msg.payload[0];
-        lenCfg = msg.payload[1];
-        memcpy(&addrOffset, msg.payload + 2, 2);
-        memcpy(data, msg.payload + 4, sizeof(data));
-        break;
-    case ACK_SET_PARAM:
-        idCfgGroup0 = msg.payload[0];
-        lenCfg = msg.payload[1];
-        memcpy(&addrOffset, msg.payload + 2, 2);
-        memcpy(data, msg.payload + 4, sizeof(data));
-        break;
-    case ACK_ERROR_PARAM:
-        errTyMsg1 = msg.payload[0];
-        dgnCode = msg.payload[1];
-        break;
-    default:
-        break;
-    }
-    qCDebug(VehicleLog) << "AckCommandParam msg.tyMsg1" << "idCfgGroup0" << idCfgGroup0
-                        << "execuateState" << execuateState << "lenCfg" << lenCfg << "errTyMsg1" << errTyMsg1 << "dgnCode" << dgnCode;
-}
-
 void Vehicle::HandleAckCommandBank(ShenHangProtocolMessage& msg)
 {
     TotalBankInfo totalBankInfo = {};
@@ -1834,7 +1781,7 @@ void Vehicle::PackVehicleCommand()
 {
 
 }
-
+#if 0
 void Vehicle::PackSetParamCommand(ShenHangProtocolMessage& msg, CommandParamType typeMsg1, uint8_t idGroup, uint8_t length, uint16_t addrOffset, uint8_t* data, uint8_t dataLength)
 {
     msg.tyMsg0 = COMMAND_PARAM;
@@ -1959,7 +1906,7 @@ void Vehicle::PackQuerySingleInfoSlot(ShenHangProtocolMessage& msg, uint16_t idB
     memcpy(msg.payload, &idBank, 2);
     memcpy(msg.payload + 2, &idInfoSlot, 2);
 }
-
+#endif
 void Vehicle::PackEnableBankAutoSw(ShenHangProtocolMessage& msg, uint8_t flagHalt)
 {
     msg.tyMsg0 = COMMAND_BANK;

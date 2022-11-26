@@ -189,19 +189,19 @@ QStringList ParameterEditorController::searchParameters(const QString& searchTex
 {
     QStringList list;
 
-    for(const QString &paramName: _parameterMgr->parameterNames(_vehicle->defaultComponentId())) {
-        if (searchText.isEmpty()) {
-            list += paramName;
-        } else {
-            Fact* fact = _parameterMgr->getParameter( paramName);
+//    for(const QString &paramName: _parameterMgr->parameterNames(_vehicle->defaultComponentId())) {
+//        if (searchText.isEmpty()) {
+//            list += paramName;
+//        } else {
+//            Fact* fact = _parameterMgr->getParameter( paramName);
 
-            if (searchInName && fact->name().contains(searchText, Qt::CaseInsensitive)) {
-                list += paramName;
-            } else if (searchInDescriptions && (fact->shortDescription().contains(searchText, Qt::CaseInsensitive) || fact->longDescription().contains(searchText, Qt::CaseInsensitive))) {
-                list += paramName;
-            }
-        }
-    }
+//            if (searchInName && fact->name().contains(searchText, Qt::CaseInsensitive)) {
+//                list += paramName;
+//            } else if (searchInDescriptions && (fact->shortDescription().contains(searchText, Qt::CaseInsensitive) || fact->longDescription().contains(searchText, Qt::CaseInsensitive))) {
+//                list += paramName;
+//            }
+//        }
+//    }
     list.sort();
 
     return list;
@@ -209,23 +209,23 @@ QStringList ParameterEditorController::searchParameters(const QString& searchTex
 
 void ParameterEditorController::saveToFile(const QString& filename)
 {
-    if (!filename.isEmpty()) {
-        QString parameterFilename = filename;
-        if (!QFileInfo(filename).fileName().contains(".")) {
-            parameterFilename += QString(".%1").arg(AppSettings::parameterFileExtension);
-        }
+//    if (!filename.isEmpty()) {
+//        QString parameterFilename = filename;
+//        if (!QFileInfo(filename).fileName().contains(".")) {
+//            parameterFilename += QString(".%1").arg(AppSettings::parameterFileExtension);
+//        }
 
-        QFile file(parameterFilename);
+//        QFile file(parameterFilename);
 
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            qgcApp()->showAppMessage(tr("Unable to create file: %1").arg(parameterFilename));
-            return;
-        }
+//        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+//            qgcApp()->showAppMessage(tr("Unable to create file: %1").arg(parameterFilename));
+//            return;
+//        }
 
-        QTextStream stream(&file);
-        _parameterMgr->writeParametersToStream(stream);
-        file.close();
-    }
+//        QTextStream stream(&file);
+//        _parameterMgr->writeParametersToStream(stream);
+//        file.close();
+//    }
 }
 
 void ParameterEditorController::clearDiff(void)
@@ -240,21 +240,21 @@ void ParameterEditorController::clearDiff(void)
 
 void ParameterEditorController::sendDiff(void)
 {
-    for (int i=0; i<_diffList.count(); i++) {
-        ParameterEditorDiff* paramDiff = _diffList.value<ParameterEditorDiff*>(i);
+//    for (int i=0; i<_diffList.count(); i++) {
+//        ParameterEditorDiff* paramDiff = _diffList.value<ParameterEditorDiff*>(i);
 
-        if (paramDiff->load) {
-            if (paramDiff->noVehicleValue) {
-                _parameterMgr->_factRawValueUpdateWorker(paramDiff->componentId, paramDiff->groupId,
-                                                         FactMetaData::getTypeSize(paramDiff->valueType),
-                                                         paramDiff->addrOffset, paramDiff->valueType,
-                                                         paramDiff->fileValueVar);
-            } else {
-                Fact* fact = _parameterMgr->getParameter(paramDiff->name);
-                fact->setRawValue(paramDiff->fileValueVar);
-            }
-        }
-    }
+//        if (paramDiff->load) {
+//            if (paramDiff->noVehicleValue) {
+//                _parameterMgr->_factRawValueUpdateWorker(paramDiff->groupId,
+//                                                         FactMetaData::getTypeSize(paramDiff->valueType),
+//                                                         paramDiff->addrOffset, paramDiff->valueType,
+//                                                         paramDiff->fileValueVar);
+//            } else {
+//                Fact* fact = _parameterMgr->getParameter(paramDiff->name);
+//                fact->setRawValue(paramDiff->fileValueVar);
+//            }
+//        }
+//    }
 }
 
 //bool ParameterEditorController::buildDiffFromFile(const QString& filename)
@@ -344,24 +344,24 @@ void ParameterEditorController::sendDiff(void)
 
 void ParameterEditorController::refresh(void)
 {
-//    _parameterMgr->refreshGroupParameters(MAV_COMP_ID_ALL, 0xff);
+    _parameterMgr->parameterGroupCommand(CommandParamType::COMMAND_QUERY_PARAM, 0XFF);
 }
 
 void ParameterEditorController::resetAllToDefaults(void)
 {
-    _parameterMgr->resetAllParametersToDefaults();
-    refresh();
+//    _parameterMgr->resetParameterGroupToDefaults();
+//    refresh();
 }
 
 void ParameterEditorController::resetAllToVehicleConfiguration(void)
 {
-    _parameterMgr->resetAllToVehicleConfiguration();
-    refresh();
+//    _parameterMgr->resetAllToVehicleConfiguration();
+//    refresh();
 }
 
 void ParameterEditorController::parameterGroupCommand (int command, int groupId)
 {
-    _parameterMgr->ParameterGroupCommand(static_cast<CommandParamType>(command), groupId);
+    _parameterMgr->parameterGroupCommand(static_cast<CommandParamType>(command), groupId);
 }
 
 bool ParameterEditorController::_shouldShow(Fact* fact)
@@ -389,23 +389,23 @@ void ParameterEditorController::_searchTextChanged(void)
         _searchParameters.beginReset();
         _searchParameters.clear();
 
-        for (const QString &paraName: _parameterMgr->parameterNames(_vehicle->defaultComponentId())) {
-            Fact* fact = _parameterMgr->getParameter(paraName);
-            bool matched = _shouldShow(fact);
-            // All of the search items must match in order for the parameter to be added to the list
-            if (matched) {
-                for (const auto& searchItem : rgSearchStrings) {
-                    if (!fact->name().contains(searchItem, Qt::CaseInsensitive) &&
-                            !fact->shortDescription().contains(searchItem, Qt::CaseInsensitive) &&
-                            !fact->longDescription().contains(searchItem, Qt::CaseInsensitive)) {
-                        matched = false;
-                    }
-                }
-            }
-            if (matched) {
-                _searchParameters.append(fact);
-            }
-        }
+//        for (const QString &paraName: _parameterMgr->parameterNames(_vehicle->defaultComponentId())) {
+//            Fact* fact = _parameterMgr->getParameter(paraName);
+//            bool matched = _shouldShow(fact);
+//            // All of the search items must match in order for the parameter to be added to the list
+//            if (matched) {
+//                for (const auto& searchItem : rgSearchStrings) {
+//                    if (!fact->name().contains(searchItem, Qt::CaseInsensitive) &&
+//                            !fact->shortDescription().contains(searchItem, Qt::CaseInsensitive) &&
+//                            !fact->longDescription().contains(searchItem, Qt::CaseInsensitive)) {
+//                        matched = false;
+//                    }
+//                }
+//            }
+//            if (matched) {
+//                _searchParameters.append(fact);
+//            }
+//        }
 
         _searchParameters.endReset();
 

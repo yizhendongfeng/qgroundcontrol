@@ -63,7 +63,7 @@ public:
     /**
      * @brief insertWaypoint    鼠标点击地图时，向当前航点后插入新的航点
      * @param coordinate        坐标
-     * @return
+     * @param index             要插入的索引
      */
     Q_INVOKABLE void insertWaypoint(QGeoCoordinate coordinate, int index);
 

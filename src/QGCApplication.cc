@@ -284,9 +284,9 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
         settings.clear();
 
         // Clear parameter cache
-        QDir paramDir(ParameterManager::parameterCacheDir());
-        paramDir.removeRecursively();
-        paramDir.mkpath(paramDir.absolutePath());
+//        QDir paramDir(ParameterManager::parameterCacheDir());
+//        paramDir.removeRecursively();
+//        paramDir.mkpath(paramDir.absolutePath());
     } else {
         // Determine if upgrade message for settings version bump is required. Check and clear must happen before toolbox is started since
         // that will write some settings.
@@ -300,8 +300,8 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
     settings.setValue(_settingsVersionKey, QGC_SETTINGS_VERSION);
 
     if (fClearCache) {
-        QDir dir(ParameterManager::parameterCacheDir());
-        dir.removeRecursively();
+//        QDir dir(ParameterManager::parameterCacheDir());
+//        dir.removeRecursively();
         QFile airframe(cachedAirframeMetaDataFile());
         airframe.remove();
         QFile parameter(cachedParameterMetaDataFile());

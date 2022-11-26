@@ -114,7 +114,7 @@ Rectangle {
             height:         _rowHeight
             onClicked: {
                 console.log("Rest group:", controller.currentGroup.groupId, controller.currentGroup.name)
-                controller.parameterGroupCommand(0/*重置*/, checkBoxAll.checked ? 0xff : controller.currentGroup.groupId)
+                controller.parameterGroupCommand(0/*重置*/, checkBoxAll.checked ? 0xFF : controller.currentGroup.groupId)
             }
         }
         QGCButton {
@@ -123,7 +123,7 @@ Rectangle {
             text:           "Load group"
             height:         _rowHeight
             onClicked: {
-                controller.parameterGroupCommand(1/*载入*/, checkBoxAll.checked ? 0xff : controller.currentGroup.groupId)
+                controller.parameterGroupCommand(1/*载入*/, checkBoxAll.checked ? 0XFF : controller.currentGroup.groupId)
                 console.log("Load group", controller.currentGroup.groupId, controller.currentGroup.name)
             }
         }
@@ -133,7 +133,17 @@ Rectangle {
             text:           "Save group"
             height:         _rowHeight
             onClicked: {
-                controller.parameterGroupCommand(2/*保存*/, checkBoxAll.checked ? 0xff : controller.currentGroup.groupId)
+                controller.parameterGroupCommand(2/*保存*/, checkBoxAll.checked ? 0XFF : controller.currentGroup.groupId)
+                console.log("Save group", controller.currentGroup.groupId, controller.currentGroup.name)
+            }
+        }
+        QGCButton {
+            id:             buttonRefresh
+            width:          ScreenTools.defaultFontPixelWidth * 20
+            text:           "Refresh group"
+            height:         _rowHeight
+            onClicked: {
+                controller.parameterGroupCommand(3/*请求*/, checkBoxAll.checked ? 0XFF : controller.currentGroup.groupId)
                 console.log("Save group", controller.currentGroup.groupId, controller.currentGroup.name)
             }
         }
@@ -157,7 +167,7 @@ Rectangle {
         id:                 toolsMenu
         QGCMenuItem {
             text:           qsTr("Refresh")
-            onTriggered:	controller.refresh()
+            onTriggered:	controller.parameterGroupCommand(3/*查询*/, 0XFF)
         }
         QGCMenuItem {
             text:           qsTr("Reset all to firmware's defaults")

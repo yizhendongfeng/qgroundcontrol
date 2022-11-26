@@ -368,8 +368,12 @@ public:
     QGCMAVLink::VehicleClass_t vehicleClass(void) const { return QGCMAVLink::vehicleClass(_vehicleType); }
     Q_INVOKABLE QString vehicleTypeName() const;
 
-    /// Sends a message to the specified link
-    /// @return true: message sent, false: Link no longer connected
+    /**
+     * @brief sendShenHangMessageOnLinkThreadSafe 通过链接发送消息
+     * @param link 与无人机的链接
+     * @param message 要发送的消息
+     * @return 成功发送为真，链接不存在为假
+     */
     bool sendShenHangMessageOnLinkThreadSafe(LinkInterface* link, ShenHangProtocolMessage message);
 
     /// Provides access to uas from vehicle. Temporary workaround until UAS is fully phased out.
@@ -1100,33 +1104,17 @@ public:
     void HandleAckReset(ShenHangProtocolMessage& msg);
 
     /**
-     * @brief HandleAckCommandParam  设置命令的回复（ty_msg0=193）
-     * @param msg
-     */
-    void HandleAckCommandParam(ShenHangProtocolMessage& msg);
-
-    /**
      * @brief HandleAckCommandBank 该航线相关命令（ty_msg0=130）的返回报文
      * @param msg
      */
     void HandleAckCommandBank(ShenHangProtocolMessage& msg);
-
-
-    /******************** 发送数据 ********************/
-    /**
-     * @brief EncodeMessageToBuffer 将数据打包到缓冲区中
-     * @param buf
-     * @param msg
-     * @return 缓冲区长度
-     */
-    int EncodeMessageToBuffer(uint8_t* buf, ShenHangProtocolMessage& msg);
 
     /******************** 命令报文 ********************/
     /**
      * @brief PackVehicleCommand 载具操纵命令（ty_msg0=128）具体内容未定，暂且保留
      */
     void PackVehicleCommand();
-
+#if 0 // WARNING To be deleted
     /**
      * @brief PackSetParamCommand 设置相关命令（ty_msg0=129）
      * @param msg
@@ -1221,7 +1209,7 @@ public:
      * @param idInfoSlot 对应需要查询的infoslot编号
      */
     void PackQuerySingleInfoSlot(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t idInfoSlot);
-
+#endif
     /**
      * @brief PackEnableBankAutoSw 航线自动跳转控制命令（ty_msg0=130,ty_msg1=5）
      * @param msg 传出参数

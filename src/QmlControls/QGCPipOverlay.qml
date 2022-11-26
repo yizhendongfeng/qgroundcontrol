@@ -267,7 +267,7 @@ Rectangle {
         flow:               Flow.TopToBottom
         anchors.fill:       parent
         anchors.margins:    5
-        model:              1
+        model:              QGroundControl.multiVehicleManager.vehicles
         delegate:           componentFlyViewVideo
         highlight:          delegateHighlight
         focus:              true
@@ -302,7 +302,7 @@ Rectangle {
                     anchors.fill: parent
                     OsdOverlay {
                         id: osdOverlay
-                        activeVehicle: globals.activeVehicle
+                        activeVehicle: globals.activeVehicle // TODO 测试用，测试结束后应该为object
                         anchors.fill: parent
                     }
 

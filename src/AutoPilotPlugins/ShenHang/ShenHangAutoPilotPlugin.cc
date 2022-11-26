@@ -104,11 +104,11 @@ void ShenHangAutoPilotPlugin::parametersReadyPreChecks(void)
     // Base class must be called
     AutoPilotPlugin::parametersReadyPreChecks();
 
-    QString hitlParam("SYS_HITL");
-    if (_vehicle->parameterManager()->parameterExists(hitlParam) &&
-            _vehicle->parameterManager()->getParameter(hitlParam)->rawValue().toBool()) {
-        qgcApp()->showAppMessage(tr("Warning: Hardware In The Loop (HITL) simulation is enabled for this vehicle."));
-    }
+//    QString hitlParam("SYS_HITL");
+//    if (_vehicle->parameterManager()->parameterExists(hitlParam) &&
+//            _vehicle->parameterManager()->getParameter(hitlParam)->rawValue().toBool()) {
+//        qgcApp()->showAppMessage(tr("Warning: Hardware In The Loop (HITL) simulation is enabled for this vehicle."));
+//    }
 }
 
 QString ShenHangAutoPilotPlugin::prerequisiteSetup(VehicleComponent* component) const

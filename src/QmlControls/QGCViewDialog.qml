@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -21,26 +21,29 @@ Item {
     property var buttons: StandardButton.NoButton
 
     signal hideDialog
-
-    Keys.onReleased: {
-        if (event.key === Qt.Key_Escape) {
-            reject()
-            event.accepted = true
-        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            accept()
-            event.accepted = true
-        }
-    }
+//    signal sigAccepted
+//    signal sigRejected
+//    Keys.onReleased: {
+//        if (event.key === Qt.Key_Escape) {
+//            reject()
+//            event.accepted = true
+//        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+//            accept()
+//            event.accepted = true
+//        }
+//    }
 
     function accept() {
         if (acceptAllowed) {
             hideDialog()
+            sigAccepted()
         }
     }
 
     function reject() {
         if (rejectAllowed) {
             hideDialog()
+            sigRejected()
         }
     }
 }

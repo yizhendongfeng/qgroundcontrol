@@ -577,4 +577,20 @@ QGCViewDialog {
             }
         }
     }
+    Component.onCompleted: {
+        console.log("itemInfoSlot id", itemInfoSlot.idInfoSlot, "idwaypoint:", itemInfoSlot.idWaypoint, "lon:", itemInfoSlot.lon.value, "_root:", _root)
+    }
+    Component.onDestruction: {
+        console.log("itemInfoSlot onDestruction id", itemInfoSlot.idInfoSlot)
+    }
+    Timer {
+        id: timer
+        interval: 1000
+        repeat: true
+        running: true
+        onTriggered: console.log("item editor:", _root, "idInfoSlot:", itemInfoSlot.idInfoSlot)
+    }
+    onHideDialog: {
+        itemInfoSlot.updateSlotInfoData()
+    }
 } // Rectangle

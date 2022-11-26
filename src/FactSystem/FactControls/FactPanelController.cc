@@ -41,36 +41,39 @@ void FactPanelController::_reportMissingParameter(const QString& name)
 
 bool FactPanelController::_allParametersExists(int componentId, QStringList names)
 {
-    bool noMissingFacts = true;
+//    bool noMissingFacts = true;
 
-    foreach (const QString &name, names) {
-        if (_vehicle && !_vehicle->parameterManager()->parameterExists(name)) {
-            _reportMissingParameter(name);
-            noMissingFacts = false;
-        }
-    }
+//    foreach (const QString &name, names) {
+//        if (_vehicle && !_vehicle->parameterManager()->parameterExists(name)) {
+//            _reportMissingParameter(name);
+//            noMissingFacts = false;
+//        }
+//    }
 
-    return noMissingFacts;
+//    return noMissingFacts;
+    return false;
 }
 
 
 Fact* FactPanelController::getParameterFact(int componentId, const QString& name, bool reportMissing)
 {
-    if (_vehicle && _vehicle->parameterManager()->parameterExists(name)) {
-        Fact* fact = _vehicle->parameterManager()->getParameter(name);
-        QQmlEngine::setObjectOwnership(fact, QQmlEngine::CppOwnership);
-        return fact;
-    } else {
-        if (reportMissing) {
-            _reportMissingParameter(name);
-        }
-        return nullptr;
-    }
+//    if (_vehicle && _vehicle->parameterManager()->parameterExists(name)) {
+//        Fact* fact = _vehicle->parameterManager()->getParameter(name);
+//        QQmlEngine::setObjectOwnership(fact, QQmlEngine::CppOwnership);
+//        return fact;
+//    } else {
+//        if (reportMissing) {
+//            _reportMissingParameter(name);
+//        }
+//        return nullptr;
+//    }
+    return nullptr;
 }
 
 bool FactPanelController::parameterExists(int componentId, const QString& name)
 {
-    return _vehicle ? _vehicle->parameterManager()->parameterExists(name) : false;
+//    return _vehicle ? _vehicle->parameterManager()->parameterExists(name) : false;
+    return false;
 }
 
 void FactPanelController::getMissingParameters(QStringList rgNames)

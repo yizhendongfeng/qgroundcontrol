@@ -390,13 +390,14 @@ void ShenHangFirmwarePlugin::guidedModeLand(Vehicle* vehicle)
 
 double ShenHangFirmwarePlugin::minimumTakeoffAltitude(Vehicle* vehicle)
 {
-    QString takeoffAltParam("MIS_TAKEOFF_ALT");
+//    QString takeoffAltParam("MIS_TAKEOFF_ALT");
 
-    if (vehicle->parameterManager()->parameterExists(takeoffAltParam)) {
-        return vehicle->parameterManager()->getParameter(takeoffAltParam)->rawValue().toDouble();
-    } else {
-        return FirmwarePlugin::minimumTakeoffAltitude(vehicle);
-    }
+//    if (vehicle->parameterManager()->parameterExists(takeoffAltParam)) {
+//        return vehicle->parameterManager()->getParameter(takeoffAltParam)->rawValue().toDouble();
+//    } else {
+//        return FirmwarePlugin::minimumTakeoffAltitude(vehicle);
+//    }
+    return 0;
 }
 
 void ShenHangFirmwarePlugin::guidedModeTakeoff(Vehicle* vehicle, double takeoffAltRel)

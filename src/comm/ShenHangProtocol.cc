@@ -119,7 +119,7 @@ uint8_t ShenHangProtocol::CaculateCrc8(uint8_t buf[], uint16_t len)
     return (0xFF - fcs);
 }
 
-void ShenHangProtocol::Decode(LinkInterface* link, uint8_t channel, QByteArray bytesReceived, ShenHangProtocolMessage& msg, ShenHangProtocolStatus* shenHangProtocolStatus)
+void ShenHangProtocol::decode(LinkInterface* link, uint8_t channel, QByteArray bytesReceived, ShenHangProtocolMessage& msg, ShenHangProtocolStatus* shenHangProtocolStatus)
 {
     if (bytesReceived.length() <= 0)
         return;
@@ -157,7 +157,7 @@ void ShenHangProtocol::Decode(LinkInterface* link, uint8_t channel, QByteArray b
                 msg.ctr = shenHangProtocolStatus->bufferReceived[i + 8 + payloadLength.value(msg.tyMsg0)];
                 uint8_t CaculatedCrc = CaculateCrc8(shenHangProtocolStatus->bufferReceived + i, MIN_PROTOCOL_LEN - 1 + payloadLength.value(msg.tyMsg0));
                 if (CaculatedCrc == shenHangProtocolStatus->bufferReceived[i + 9 + payloadLength.value(msg.tyMsg0)]) {
-                    HandleMessage(link, channel);
+                    handleMessage(link, channel);
                     i += MIN_PROTOCOL_LEN + payloadLength.value(msg.tyMsg0);
                 } else {
                     i++;
@@ -173,7 +173,7 @@ void ShenHangProtocol::Decode(LinkInterface* link, uint8_t channel, QByteArray b
     shenHangProtocolStatus->receivedBufferLength -= i;
 }
 
-uint16_t ShenHangProtocol::Encode(ShenHangProtocolMessage msg, uint8_t* buf)
+uint16_t ShenHangProtocol::encode(ShenHangProtocolMessage msg, uint8_t* buf)
 {
     buf[0] = HEAD0;
     buf[1] = HEAD1;
@@ -184,11 +184,10 @@ uint16_t ShenHangProtocol::Encode(ShenHangProtocolMessage msg, uint8_t* buf)
     memcpy(buf + 8, &msg.payload, payloadLength.value(msg.tyMsg0));
     buf[8 + payloadLength.value(msg.tyMsg0)] = counter++;
     buf[9 + payloadLength.value(msg.tyMsg0)] = CaculateCrc8(buf, 9 + payloadLength.value(msg.tyMsg0));
-//    qDebug() << QByteArray((char*)(buf) , 10 + payloadLength.value(msg.tyMsg0)).toHex(' ');
     return 10 + payloadLength.value(msg.tyMsg0);
 }
 
-void ShenHangProtocol::HandleMessage(LinkInterface* link, uint8_t channel)
+void ShenHangProtocol::handleMessage(LinkInterface* link, uint8_t channel)
 {
     //-----------------------------------------------------------------
     // MAVLink Status
@@ -227,9 +226,9 @@ void ShenHangProtocol::HandleMessage(LinkInterface* link, uint8_t channel)
     receiveLossPercent *= 100.0f;
     receiveLossPercent = (receiveLossPercent * 0.5f) + (runningLossPercent[channel] * 0.5f);
     runningLossPercent[channel] = receiveLossPercent;
-    // Update MAVLink status on every 32th packet
+    // Update status on every 32th packet
     if ((totalReceiveCounter[channel] & 0x1F) == 0) {
-        emit mavlinkMessageStatus(_shenHangProtocolMessage.idSource, totalSent, totalReceiveCounter[channel], totalLossCounter[channel], receiveLossPercent);
+        emit shenHangMessageStatus(_shenHangProtocolMessage.idSource, totalSent, totalReceiveCounter[channel], totalLossCounter[channel], receiveLossPercent);
     }
     if (_shenHangProtocolMessage.tyMsg0 == GENERAL_STATUS)  // 获取无人机类型
     {
@@ -358,59 +357,7 @@ void ShenHangProtocol::receiveBytes(LinkInterface* link, QByteArray b)
         int32_t length = lengthLeft < b.size() ? lengthLeft : b.size();
         QByteArray bytes = b.left(length);
         b.remove(0, length);
-        Decode(link, shenHangProtocollinkChannel, bytes, _shenHangProtocolMessage, _shenHangProtocolStatus);
-        {
-#if 0
-            //-----------------------------------------------------------------
-            // MAVLink Status
-            uint8_t lastSeq = lastIndex[_shenHangProtocolMessage.idSource];
-            uint8_t expectedSeq = lastSeq + 1;
-            // Increase receive counter
-            totalReceiveCounter[shenHangProtocollinkChannel]++;
-            // Determine what the next expected sequence number is, accounting for
-            // never having seen a message for this system/component pair.
-            if(firstMessage[_shenHangProtocolMessage.idSource]) {
-                firstMessage[_shenHangProtocolMessage.idSource] = 0;
-                lastSeq     = _shenHangProtocolMessage.ctr;
-                expectedSeq = _shenHangProtocolMessage.ctr;
-            }
-            // And if we didn't encounter that sequence number, record the error
-            //int foo = 0;
-            if (_shenHangProtocolMessage.ctr != expectedSeq)
-            {
-                //foo = 1;
-                int lostMessages = 0;
-                //-- Account for overflow during packet loss
-                if(_shenHangProtocolMessage.ctr < expectedSeq) {
-                    lostMessages = (_shenHangProtocolMessage.ctr + 255) - expectedSeq;
-                } else {
-                    lostMessages = _shenHangProtocolMessage.ctr - expectedSeq;
-                }
-                // Log how many were lost
-                totalLossCounter[shenHangProtocollinkChannel] += static_cast<uint64_t>(lostMessages);
-            }
-
-            // And update the last sequence number for this system/component pair
-            lastIndex[_shenHangProtocolMessage.idSource] = _shenHangProtocolMessage.ctr;
-            // Calculate new loss ratio
-            uint64_t totalSent = totalReceiveCounter[shenHangProtocollinkChannel] + totalLossCounter[shenHangProtocollinkChannel];
-            float receiveLossPercent = static_cast<float>(static_cast<double>(totalLossCounter[shenHangProtocollinkChannel]) / static_cast<double>(totalSent));
-            receiveLossPercent *= 100.0f;
-            receiveLossPercent = (receiveLossPercent * 0.5f) + (runningLossPercent[shenHangProtocollinkChannel] * 0.5f);
-            runningLossPercent[shenHangProtocollinkChannel] = receiveLossPercent;
-            // Update MAVLink status on every 32th packet
-            if ((totalReceiveCounter[shenHangProtocollinkChannel] & 0x1F) == 0) {
-                emit mavlinkMessageStatus(_shenHangProtocolMessage.idSource, totalSent, totalReceiveCounter[shenHangProtocollinkChannel], totalLossCounter[shenHangProtocollinkChannel], receiveLossPercent);
-            }
-            if (_shenHangProtocolMessage.tyMsg0 == GENERAL_STATUS)  // 获取无人机类型
-            {
-                GeneralStatus generalStatus;
-                memcpy(&generalStatus, _shenHangProtocolMessage.payload, sizeof(generalStatus));
-                emit shenHangVehicleTypeInfo(link, _shenHangProtocolMessage.idSource, MAV_COMP_ID_AUTOPILOT1, MAV_AUTOPILOT_SHEN_HANG, generalStatus.tyObj);
-            }
-            emit shenHangMessageReceived(link, _shenHangProtocolMessage);
-#endif
-        }
+        decode(link, shenHangProtocollinkChannel, bytes, _shenHangProtocolMessage, _shenHangProtocolStatus);
     }
 }
 

@@ -297,12 +297,12 @@ ApplicationWindow {
         visible:            false
         onYes:              activeConnectionsCloseDialog.check()
         function check() {
-            for (var index=0; index<QGroundControl.multiVehicleManager.vehicles.count; index++) {
-                if (QGroundControl.multiVehicleManager.vehicles.get(index).parameterManager.pendingWrites) {
-                    pendingParameterWritesCloseDialog.open()
-                    return
-                }
-            }
+//            for (var index=0; index<QGroundControl.multiVehicleManager.vehicles.count; index++) {
+//                if (QGroundControl.multiVehicleManager.vehicles.get(index).parameterManager.pendingWrites) {
+//                    pendingParameterWritesCloseDialog.open()
+//                    return
+//                }
+//            }
             activeConnectionsCloseDialog.check()
         }
     }

@@ -206,7 +206,7 @@ struct GpsRawInt {
 enum CommandParamType {          // ty_msg0=129时, ty_msg1用以对机上参数进行读取、设置、初始化、保存等操作，名称id_cfggroup
     COMMAND_RESET_PARAM = 0,       // 重置设置（ty_msg0=129,ty_msg1=0）
     COMMAND_LOAD_PARAM,            // 载入设置（ty_msg0=129,ty_msg1=1）
-    COMMAND_SAVE_PARAM,            // 保存设置（ty_msg0=129,ty_msg1=1）
+    COMMAND_SAVE_PARAM,            // 保存设置（ty_msg0=129,ty_msg1=2）
     COMMAND_QUERY_PARAM,           // 查询设置（ty_msg0=129,ty_msg1=3）
     COMMAND_SET_PARAM,             // 设置参数（ty_msg0=129,ty_msg1=4）
 };

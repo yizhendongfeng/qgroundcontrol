@@ -59,7 +59,7 @@ void PlanManager::_handleAckInfoSlot(const ShenHangProtocolMessage &message)
     switch(_transactionInProgress) {
     case TransactionRead:
         if (infoSlot->idBank != _lastBankIdRead || infoSlot->idInfoSlot != _lastInfoSlotIdRead) {
-            // TODO 返回错误的infoSlot，弹窗警告，并终止
+            qgcApp()->showAppMessage(tr("Receive wrong infoSlot when reading"));
             return;
         }
         _mapInfoSlotsInBanksToWrite[infoSlot->idBank][infoSlot->idInfoSlot] = infoSlot;
@@ -88,11 +88,11 @@ void PlanManager::_handleAckInfoSlot(const ShenHangProtocolMessage &message)
                                 << "idInfosl:" << infoSlot->idInfoSlot << "_infoSlotIndicesToWrite" << _infoSlotIndicesToWrite
                                 << "waypointInfoSlot->cs" << infoSlot->cs <<  _mapInfoSlotsInBanksToWrite[_lastBankIdWrite][_lastInfoSlotIdWrite]->cs;
         if (infoSlot->idBank != _lastBankIdWrite || infoSlot->idInfoSlot != _lastInfoSlotIdWrite) {
-            // TODO 返回错误的infoSlot，弹窗警告，并终止
+            qgcApp()->showAppMessage(tr("Receive wrong infoSlot when writing"));
             return;
         }
         if (infoSlot->cs != _mapInfoSlotsInBanksToWrite[_lastBankIdWrite][_lastInfoSlotIdWrite]->cs) { // 判断返回的infoSlot是否一致
-            //  TODO 弹窗警告
+            qgcApp()->showAppMessage(tr("Receive wrong infoSlot checksum"));
             return;
         }
         if (!_checkForExpectedAck(AckCommandBank::ACK_SET_SINGLE_INFO_SLOT)) {
@@ -351,6 +351,8 @@ void PlanManager::_handleAllBankInfo(const ShenHangProtocolMessage& message)
     _retryCount = 0;
     switch (_transactionInProgress) {
     case TransactionRead:
+        /********** 此处暂用largeBankNumber来表示无人机中航线个数，默认从零开始编号 **********/
+        // WARNING largeBankNumber应修改为无人机中航线个数
         for (uint16_t i = 0; i < totalBankInfo.largeBankNumber; i++) {
             _bankIndicesToRead << i;
         }
@@ -359,7 +361,7 @@ void PlanManager::_handleAllBankInfo(const ShenHangProtocolMessage& message)
         break;
     case TransactionWrite:
         if (totalBankInfo.largeBankNumber < _mapInfoSlotsInBanksToWrite.count()) {
-            // TODO 增加提示
+            qgcApp()->showAppMessage(tr("exceed large bank maximum number in vehicle"));
             return;
         }
         _bankIndicesToWrite = _mapBankInfosToWrite.keys();
@@ -420,12 +422,12 @@ void PlanManager::_handleAckCommandBank(const ShenHangProtocolMessage& message)
             // u8变量，对应航线状态,bit0 0未装载，1装载；bit1 0未校验，1已校验；bit2 0未锁定，1已锁定；bit3 0空闲，1占用；bit4：7 保留
             if ((singleBankInfo->stateBank & 0x08) >> 3 == 1) { // bit3 0空闲，1占用；占用中的bank不可更新
                 qCDebug(PlanManagerLog) << "current bank is occupied id:" << singleBankInfo->idBank;
-                // TODO 弹出提示窗口，并终止任务传输
-//                return;
+                qgcApp()->showAppMessage(tr("current bank is occupied id:") + singleBankInfo->idBank);
+                return;
             } else if ((singleBankInfo->stateBank & 0x04) >> 2 == 1) { // bit2 0未锁定，1已锁定；锁定中的bank需先解除锁定后再更新
                 qCDebug(PlanManagerLog) << "current bank is locked id:" << singleBankInfo->idBank;
-                // TODO 弹出提示窗口，并终止任务传输
-//                return;
+                qgcApp()->showAppMessage(tr("current bank is locked id:") + singleBankInfo->idBank);
+                return;
             }
             _bankIndicesToWrite.removeOne(singleBankInfo->idBank);
             if (_bankIndicesToWrite.count() > 0)
@@ -760,21 +762,6 @@ void PlanManager::packCommandBankQuerySingle(ShenHangProtocolMessage &msg, uint1
     memcpy(msg.payload, &idBank, 2);
 }
 
-void PlanManager::packCommandBankSetSingle(ShenHangProtocolMessage &msg, uint16_t idBank, uint16_t idBankSuc, uint16_t idBankIwpSuc, uint16_t actBankEnd, uint8_t flagBankVerified, uint8_t flagBankLock)
-{
-    msg.tyMsg0 = COMMAND_BANK;
-    msg.tyMsg1 = SET_SINGLE_BANK;
-    msg.idSource = qgcApp()->toolbox()->shenHangProtocol()->getSystemId();
-    msg.idTarget = _vehicle->id();
-    memset(msg.payload, 0, sizeof(msg.payload));
-    memcpy(msg.payload, &idBank, 2);
-    memcpy(msg.payload + 2, &idBankSuc, 2);
-    memcpy(msg.payload + 4, &idBankIwpSuc, 2);
-    memcpy(msg.payload + 6, &actBankEnd, 2);
-    msg.payload[8] = flagBankVerified;
-    msg.payload[9] = flagBankLock;
-}
-
 void PlanManager::packRefactorInfoSlot(ShenHangProtocolMessage &msg, uint16_t idBank, uint16_t nWp, uint16_t nInfoSlot)
 {
     msg.tyMsg0 = COMMAND_BANK;
@@ -911,7 +898,7 @@ void PlanManager::_queryAllBanks()
     if (!weakLink.expired()) {
         SharedLinkInterfacePtr  sharedLink = weakLink.lock();
         ShenHangProtocolMessage msg = {};
-        _vehicle->PackCommandBankQueryAll(msg);
+        packCommandBankQueryAll(msg);
         _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
     }        
     _startAckTimeout(ACK_QUERY_ALL_BANK);
@@ -924,7 +911,7 @@ void PlanManager::_querySingleBankInfo(uint16_t idBank)
     if (!weakLink.expired()) {
         SharedLinkInterfacePtr  sharedLink = weakLink.lock();
         ShenHangProtocolMessage msg = {};
-        _vehicle->PackCommandBankQuerySingle(msg, idBank);
+        packCommandBankQuerySingle(msg, idBank);
         _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
     }
     _startAckTimeout(ACK_QUERY_SINGLE_BANK);
@@ -950,7 +937,7 @@ void PlanManager::_refactorInfoSlots(uint16_t idBank, uint16_t nWp, uint16_t nIn
     if (!weakLink.expired()) {
         SharedLinkInterfacePtr  sharedLink = weakLink.lock();
         ShenHangProtocolMessage msg = {};
-        _vehicle->PackRefactorInfoSlot(msg, idBank, nWp, nInfoSlot);
+        packRefactorInfoSlot(msg, idBank, nWp, nInfoSlot);
         _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
     }
     _startAckTimeout(ACK_REFACTOR_INFO_SLOT);
@@ -963,7 +950,7 @@ void PlanManager::_querySingleInfoSlot(uint16_t idBank, uint16_t idInfoSlot)
     if (!weakLink.expired()) {
         SharedLinkInterfacePtr  sharedLink = weakLink.lock();
         ShenHangProtocolMessage msg = {};
-        _vehicle->PackQuerySingleInfoSlot(msg, idBank, idInfoSlot);
+        packQuerySingleInfoSlot(msg, idBank, idInfoSlot);
         _vehicle->sendShenHangMessageOnLinkThreadSafe(sharedLink.get(), msg);
     }
     _startAckTimeout(ACK_QUERY_SINGLE_INFO_SLOT);

@@ -160,7 +160,7 @@ Item {
     FlyViewToolStrip {
         id:                     toolStrip
         anchors.bottom:             parent.bottom
-        anchors.bottomMargin:       100//_toolsMargin + parentToolInsets.topEdgeLeftInset
+        anchors.bottomMargin:       50//_toolsMargin + parentToolInsets.topEdgeLeftInset
         anchors.horizontalCenter:   parent.horizontalCenter
         z:                      QGroundControl.zOrderWidgets
         maxHeight:              parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin

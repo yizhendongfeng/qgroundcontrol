@@ -1047,6 +1047,7 @@ Item {
                                                 enabled: tabWaypointEditor.indexCurrentWaypoint > 0
                                                 onClicked: {
                                                     _itemCurrentBank.setItemCurrentWaypoint(_itemCurrentBank.indexCurrentWaypoint - 1)
+                                                    splitSegmentItem._updateSplitCoord()
                                                 }
                                             }
 
@@ -1068,6 +1069,7 @@ Item {
                                                 enabled: _itemCurrentBank ? tabWaypointEditor.indexCurrentWaypoint < _itemCurrentBank.nWp - 1 : false
                                                 onClicked: {
                                                     _itemCurrentBank.setItemCurrentWaypoint(_itemCurrentBank.indexCurrentWaypoint + 1)
+                                                    splitSegmentItem._updateSplitCoord()
                                                 }
                                             }
                                         }
@@ -1726,6 +1728,7 @@ Item {
                 onClicked: {
                     listViewInfoSlot.currentIndex = index
                     listViewInfoSlot.focus = true
+                    console.log("_itemCurrentInfoSlot", _itemCurrentInfoSlot)
                     console.log("listViewWaypoint waypoint index: ", index, "focus: ", focus, "listViewWaypoint:", listViewInfoSlot)
                 }
                 RowLayout {
@@ -1794,7 +1797,7 @@ Item {
                         onClicked: {
                             toolTipButtonWaypointEdit.visible = false
                             listViewInfoSlot.currentIndex = index
-                            mainWindow.showComponentDialog(componentInfoslotEditor, qsTr("InfoSlot ") + _itemCurrentInfoSlot.idInfoSlot, _rightPanelWidth / ScreenTools.defaultFontPixelWidth, StandardButton.Close)
+                            mainWindow.showComponentDialog(componentInfoslotEditor, qsTr("InfoSlot ") + _itemCurrentInfoSlot.idInfoSlot, _rightPanelWidth / ScreenTools.defaultFontPixelWidth, StandardButton.Ok)
                         }
                         ToolTip {
                             id: toolTipButtonWaypointEdit

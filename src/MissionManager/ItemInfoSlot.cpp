@@ -88,6 +88,7 @@ ItemInfoSlot::ItemInfoSlot(const WaypointInfoSlot &infoSlot, QObject* parent)
 
 {
     _setupMetaData();
+    _connectSignals();
     qDebug() << "ItemInfoSlot::ItemInfoSlot()" << _infoSlot.idBank << _infoSlot.idWp << _infoSlot.idInfoSlot;
 }
 
@@ -246,6 +247,7 @@ void ItemInfoSlot::updateSlotInfoData()
     _infoSlot.reserved0 = static_cast<uint8_t>(_reserved0.rawValue().toUInt());
     _infoSlot.reserved1 = static_cast<uint8_t>(_reserved1.rawValue().toUInt());
     _infoSlot.cs = ShenHangProtocol::CaculateCrc8((uint8_t*)&_infoSlot, sizeof(_infoSlot) - 1);
+    setDirty(true);
 }
 
 void ItemInfoSlot::setDirty(bool dirty)

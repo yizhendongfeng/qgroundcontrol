@@ -16,6 +16,7 @@ import QGroundControl.Palette       1.0
 import QGroundControl.ScreenTools   1.0
 
 Drawer {
+    id: _root
     edge:           Qt.RightEdge
     interactive:    false
 
@@ -100,8 +101,10 @@ Drawer {
         function onHideDialog() {
             Qt.inputMethod.hide()
             close()
+//            _root.destroy()
         }
     }
+    onClosed: _root.destroy()
 
     Component.onCompleted: setupDialogButtons(dialogButtons)
 

@@ -119,18 +119,6 @@ public:
     void packCommandBankQuerySingle(ShenHangProtocolMessage& msg, uint16_t idBank);
 
     /**
-     * @brief packCommandBankSetSingle 设置单个bank（ty_msg0=130,ty_msg1=2）
-     * @param msg 传出参数
-     * @param idBank 对应需要设置的bank编号
-     * @param idBankSuc 对应接续航线bank编号
-     * @param idBankIwpSuc 对应接续航线中航点编号
-     * @param actBankEnd 设置航线完成动作，暂未定义，保留
-     * @param flagBankVerified 设置航线校验位，0：校验未通过，1：校验通过
-     * @param flagBankLock 设置航线锁定位，0：解除锁定，1：设置锁定
-     */
-    void packCommandBankSetSingle(ShenHangProtocolMessage& msg, uint16_t idBank, uint16_t idBankSuc, uint16_t idBankIwpSuc, uint16_t actBankEnd, uint8_t flagBankVerified, uint8_t flagBankLock);
-
-    /**
      * @brief packRefactorInfoSlot 重构infoslot表单（ty_msg0=130,ty_msg1=3）
      * @param msg 传出参数
      * @param idBank 对应需要重构的bank编号

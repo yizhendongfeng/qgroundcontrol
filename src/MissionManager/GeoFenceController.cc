@@ -492,11 +492,11 @@ void GeoFenceController::clearAllInteractive(void)
 // Hack for PX4
 double GeoFenceController::paramCircularFence(void)
 {
-    if (_managerVehicle->isOfflineEditingVehicle() || !_managerVehicle->parameterManager()->parameterExists( _px4ParamCircularFence)) {
-        return 0;
-    }
+//    if (_managerVehicle->isOfflineEditingVehicle() || !_managerVehicle->parameterManager()->parameterExists( _px4ParamCircularFence)) {
+//        return 0;
+//    }
 
-    return _managerVehicle->parameterManager()->getParameter(_px4ParamCircularFence)->rawValue().toDouble();
+    return 0;//_managerVehicle->parameterManager()->getParameter(_px4ParamCircularFence)->rawValue().toDouble();
 }
 
 void GeoFenceController::_parametersReady(void)
@@ -506,13 +506,13 @@ void GeoFenceController::_parametersReady(void)
         _px4ParamCircularFenceFact = nullptr;
     }
 
-    if (_managerVehicle->isOfflineEditingVehicle() || !_managerVehicle->parameterManager()->parameterExists(_px4ParamCircularFence)) {
-        emit paramCircularFenceChanged();
-        return;
-    }
+//    if (_managerVehicle->isOfflineEditingVehicle() || !_managerVehicle->parameterManager()->parameterExists(_px4ParamCircularFence)) {
+//        emit paramCircularFenceChanged();
+//        return;
+//    }
 
-    _px4ParamCircularFenceFact = _managerVehicle->parameterManager()->getParameter(_px4ParamCircularFence);
-    connect(_px4ParamCircularFenceFact, &Fact::rawValueChanged, this, &GeoFenceController::paramCircularFenceChanged);
+//    _px4ParamCircularFenceFact = _managerVehicle->parameterManager()->getParameter(_px4ParamCircularFence);
+//    connect(_px4ParamCircularFenceFact, &Fact::rawValueChanged, this, &GeoFenceController::paramCircularFenceChanged);
     emit paramCircularFenceChanged();
 }
 
