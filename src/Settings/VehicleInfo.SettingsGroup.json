@@ -1,0 +1,56 @@
+{
+    "version":  1,
+    "fileType": "FactMetaData",
+    "QGC.MetaData.Facts":
+[
+{
+    "name":         "vehicleName",
+    "shortDesc":    "Vehicle name",
+    "type":         "string"
+},
+{
+    "name":         "uid",
+    "shortDesc":    "Hardware UID",
+    "type":         "Uint64"
+},
+{
+    "name":         "uid2LowBytes",
+    "shortDesc":    "Hardware UID2 uint8[0:7]",
+    "type":         "Uint64"
+},
+{
+    "name":         "uid2MidBytes",
+    "shortDesc":    "Hardware UID2 uint8[8:15]",
+    "type":         "Uint64"
+},
+{
+    "name":         "uid2HighBytes",
+    "shortDesc":    "Hardware UID2 uint8[16:17]",
+    "type":         "Uint16"
+},
+{
+    "name":         "mav_type",
+    "shortDesc":    "MAV_TYPE",
+    "type":         "Uint8"
+},
+{
+    "name":         "mav_autopilot",
+    "shortDesc":    "MAV_AUTOPPILOT",
+    "type":         "Uint8"
+},
+{
+    "name":         "cameraType",
+    "shortDesc":    "Camera type",
+    "type":         "Uint8",
+    "enumStrings":  [ "None", "Mavlink Camera", "Photo Only", "Video Only", "Photo and Video" ],
+    "enumValues":   [ 0, 1, 2, 3, 4 ]
+},
+{
+    "name":         "gimbalType",
+    "shortDesc":    "Gimbal type",
+    "type":         "Uint8",
+    "enumStrings":  [ "None", "Pitch", "Pitch and Yaw"],
+    "enumValues":   [ 0, 1, 2 ]
+}
+]
+}
