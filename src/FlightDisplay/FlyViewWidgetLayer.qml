@@ -47,6 +47,9 @@ Item {
     property rect   _centerViewport:        Qt.rect(0, 0, width, height)
     property real   _rightPanelWidth:       ScreenTools.defaultFontPixelWidth * 30
     property alias  _gripperMenu:           gripperOptions
+    property real   _layoutMargin:          ScreenTools.defaultFontPixelWidth * 0.75
+    property bool   _layoutSpacing:         ScreenTools.defaultFontPixelWidth
+    property bool   _showSingleVehicleUI:   true
 
     property bool utmspActTrigger
 
@@ -66,47 +69,28 @@ Item {
         bottomEdgeRightInset:   virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeRightInset : parentToolInsets.bottomEdgeRightInset
     }
 
+    FlyViewTopRightColumnLayout {
+        id:                 topRightColumnLayout
+        anchors.margins:    _layoutMargin
+        anchors.top:        parent.top
+        anchors.bottom:     bottomRightRowLayout.top
+        anchors.right:      parent.right
+        spacing:            _layoutSpacing
+    }
+
+    FlyViewBottomRightRowLayout {
+        id:                 bottomRightRowLayout
+        anchors.margins:    _layoutMargin
+        anchors.bottom:     parent.bottom
+        anchors.right:      parent.right
+        spacing:            _layoutSpacing
+    }
+
     FlyViewMissionCompleteDialog {
         missionController:      _missionController
         geoFenceController:     _geoFenceController
         rallyPointController:   _rallyPointController
     }
-
-    Row {
-        id:                 multiVehiclePanelSelector
-        anchors.margins:    _toolsMargin
-        anchors.top:        parent.top
-        anchors.right:      parent.right
-        width:              _rightPanelWidth
-        spacing:            ScreenTools.defaultFontPixelWidth
-        visible:            QGroundControl.multiVehicleManager.vehicles.count > 1 && QGroundControl.corePlugin.options.flyView.showMultiVehicleList
-
-        property bool showSingleVehiclePanel:  !visible || singleVehicleRadio.checked
-
-        QGCMapPalette { id: mapPal; lightColors: true }
-
-        QGCRadioButton {
-            id:             singleVehicleRadio
-            text:           qsTr("Single")
-            checked:        true
-            textColor:      mapPal.text
-        }
-
-        QGCRadioButton {
-            text:           qsTr("Multi-Vehicle")
-            textColor:      mapPal.text
-        }
-    }
-
-    MultiVehicleList {
-        anchors.margins:    _toolsMargin
-        anchors.top:        multiVehiclePanelSelector.bottom
-        anchors.right:      parent.right
-        width:              _rightPanelWidth
-        height:             parent.height - y - _toolsMargin
-        visible:            !multiVehiclePanelSelector.showSingleVehiclePanel
-    }
-
 
     GuidedActionConfirm {
         anchors.margins:            _toolsMargin
@@ -115,113 +99,7 @@ Item {
         z:                          QGroundControl.zOrderTopMost
         guidedController:           _guidedController
         guidedValueSlider:          _guidedValueSlider
-        utmspSliderTrigger:          utmspActTrigger
-    }
-
-    FlyViewInstrumentPanel {
-        id:                         instrumentPanel
-        anchors.margins:            _toolsMargin
-        anchors.top:                multiVehiclePanelSelector.visible ? multiVehiclePanelSelector.bottom : parent.top
-        anchors.right:              parent.right
-        spacing:                    _toolsMargin
-        visible:                    QGroundControl.corePlugin.options.flyView.showInstrumentPanel && multiVehiclePanelSelector.showSingleVehiclePanel
-        availableHeight:            parent.height - y - _toolsMargin
-
-        property real rightEdgeTopInset: visible ? parent.width - x : 0
-        property real topEdgeRightInset: visible ? y + height : 0
-    }
-
-    PhotoVideoControl {
-        id:                     photoVideoControl
-        anchors.margins:        _toolsMargin
-        anchors.top:            instrumentPanel.bottom
-        anchors.right:          parent.right
-        width:                  _rightPanelWidth
-
-        property real rightEdgeCenterInset: visible ? parent.width - x : 0
-    }
-
-    TelemetryValuesBar {
-        id:                 telemetryPanel
-        x:                  recalcXPosition()
-        anchors.margins:    _toolsMargin
-
-        property real bottomEdgeCenterInset: 0
-        property real rightEdgeCenterInset: 0
-
-        // States for custom layout support
-        states: [
-            State {
-                name: "bottom"
-                when: telemetryPanel.bottomMode
-
-                AnchorChanges {
-                    target: telemetryPanel
-                    anchors.top: undefined
-                    anchors.bottom: parent.bottom
-                    anchors.right: undefined
-                    anchors.verticalCenter: undefined
-                }
-
-                PropertyChanges {
-                    target: telemetryPanel
-                    x: recalcXPosition()
-                    bottomEdgeCenterInset: visible ? parent.height-y : 0
-                    rightEdgeCenterInset: 0
-                }
-            },
-
-            State {
-                name: "right-video"
-                when: !telemetryPanel.bottomMode && photoVideoControl.visible
-
-                AnchorChanges {
-                    target: telemetryPanel
-                    anchors.top: photoVideoControl.bottom
-                    anchors.bottom: undefined
-                    anchors.right: parent.right
-                    anchors.verticalCenter: undefined
-                }
-                PropertyChanges {
-                    target: telemetryPanel
-                    bottomEdgeCenterInset: 0
-                    rightEdgeCenterInset: visible ? parent.width - x : 0
-                }
-            },
-
-            State {
-                name: "right-novideo"
-                when: !telemetryPanel.bottomMode && !photoVideoControl.visible
-
-                AnchorChanges {
-                    target: telemetryPanel
-                    anchors.top: undefined
-                    anchors.bottom: undefined
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                PropertyChanges {
-                    target: telemetryPanel
-                    bottomEdgeCenterInset: 0
-                    rightEdgeCenterInset: visible ? parent.width - x : 0
-                }
-            }
-        ]
-
-        function recalcXPosition() {
-            // First try centered
-            var halfRootWidth   = _root.width / 2
-            var halfPanelWidth  = telemetryPanel.width / 2
-            var leftX           = (halfRootWidth - halfPanelWidth) - _toolsMargin
-            var rightX          = (halfRootWidth + halfPanelWidth) + _toolsMargin
-            if (leftX >= parentToolInsets.leftEdgeBottomInset || rightX <= parentToolInsets.rightEdgeBottomInset ) {
-                // It will fit in the horizontalCenter
-                return halfRootWidth - halfPanelWidth
-            } else {
-                // Anchor to left edge
-                return parentToolInsets.leftEdgeBottomInset + _toolsMargin
-            }
-        }
+        utmspSliderTrigger:         utmspActTrigger
     }
 
     //-- Virtual Joystick
