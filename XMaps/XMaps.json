@@ -1,0 +1,53 @@
+﻿{
+  "MapProviders": [
+    {
+      "Style": "StreetMap",
+      "Name": "高德街道",
+      "Description": "",
+      "MaximumZoomLevel": 22,
+      "IsTransformation": true,
+      "TileUrl": "https://webrd03.is.autonavi.com/appmaptile?x=%1&y=%2&z=%3&size=1&scale=1&style=8&lang=zh_cn"
+    },
+    {
+      "Style": "SatelliteMapDay",
+      "Name": "高德卫星",
+      "Description": "",
+      "MaximumZoomLevel": 22,
+      "IsTransformation": true,
+      "TileUrl": "https://webst03.is.autonavi.com/appmaptile?x=%1&y=%2&z=%3&style=6"
+    },
+    {
+      "Style": "StreetMap",
+      "Name": "谷歌街道",
+      "Description": "",
+      "MaximumZoomLevel": 22,
+      "IsTransformation": true,
+      "TileUrl": "https://mt3.google.com/vt/x=%1&y=%2&z=%3&lyrs=m"
+    },
+    {
+      "Style": "SatelliteMapDay",
+      "Name": "谷歌卫星",
+      "Description": "",
+      "MaximumZoomLevel": 22,
+      "IsTransformation": false,
+      "TileUrl": "https://mt3.google.com/vt/x=%1&y=%2&z=%3&lyrs=s"
+    },
+    {
+      "Style": "StreetMap",
+      "Name": "天地街道",
+      "Description": "",
+      "MaximumZoomLevel": 22,
+      "IsTransformation": false,
+      "TileUrl": "https://t3.tianditu.gov.cn/vec_w/wmts?service=wmts&request=gettile&version=1.0.0&layer=vec&style=default&tilematrixset=w&format=tiles&tilematrix=%3&tilerow=%2&tilecol=%1&tk=a7005e23a0b7bac19afbfe2097b706fa"
+    },
+    {
+      "Style": "SatelliteMapDay",
+      "Name": "天地卫星",
+      "Description": "",
+      "MaximumZoomLevel": 22,
+      "IsTransformation": false,
+      "TileUrl": "https://t3.tianditu.gov.cn/img_w/wmts?service=wmts&request=gettile&version=1.0.0&layer=img&style=default&tilematrixset=w&format=tiles&tilematrix=%3&tilerow=%2&tilecol=%1&tk=a7005e23a0b7bac19afbfe2097b706fa"
+    }
+  ],
+  "SearchUrl": "https://restapi.amap.com/v3/assistant/inputtips?key=d2283bdecddd5db10d2c148e9c619966&keywords=%1"
+}
