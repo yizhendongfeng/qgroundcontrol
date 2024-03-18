@@ -38,18 +38,17 @@ if(QGC_STABLE_BUILD)
     message(STATUS "Stable Build")
 else()
     message(STATUS "Daily Build")
-    add_definitions(-DDAILY_BUILD)
+    add_compile_definitions(DAILY_BUILD)
 endif()
 
 include(CMakeDependentOption)
 cmake_dependent_option(QGC_BUILD_TESTING "Enable testing" ON "CMAKE_BUILD_TYPE STREQUAL Debug" OFF)
 
+include(CompileOptions)
+
 #######################################################
 #               Qt6 Configuration
 #######################################################
-
-add_compile_definitions(QT_DISABLE_DEPRECATED_BEFORE=0x060600)
-add_compile_definitions(QT_DEBUG_FIND_PACKAGE=ON)
 
 include(Qt6QGCConfiguration)
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
@@ -84,9 +83,10 @@ find_package(Qt6
         Widgets
         Xml
     OPTIONAL_COMPONENTS
+        LinguistTools
         SerialPort
     HINTS
-        {QT_LIBRARY_HINTS}
+        ${QT_LIBRARY_HINTS}
 )
 
 qt_standard_project_setup(REQUIRES 6.6.0)
@@ -96,8 +96,8 @@ qt_policy(
     SET QTP0002 NEW
 )
 
-# set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml" CACHE PATH "Install path for QML" FORCE)
-# set(QML_IMPORT_PATH "${CMAKE_BINARY_DIR}/qml" CACHE STRING "Extra QML Import Paths" FORCE)
+set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml" CACHE PATH "Install path for QML" FORCE)
+set(QML_IMPORT_PATH ${CMAKE_SOURCE_DIR}/qml ${CMAKE_BINARY_DIR}/imports CACHE STRING "Extra QML Import Paths" FORCE)
 
 #######################################################
 #                QML Configuration
@@ -118,8 +118,10 @@ option(QGC_DEBUG_QML "Build QGroundControl with QML debugging/profiling support.
 add_feature_info(DEBUG_QML DEBUG_QML "Build QGroundControl with QML debugging/profiling support.")
 if(QGC_DEBUG_QML)
     message(STATUS "To enable the QML debugger/profiler, run with: '-qmljsdebugger=port:1234'")
-    add_definitions(-DQMLJSDEBUGGER)
-    add_definitions(-DQT_QML_DEBUG)
+    add_compile_definitions(
+        QMLJSDEBUGGER
+        QT_QML_DEBUG
+    )
 endif()
 
 #######################################################
@@ -130,10 +132,10 @@ set(COMPANY "Mavlink")
 set(COPYRIGHT "Copyright (c) 2018 QGroundControl. All rights reserved.")
 set(IDENTIFIER "io.mavlink.qgroundcontrol")
 
-add_definitions(
-    -DQGC_APPLICATION_NAME="QGroundControl"
-    -DQGC_ORG_NAME="QGroundControl.org"
-    -DQGC_ORG_DOMAIN="org.qgroundcontrol"
+add_compile_definitions(
+    QGC_APPLICATION_NAME="QGroundControl"
+    QGC_ORG_NAME="QGroundControl.org"
+    QGC_ORG_DOMAIN="org.qgroundcontrol"
 )
 
 #######################################################
@@ -142,16 +144,10 @@ add_definitions(
 
 include(Git)
 message(STATUS "QGroundControl version: ${APP_VERSION_STR}")
-# set_target_properties(${PROJECT_NAME} PROPERTIES VERSION 1.0)
-
-include(CompileOptions)
 
 #######################################################
 #                QGroundControl Resources
 #######################################################
-
-add_subdirectory(libs)
-add_subdirectory(src)
 
 set(QGC_RESOURCES
     ${CMAKE_SOURCE_DIR}/qgcimages.qrc
@@ -174,7 +170,7 @@ endif()
 
 if(WIN32)
     list(APPEND QGC_RESOURCES ${CMAKE_SOURCE_DIR}/deploy/windows/QGroundControl.rc)
-elseif(APPLE)
+elseif(MACOS)
     set(MACOSX_BUNDLE_ICON_FILE macx.icns)
     set(app_icon_macos "${CMAKE_SOURCE_DIR}/resources/icons/macx.icns")
     set_source_files_properties(${app_icon_macos} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
@@ -185,13 +181,37 @@ endif()
 #               QGroundControl Target
 #######################################################
 
-qt_add_executable(${PROJECT_NAME} ${QGC_RESOURCES})
+qt_add_executable(${PROJECT_NAME} src/main.cc ${QGC_RESOURCES})
 
-if(APPLE)
+add_subdirectory(libs)
+add_subdirectory(src)
+
+set_target_properties(${PROJECT_NAME}
+    PROPERTIES
+        QT_RESOURCE_PREFIX "/qgc"
+)
+
+target_precompile_headers(${PROJECT_NAME} PRIVATE src/pch.h)
+
+if(Qt6LinguistTools_FOUND)
+    file(GLOB TS_SOURCES RELATIVE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/translations/qgc_*.ts)
+    # TODO: Update to new qt_add_translations form in Qt6.7
+    qt_add_translations(${PROJECT_NAME}
+        TS_FILES
+            ${TS_SOURCES}
+    )
+endif()
+
+if(MACOS)
     set_target_properties(${PROJECT_NAME}
         PROPERTIES
             MACOSX_BUNDLE TRUE
             MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/deploy/mac/MacOSXBundleInfo.plist.in
+    )
+elseif(IOS)
+    set_target_properties(${PROJECT_NAME}
+       PROPERTIES
+           QT_IOS_LAUNCH_SCREEN ${CMAKE_SOURCE_DIR}/deploy/ios/QGCLaunchScreen.xib
     )
 elseif(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
@@ -201,27 +221,17 @@ elseif(ANDROID)
     set_target_properties(${PROJECT_NAME}
         PROPERTIES
             QT_ANDROID_ABIS ${ANDROID_ABI}
-            #QT_ANDROID_EXTRA_LIBS "${ANDROID_EXTRA_LIBS_APP}"
             QT_ANDROID_MIN_SDK_VERSION 26
             QT_ANDROID_TARGET_SDK_VERSION 33
             QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/android
-            #QT_ANDROID_SDK_BUILD_TOOLS_REVISION 34.0.0
             QT_ANDROID_VERSION_NAME ${APP_VERSION_STR}
-            #QT_ANDROID_VERSION_CODE 0.1
-            #QT_QML_ROOT_PATH ${CMAKE_SOURCE_DIR}/ui/qml # ${CMAKE_BINARY_DIR}/qml
-            #QT_ANDROID_DEPLOY_RELEASE
-            #QT_ANDROID_KEYSTORE_PATH
-            #QT_ANDROID_KEYSTORE_ALIAS
-            #QT_ANDROID_KEYSTORE_STORE_PASS
-            #QT_ANDROID_KEYSTORE_KEY_PASS
-            #QT_ANDROID_SIGN_APK
-            #QT_ENABLE_VERBOSE_DEPLOYMENT
-            #QT_HOST_PATH
-            #QT_PATH_ANDROID_ABI_arm64-v8a
+            # QT_ANDROID_VERSION_CODE 5.0
+            QT_QML_ROOT_PATH ${CMAKE_SOURCE_DIR}
     )
 
-elseif(LINUX)
-
+    if(CMAKE_BUILD_TYPE STREQUAL "Release" AND ANDROID_KEYSTORE_PASSWORD)
+        set(QT_ANDROID_SIGN_APK TRUE)
+    endif()
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE qgc)
@@ -232,7 +242,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE qgc)
 
 if(QGC_BUILD_TESTING)
     add_subdirectory(test)
-    target_link_libraries(qgc PRIVATE qgctest)
+    target_link_libraries(${PROJECT_NAME} PRIVATE qgctest)
 endif()
 
 #######################################################

@@ -90,7 +90,7 @@ QGCMouseArea                            1.0 QGCMouseArea.qml
 QGCMovableItem                          1.0 QGCMovableItem.qml
 QGCOptionsComboBox                      1.0 QGCOptionsComboBox.qml
 PipView                                 1.0 PipView.qml
-PipState                             1.0 PipState.qml
+PipState                                1.0 PipState.qml
 QGCPopupDialog                          1.0 QGCPopupDialog.qml
 QGCRadioButton                          1.0 QGCRadioButton.qml
 QGCSimpleMessageDialog                  1.0 QGCSimpleMessageDialog.qml
@@ -106,6 +106,7 @@ RallyPointItemEditor                    1.0 RallyPointItemEditor.qml
 RallyPointMapVisuals                    1.0 RallyPointMapVisuals.qml
 RCChannelMonitor                        1.0 RCChannelMonitor.qml
 RCToParamDialog                         1.0 RCToParamDialog.qml
+RemoteIDIndicatorPage                   1.0 RemoteIDIndicatorPage.qml
 QCRoundButton                           1.0 QGCRoundButton.qml
 SectionHeader                           1.0 SectionHeader.qml
 SetupPage                               1.0 SetupPage.qml

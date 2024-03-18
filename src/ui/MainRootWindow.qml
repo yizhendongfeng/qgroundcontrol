@@ -87,8 +87,8 @@ ApplicationWindow {
         readonly property var       activeVehicle:                  QGroundControl.multiVehicleManager.activeVehicle
         readonly property real      defaultTextHeight:              ScreenTools.defaultFontPixelHeight
         readonly property real      defaultTextWidth:               ScreenTools.defaultFontPixelWidth
-        readonly property var       planMasterControllerFlyView:    flightView.planController
-        readonly property var       guidedControllerFlyView:        flightView.guidedController
+        readonly property var       planMasterControllerFlyView:    flyView.planController
+        readonly property var       guidedControllerFlyView:        flyView.guidedController
 
         property bool               validationError:                false   // There is a FactTextField somewhere with a validation error
 
@@ -118,11 +118,17 @@ ApplicationWindow {
     }
 
     function showPlanView() {
+        flyView.visible = false
         planView.visible = true
     }
 
+    function showFlyView() {
+        flyView.visible = true
+        planView.visible = false
+    }
+
     function showTool(toolTitle, toolSource, toolIcon) {
-        toolDrawer.backIcon     = flightView.visible ? "/qmlimages/PaperPlane.svg" : "/qmlimages/Plan.svg"
+        toolDrawer.backIcon     = flyView.visible ? "/qmlimages/PaperPlane.svg" : "/qmlimages/Plan.svg"
         toolDrawer.toolTitle    = toolTitle
         toolDrawer.toolSource   = toolSource
         toolDrawer.toolIcon     = toolIcon
@@ -238,14 +244,16 @@ ApplicationWindow {
     }
 
     FlyView { 
-        id:                     flightView
+        id:                     flyView
         anchors.fill:           parent
+        enabled:                !toolDrawer.visible //The DragHandler in FlightMap.qml needs to be disabled when the toolDrawer is open, otherwise touch signals bleed through the pages
         utmspSendActTrigger:    _utmspSendActTrigger
     }
 
     PlanView {
         id:             planView
         anchors.fill:   parent
+        enabled:                !toolDrawer.visible //The DragHandler in FlightMap.qml needs to be disabled when the toolDrawer is open, otherwise touch signals bleed through the pages
         visible:        false
 
         onActivationParamsSent:{
@@ -622,7 +630,7 @@ ApplicationWindow {
                 if (criticalVehicleMessagePopup.dropMessageIndicatorOnClose) {
                     criticalVehicleMessagePopup.dropMessageIndicatorOnClose = false;
                     QGroundControl.multiVehicleManager.activeVehicle.resetErrorLevelMessages();
-                    flyView.toolbar.dropMessageIndicatorTool();
+                    flyView.dropMessageIndicatorTool();
                 }
             }
         }

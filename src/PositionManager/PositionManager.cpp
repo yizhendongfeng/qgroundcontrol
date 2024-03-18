@@ -11,7 +11,7 @@
 #include "QGCApplication.h"
 #include "QGCCorePlugin.h"
 
-#if !defined(NO_SERIAL_LINK) && !defined(__android__)
+#if !defined(NO_SERIAL_LINK) && !defined(Q_OS_ANDROID)
 #include <QSerialPortInfo>
 #endif
 
@@ -182,7 +182,10 @@ void QGCPositionManager::setPositionSource(QGCPositionManager::QGCPositionSource
     if (_currentSource != nullptr) {
         _updateInterval = _currentSource->minimumUpdateInterval();
         _currentSource->setPreferredPositioningMethods(QGeoPositionInfoSource::SatellitePositioningMethods);
+        // OSX and iOS do not support setting the update interval
+#if !defined(Q_OS_DARWIN) && !defined(Q_OS_IOS)
         _currentSource->setUpdateInterval(_updateInterval);
+#endif
         connect(_currentSource, &QGeoPositionInfoSource::positionUpdated, this, &QGCPositionManager::_positionUpdated);
         connect(_currentSource, &QGeoPositionInfoSource::errorOccurred, this, &QGCPositionManager::_error);
         _currentSource->startUpdates();
