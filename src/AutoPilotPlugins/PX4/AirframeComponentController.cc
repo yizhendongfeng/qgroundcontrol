@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,13 +9,17 @@
 
 #include "AirframeComponentController.h"
 #include "AirframeComponentAirframes.h"
-#include "QGCMAVLink.h"
 #include "MultiVehicleManager.h"
 #include "QGCApplication.h"
 #include "LinkManager.h"
+#include "QGC.h"
+#include "Fact.h"
+#include "Vehicle.h"
+#include "ParameterManager.h"
 
-#include <QVariant>
-#include <QQmlProperty>
+#include <QtCore/QVariant>
+#include <QtQml/QtQml>
+#include <QtGui/QCursor>
 
 bool AirframeComponentController::_typesRegistered = false;
 
@@ -32,14 +36,14 @@ AirframeComponentController::AirframeComponentController(void) :
     
     QStringList usedParams;
     usedParams << "SYS_AUTOSTART" << "SYS_AUTOCONFIG";
-    if (!_allParametersExists(FactSystem::defaultComponentId, usedParams)) {
+    if (!_allParametersExists(ParameterManager::defaultComponentId, usedParams)) {
         return;
     }
     
     // Load up member variables
     
     bool autostartFound = false;
-    _autostartId = getParameterFact(FactSystem::defaultComponentId, "SYS_AUTOSTART")->rawValue().toInt();
+    _autostartId = getParameterFact(ParameterManager::defaultComponentId, "SYS_AUTOSTART")->rawValue().toInt();
 
     
     for (int tindex = 0; tindex < AirframeComponentAirframes::get().count(); tindex++) {
@@ -85,8 +89,8 @@ void AirframeComponentController::changeAutostart(void)
         qgcApp()->showAppMessage(tr("You cannot change airframe configuration while connected to multiple vehicles."));
 		return;
 	}
-	
-    qgcApp()->setOverrideCursor(Qt::WaitCursor);
+
+    QGuiApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
     
     Fact* sysAutoStartFact  = getParameterFact(-1, "SYS_AUTOSTART");
     Fact* sysAutoConfigFact = getParameterFact(-1, "SYS_AUTOCONFIG");
@@ -96,7 +100,7 @@ void AirframeComponentController::changeAutostart(void)
     connect(sysAutoStartFact, &Fact::vehicleUpdated, this, &AirframeComponentController::_waitParamWriteSignal);
     connect(sysAutoConfigFact, &Fact::vehicleUpdated, this, &AirframeComponentController::_waitParamWriteSignal);
     
-    // We use forceSetValue to params are sent even if the previous value is that same as the new value
+    // We use forceSetValue to ensure params are sent even if the previous value is that same as the new value
     sysAutoStartFact->forceSetRawValue(_autostartId);
     sysAutoConfigFact->forceSetRawValue(1);
 }
@@ -117,12 +121,12 @@ void AirframeComponentController::_waitParamWriteSignal(QVariant value)
 void AirframeComponentController::_rebootAfterStackUnwind(void)
 {    
     _vehicle->sendMavCommand(_vehicle->defaultComponentId(), MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN, true /* showError */, 1.0f);
-    qgcApp()->processEvents(QEventLoop::ExcludeUserInputEvents);
+    QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
     for (unsigned i = 0; i < 2000; i++) {
         QGC::SLEEP::usleep(500);
-        qgcApp()->processEvents(QEventLoop::ExcludeUserInputEvents);
+        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
     }
-    qgcApp()->restoreOverrideCursor();
+    QGuiApplication::restoreOverrideCursor();
     qgcApp()->toolbox()->linkManager()->disconnectAll();
 }
 

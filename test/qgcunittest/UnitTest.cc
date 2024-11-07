@@ -10,15 +10,17 @@
 #include "UnitTest.h"
 #include "QGCApplication.h"
 #include "MAVLinkProtocol.h"
+#include "MultiVehicleManager.h"
 #include "Vehicle.h"
 #include "AppSettings.h"
 #include "SettingsManager.h"
-#include "MockLink.h"
 #include "LinkManager.h"
+#include "QGC.h"
+#include "Fact.h"
+#include "MissionItem.h"
 
-#include <QRandomGenerator>
-#include <QTemporaryFile>
-#include <QTime>
+#include <QtTest/QTest>
+#include <QtTest/QSignalSpy>
 
 bool UnitTest::_messageBoxRespondedTo = false;
 bool UnitTest::_badResponseButton = false;
@@ -66,7 +68,7 @@ QList<UnitTest*>& UnitTest::_testList(void)
     return tests;
 }
 
-int UnitTest::run(QString& singleTest)
+int UnitTest::run(QStringView singleTest)
 {
     int ret = 0;
 
@@ -94,7 +96,7 @@ void UnitTest::init(void)
         _linkManager = qgcApp()->toolbox()->linkManager();
     }
 
-    _linkManager->restart();
+    _linkManager->setConnectionsAllowed();
 
     // Force offline vehicle back to defaults
     AppSettings* appSettings = qgcApp()->toolbox()->settingsManager()->appSettings();
@@ -139,7 +141,7 @@ void UnitTest::cleanup(void)
     // If you have a failure whose stack trace points to this then
     // your test is leaking signals or events. It could cause use-after-free or
     // segmentation faults from wild pointers.
-    qgcApp()->processEvents();
+    QCoreApplication::processEvents();
 }
 
 void UnitTest::setExpectedMessageBox(QMessageBox::StandardButton response)

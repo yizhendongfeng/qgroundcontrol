@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,22 +9,25 @@
 
 #pragma once
 
-#include <QObject>
+#include <QtCore/QObject>
+#include <QtCore/QLoggingCategory>
 
 #include "MissionController.h"
 #include "GeoFenceController.h"
 #include "RallyPointController.h"
-#include "Vehicle.h"
-#include "MultiVehicleManager.h"
-#include "QGCLoggingCategory.h"
-#include "QmlObjectListModel.h"
 
 Q_DECLARE_LOGGING_CATEGORY(PlanMasterControllerLog)
+
+class QmlObjectListModel;
+class MultiVehicleManager;
+class Vehicle;
 
 /// Master controller for mission, fence, rally
 class PlanMasterController : public QObject
 {
     Q_OBJECT
+    Q_MOC_INCLUDE("QmlObjectListModel.h")
+    Q_MOC_INCLUDE("Vehicle.h")
     
 public:
     PlanMasterController(QObject* parent = nullptr);
@@ -104,11 +107,11 @@ public:
     Vehicle* controllerVehicle(void) { return _controllerVehicle; }
     Vehicle* managerVehicle(void) { return _managerVehicle; }
 
-    static const int    kPlanFileVersion;
-    static const char*  kPlanFileType;
-    static const char*  kJsonMissionObjectKey;
-    static const char*  kJsonGeoFenceObjectKey;
-    static const char*  kJsonRallyPointsObjectKey;
+    static constexpr int   kPlanFileVersion =            1;
+    static constexpr const char* kPlanFileType =               "Plan";
+    static constexpr const char* kJsonMissionObjectKey =       "mission";
+    static constexpr const char* kJsonGeoFenceObjectKey =      "geoFence";
+    static constexpr const char* kJsonRallyPointsObjectKey =   "rallyPoints";
 
 signals:
     void containsItemsChanged               (bool containsItems);

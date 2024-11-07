@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,8 +9,7 @@
 
 #include "SettingsManager.h"
 
-#include <QQmlEngine>
-#include <QtQml>
+#include <QtQml/QQmlEngine>
 
 SettingsManager::SettingsManager(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool(app, toolbox)
@@ -30,6 +29,7 @@ SettingsManager::SettingsManager(QGCApplication* app, QGCToolbox* toolbox)
     , _batteryIndicatorSettings     (nullptr)
     , _mapsSettings                 (nullptr)
     , _viewer3DSettings             (nullptr)
+    , _gimbalControllerSettings     (nullptr)
 #if !defined(NO_ARDUPILOT_DIALECT)
     , _apmMavlinkStreamRateSettings (nullptr)
 #endif
@@ -61,6 +61,7 @@ void SettingsManager::setToolbox(QGCToolbox *toolbox)
     _batteryIndicatorSettings =     new BatteryIndicatorSettings    (this);
     _mapsSettings =                 new MapsSettings                (this);
     _viewer3DSettings =             new Viewer3DSettings            (this);
+    _gimbalControllerSettings =     new GimbalControllerSettings    (this);
 #if !defined(NO_ARDUPILOT_DIALECT)
     _apmMavlinkStreamRateSettings = new APMMavlinkStreamRateSettings(this);
 #endif

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,11 +10,12 @@
 #pragma once
 
 #include "FirmwarePlugin.h"
-#include "QGCLoggingCategory.h"
-#include "APMParameterMetaData.h"
+#include "QGCMAVLink.h"
 #include "FollowMe.h"
 
-#include <QAbstractSocket>
+#include <QtNetwork/QAbstractSocket>
+#include <QtCore/QMutex>
+#include <QtCore/QLoggingCategory>
 
 Q_DECLARE_LOGGING_CATEGORY(APMFirmwarePluginLog)
 
@@ -51,7 +52,7 @@ public:
     void                setGuidedMode                   (Vehicle* vehicle, bool guidedMode) override;
     void                guidedModeTakeoff               (Vehicle* vehicle, double altitudeRel) override;
     void                guidedModeGotoLocation          (Vehicle* vehicle, const QGeoCoordinate& gotoCoord) override;
-    double              minimumTakeoffAltitude          (Vehicle* vehicle) override;
+    double              minimumTakeoffAltitudeMeters    (Vehicle* vehicle) override;
     void                startMission                    (Vehicle* vehicle) override;
     QStringList         flightModes                     (Vehicle* vehicle) override;
     QString             flightMode                      (uint8_t base_mode, uint32_t custom_mode) const override;
@@ -65,6 +66,7 @@ public:
     void                pauseVehicle                    (Vehicle* vehicle) override;
     void                guidedModeRTL                   (Vehicle* vehicle, bool smartRTL) override;
     void                guidedModeChangeAltitude        (Vehicle* vehicle, double altitudeChange, bool pauseVehicle) override;
+    void                guidedModeChangeHeading         (Vehicle* vehicle, const QGeoCoordinate &headingCoord) override;
     bool                adjustIncomingMavlinkMessage    (Vehicle* vehicle, mavlink_message_t* message) override;
     void                adjustOutgoingMavlinkMessageThreadSafe(Vehicle* vehicle, LinkInterface* outgoingLink, mavlink_message_t* message) override;
     virtual void        initializeStreamRates           (Vehicle* vehicle);
@@ -73,7 +75,7 @@ public:
     QString             missionCommandOverrides         (QGCMAVLink::VehicleClass_t vehicleClass) const override;
     QString             _internalParameterMetaDataFile  (const Vehicle* vehicle) const override;
     FactMetaData*       _getMetaDataForFact             (QObject* parameterMetaData, const QString& name, FactMetaData::ValueType_t type, MAV_TYPE vehicleType) override;
-    void                _getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion) override { APMParameterMetaData::getParameterMetaDataVersionInfo(metaDataFile, majorVersion, minorVersion); }
+    void                _getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion) override;
     QObject*            _loadParameterMetaData          (const QString& metaDataFile) override;
     QString             brandImageIndoor                (const Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("/qmlimages/APM/BrandImage"); }
     QString             brandImageOutdoor               (const Vehicle* vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("/qmlimages/APM/BrandImage"); }
@@ -85,13 +87,26 @@ public:
     bool                fixedWingAirSpeedLimitsAvailable(Vehicle* vehicle) override;
     void                guidedModeChangeEquivalentAirspeedMetersSecond(Vehicle* vehicle, double airspeed_equiv) override;
     QVariant            mainStatusIndicatorContentItem  (const Vehicle* vehicle) const override;
+    void                sendGCSMotionReport(Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities) override;
+
+    // support for changing speed in Copter guide mode:
+    bool mulirotorSpeedLimitsAvailable(Vehicle* vehicle) override;
+    double maximumHorizontalSpeedMultirotor(Vehicle* vehicle) override;
+    void guidedModeChangeGroundSpeedMetersSecond(Vehicle *vehicle, double speed) override;
+
+    static QPair<QMetaObject::Connection,QMetaObject::Connection> startCompensatingBaro(Vehicle* vehicle);
+    static bool stopCompensatingBaro(const Vehicle* vehicle, QPair<QMetaObject::Connection,QMetaObject::Connection> updaters);
+    static qreal calcAltOffsetPT(uint32_t atmospheric1, qreal temperature1, uint32_t atmospheric2, qreal temperature2);
+    static qreal calcAltOffsetP(uint32_t atmospheric1, uint32_t atmospheric2);
 
 protected:
     /// All access to singleton is through stack specific implementation
     APMFirmwarePlugin(void);
 
     void setSupportedModes  (QList<APMCustomMode> supportedModes);
-    void _sendGCSMotionReport(Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities);
+
+    static void _setBaroGndTemp(Vehicle* vehicle, qreal temperature);
+    static void _setBaroAltOffset(Vehicle* vehicle, qreal offset);
 
     bool                _coaxialMotors;
 
@@ -101,7 +116,6 @@ private slots:
 private:
     void _adjustCalibrationMessageSeverity(mavlink_message_t* message) const;
     void _setInfoSeverity(mavlink_message_t* message) const;
-    QString _getMessageText(mavlink_message_t* message) const;
     void _handleIncomingParamValue(Vehicle* vehicle, mavlink_message_t* message);
     bool _handleIncomingStatusText(Vehicle* vehicle, mavlink_message_t* message);
     void _handleIncomingHeartbeat(Vehicle* vehicle, mavlink_message_t* message);
@@ -112,6 +126,7 @@ private:
     void _handleRCChannelsRaw(Vehicle* vehicle, mavlink_message_t* message);
     QString _getLatestVersionFileUrl(Vehicle* vehicle) override;
     QString _versionRegex() override;
+    QString _vehicleClassToString(QGCMAVLink::VehicleClass_t vehicleClass) const;
 
     // Any instance data here must be global to all vehicles
     // Vehicle specific data should go into APMFirmwarePluginInstanceData
@@ -122,8 +137,8 @@ private:
 
     QMutex _adjustOutgoingMavlinkMutex;
 
-    static const char*      _artooIP;
-    static const int        _artooVideoHandshakePort;
+    static constexpr const char* _artooIP =                   "10.1.1.1"; ///< IP address of ARTOO controller
+    static constexpr int   _artooVideoHandshakePort =   5502;       ///< Port for video handshake on ARTOO controller
 
     static uint8_t          _reencodeMavlinkChannel();
     static QMutex&          _reencodeMavlinkChannelMutex();

@@ -1,10 +1,19 @@
-#include "Viewer3DQmlBackend.h"
-#include <QQmlEngine>
-#include <QQmlComponent>
-#include <QUrl>
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
+#include "Viewer3DQmlBackend.h"
 #include "QGCApplication.h"
 #include "SettingsManager.h"
+#include "MultiVehicleManager.h"
+#include "Vehicle.h"
+#include "Viewer3DSettings.h"
+#include "OsmParser.h"
 
 #define GPS_REF_NOT_SET                 0
 #define GPS_REF_SET_BY_MAP              1
@@ -39,6 +48,7 @@ void Viewer3DQmlBackend::_activeVehicleChangedEvent(Vehicle *vehicle)
             _gpsRefSet = GPS_REF_NOT_SET;
         }
     }else{
+        _activeVehicleCoordinateChanged(_activeVehicle->coordinate());
         connect(_activeVehicle, &Vehicle::coordinateChanged, this, &Viewer3DQmlBackend::_activeVehicleCoordinateChanged);
     }
 }

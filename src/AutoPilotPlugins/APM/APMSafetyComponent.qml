@@ -10,7 +10,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Qt5Compat.GraphicalEffects
 
 import QGroundControl.FactSystem
 import QGroundControl.FactControls
@@ -145,7 +144,7 @@ SetupPage {
 
                 QGCLabel {
                     text:       qsTr("Battery1 Failsafe Triggers")
-                    font.family: ScreenTools.demiboldFontFamily
+                    font.bold:   true
                 }
 
                 Rectangle {
@@ -179,7 +178,7 @@ SetupPage {
 
                 QGCLabel {
                     text:       qsTr("Battery2 Failsafe Triggers")
-                    font.family: ScreenTools.demiboldFontFamily
+                    font.bold:   true
                 }
 
                 Rectangle {
@@ -218,7 +217,7 @@ SetupPage {
 
                     QGCLabel {
                         text:       qsTr("Failsafe Triggers")
-                        font.family: ScreenTools.demiboldFontFamily
+                        font.bold:   true
                     }
 
                     Rectangle {
@@ -277,7 +276,7 @@ SetupPage {
                     QGCLabel {
                         id:         failsafeLabel
                         text:       qsTr("Failsafe Triggers")
-                        font.family: ScreenTools.demiboldFontFamily
+                        font.bold:   true
                     }
 
                     Rectangle {
@@ -343,7 +342,7 @@ SetupPage {
 
                     QGCLabel {
                         text:       qsTr("General Failsafe Triggers")
-                        font.family: ScreenTools.demiboldFontFamily
+                        font.bold:   true
                     }
 
                     Rectangle {
@@ -415,7 +414,7 @@ SetupPage {
 
                     QGCLabel {
                         text:           qsTr("GeoFence")
-                        font.family:    ScreenTools.demiboldFontFamily
+                        font.bold:      true
                     }
 
                     Rectangle {
@@ -542,7 +541,7 @@ SetupPage {
                     QGCLabel {
                         id:             rtlLabel
                         text:           qsTr("Return to Launch")
-                        font.family:    ScreenTools.demiboldFontFamily
+                        font.bold:      true
                     }
 
                     Rectangle {
@@ -551,25 +550,19 @@ SetupPage {
                         height: landSpeedField.y + landSpeedField.height + _margins
                         color:  ggcPal.windowShade
 
-                        Image {
+                        QGCColoredImage {
                             id:                 icon
+                            visible:            _showIcon
                             anchors.margins:    _margins
                             anchors.left:       parent.left
                             anchors.top:        parent.top
                             height:             ScreenTools.defaultFontPixelWidth * 20
                             width:              ScreenTools.defaultFontPixelWidth * 20
+                            color:              ggcPal.text
                             sourceSize.width:   width
                             mipmap:             true
                             fillMode:           Image.PreserveAspectFit
-                            visible:            false
                             source:             "/qmlimages/ReturnToHomeAltitude.svg"
-                        }
-
-                        ColorOverlay {
-                            anchors.fill:   icon
-                            source:         icon
-                            color:          ggcPal.text
-                            visible:        _showIcon
                         }
 
                         QGCRadioButton {
@@ -671,7 +664,7 @@ SetupPage {
 
                     QGCLabel {
                         text:           qsTr("Return to Launch")
-                        font.family:    ScreenTools.demiboldFontFamily
+                        font.bold:      true
                     }
 
                     Rectangle {
@@ -723,7 +716,7 @@ SetupPage {
 
                 QGCLabel {
                     text:           qsTr("Arming Checks")
-                    font.family:    ScreenTools.demiboldFontFamily
+                    font.bold:      true
                 }
 
                 Rectangle {

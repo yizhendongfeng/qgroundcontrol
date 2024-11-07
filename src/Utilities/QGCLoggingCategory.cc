@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -13,9 +13,9 @@
 
 #include "QGCLoggingCategory.h"
 
-#include <QSettings>
+#include <QtCore/QSettings>
 
-static const char* kVideoAllLogCategory = "VideoAllLog";
+static constexpr const char* kVideoAllLogCategory = "VideoAllLog";
 
 // Add Global logging categories (not class specific) here using QGC_LOGGING_CATEGORY
 QGC_LOGGING_CATEGORY(FirmwareUpgradeLog,            "FirmwareUpgradeLog")
@@ -23,17 +23,13 @@ QGC_LOGGING_CATEGORY(FirmwareUpgradeVerboseLog,     "FirmwareUpgradeVerboseLog")
 QGC_LOGGING_CATEGORY(MissionCommandsLog,            "MissionCommandsLog")
 QGC_LOGGING_CATEGORY(MissionItemLog,                "MissionItemLog")
 QGC_LOGGING_CATEGORY(ParameterManagerLog,           "ParameterManagerLog")
-QGC_LOGGING_CATEGORY(GeotaggingLog,                 "GeotaggingLog")
-QGC_LOGGING_CATEGORY(RTKGPSLog,                     "RTKGPSLog")
 QGC_LOGGING_CATEGORY(GuidedActionsControllerLog,    "GuidedActionsControllerLog")
-QGC_LOGGING_CATEGORY(ADSBVehicleManagerLog,         "ADSBVehicleManagerLog")
 QGC_LOGGING_CATEGORY(LocalizationLog,               "LocalizationLog")
 QGC_LOGGING_CATEGORY(VideoAllLog,                   kVideoAllLogCategory)
 QGC_LOGGING_CATEGORY(JoystickLog,                   "JoystickLog")
 
 
 QGCLoggingCategoryRegister* _instance = nullptr;
-const char* QGCLoggingCategoryRegister::_filterRulesSettingsGroup = "LoggingFilters";
 
 QGCLoggingCategoryRegister* QGCLoggingCategoryRegister::instance(void)
 {
@@ -78,6 +74,7 @@ void QGCLoggingCategoryRegister::setFilterRulesFromSettings(const QString& comma
     }
 
     filterRules += "*Log.debug=false\n";
+    filterRules += "qgc.*.debug=false\n";
 
     // Set up filters defined in settings
     foreach (QString category, _registeredCategories) {

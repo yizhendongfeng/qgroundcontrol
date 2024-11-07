@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -17,9 +17,9 @@
 #include "SettingsManager.h"
 #include "AppSettings.h"
 
-#include <QStringListModel>
-#include <QtConcurrent>
-#include <QTextStream>
+#include <QtCore/QStringListModel>
+#include <QtConcurrent/QtConcurrent>
+#include <QtCore/QTextStream>
 
 Q_GLOBAL_STATIC(AppLogModel, debug_model)
 

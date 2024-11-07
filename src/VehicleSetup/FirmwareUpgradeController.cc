@@ -1,6 +1,6 @@
 ﻿/****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,6 +8,7 @@
  ****************************************************************************/
 
 #include "FirmwareUpgradeController.h"
+#include "PX4FirmwareUpgradeThread.h"
 #include "Bootloader.h"
 #include "QGCApplication.h"
 #include "QGCFileDownload.h"
@@ -18,26 +19,16 @@
 #include "QGCZlib.h"
 #include "JsonHelper.h"
 #include "LinkManager.h"
+#include "MultiVehicleManager.h"
+#include "FirmwareImage.h"
+#include "Fact.h"
+#include "QGCLoggingCategory.h"
 
-#include <QStandardPaths>
-#include <QRegularExpression>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QNetworkProxy>
-
-const char* FirmwareUpgradeController::_manifestFirmwareJsonKey =               "firmware";
-const char* FirmwareUpgradeController::_manifestBoardIdJsonKey =                "board_id";
-const char* FirmwareUpgradeController::_manifestMavTypeJsonKey =                "mav-type";
-const char* FirmwareUpgradeController::_manifestFormatJsonKey =                 "format";
-const char* FirmwareUpgradeController::_manifestUrlJsonKey =                    "url";
-const char* FirmwareUpgradeController::_manifestMavFirmwareVersionTypeJsonKey = "mav-firmware-version-type";
-const char* FirmwareUpgradeController::_manifestUSBIDJsonKey =                  "USBID";
-const char* FirmwareUpgradeController::_manifestMavFirmwareVersionJsonKey =     "mav-firmware-version";
-const char* FirmwareUpgradeController::_manifestBootloaderStrJsonKey =          "bootloader_str";
-const char* FirmwareUpgradeController::_manifestLatestKey =                     "latest";
-const char* FirmwareUpgradeController::_manifestPlatformKey =                   "platform";
-const char* FirmwareUpgradeController::_manifestBrandNameKey =                  "brand_name";
+#include <QtCore/QDir>
+#include <QtCore/QStandardPaths>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QJsonArray>
 
 struct FirmwareToUrlElement_t {
     FirmwareUpgradeController::AutoPilotStackType_t     stackType;
@@ -60,6 +51,7 @@ static QMap<int, QString> px4_board_name_map {
     {54, "px4_fmu-v6u_default"},
     {56, "px4_fmu-v6c_default"},
     {57, "ark_fmu-v6x_default"},
+    {59, "ark_fpv_default"},
     {35, "px4_fmu-v6xrt_default"},
     {55, "sky-drones_smartap-airlink_default"},
     {88, "airmind_mindpx-v2_default"},
@@ -95,6 +87,9 @@ static QMap<int, QString> px4_board_name_map {
     {1048, "holybro_kakuteh7_default"},
     {1053, "holybro_kakuteh7v2_default"},
     {1054, "holybro_kakuteh7mini_default"},
+    {1110, "jfb_jfb110_default"},
+    {1123, "siyi_n7_default"},    
+    {1124, "3dr_ctrl-zero-h7-oem-revg_default"},
 };
 
 uint qHash(const FirmwareUpgradeController::FirmwareIdentifier& firmwareId)
@@ -148,7 +143,6 @@ FirmwareUpgradeController::FirmwareUpgradeController(void)
     connect(_apmVehicleTypeSetting, &Fact::rawValueChanged, this, &FirmwareUpgradeController::_buildAPMFirmwareNames);
 #endif
 
-    _initFirmwareHash();
     _determinePX4StableVersion();
 
 #if !defined(NO_ARDUPILOT_DIALECT)
@@ -298,31 +292,6 @@ void FirmwareUpgradeController::_foundBoardInfo(int bootloaderVersion, int board
     }
 }
 
-
-/// @brief intializes the firmware hashes with proper urls.
-/// This happens only once for a class instance first time when it is needed.
-void FirmwareUpgradeController::_initFirmwareHash()
-{
-    // indirect check whether this function has been called before or not
-    // may have to be modified if _rgPX4FMUV2Firmware disappears
-    if (!_rgPX4FLowFirmware.isEmpty()) {
-        return;
-    }
-
-    /////////////////////////////// px4flow firmwares ///////////////////////////////////////
-    FirmwareToUrlElement_t rgPX4FLowFirmwareArray[] = {
-        { PX4FlowPX4, StableFirmware, DefaultVehicleFirmware, "http://px4-travis.s3.amazonaws.com/Flow/master/px4flow.px4" },
-    #if !defined(NO_ARDUPILOT_DIALECT)
-        { PX4FlowAPM, StableFirmware, DefaultVehicleFirmware, "http://firmware.ardupilot.org/Tools/PX4Flow/px4flow-klt-latest.px4" },
-    #endif
-    };
-
-    // We build the maps for PX4 firmwares dynamically using the data below
-    for (auto& element : rgPX4FLowFirmwareArray) {
-        _rgPX4FLowFirmware.insert(FirmwareIdentifier(element.stackType, element.firmwareType, element.vehicleType), element.url);
-    }
-}
-
 /// @brief Called when the findBootloader process is unable to sync to the bootloader. Moves the state
 ///         machine to the appropriate error state.
 void FirmwareUpgradeController::_bootloaderSyncFailed(void)
@@ -335,9 +304,6 @@ QHash<FirmwareUpgradeController::FirmwareIdentifier, QString>* FirmwareUpgradeCo
     _rgFirmwareDynamic.clear();
 
     switch (boardId) {
-    case Bootloader::boardIDPX4Flow:
-        _rgFirmwareDynamic = _rgPX4FLowFirmware;
-        break;
     case Bootloader::boardIDSiKRadio1000:
     {
         FirmwareToUrlElement_t element = { SiKRadio, StableFirmware, DefaultVehicleFirmware, "http://px4-travis.s3.amazonaws.com/SiK/stable/radio~hm_trp.ihx" };
@@ -555,10 +521,6 @@ void FirmwareUpgradeController::_buildAPMFirmwareNames(void)
     quint16                 boardVID =          _boardInfo.vendorIdentifier();
     quint16                 boardPID =          _boardInfo.productIdentifier();
     uint32_t                rawBoardId =        _bootloaderBoardID == Bootloader::boardIDPX4FMUV3 ? Bootloader::boardIDPX4FMUV2 : _bootloaderBoardID;
-
-    if (_boardType == QGCSerialPortInfo::BoardTypePX4Flow) {
-        return;
-    }
 
     qCDebug(FirmwareUpgradeLog) << QStringLiteral("_buildAPMFirmwareNames description(%1) vid(%2/0x%3) pid(%4/0x%5)").arg(boardDescription).arg(boardVID).arg(boardVID, 1, 16).arg(boardPID).arg(boardPID, 1, 16);
 

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,11 +8,11 @@
  ****************************************************************************/
 
 
-#ifndef QGCMapPalette_h
-#define QGCMapPalette_h
+#pragma once
 
-#include <QObject>
-#include <QColor>
+#include <QtCore/QObject>
+#include <QtGui/QColor>
+#include <QtQmlIntegration/QtQmlIntegration>
 
 /*!
  QGCMapPalette is a variant of QGCPalette which is used to hold colors used for display over
@@ -39,6 +39,7 @@
 class QGCMapPalette : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
     
     Q_PROPERTY(bool lightColors READ lightColors WRITE setLightColors NOTIFY paletteChanged)
 
@@ -67,5 +68,3 @@ private:
     static QColor _text[_cColorGroups];
     static QColor _textOutline[_cColorGroups];
 };
-
-#endif

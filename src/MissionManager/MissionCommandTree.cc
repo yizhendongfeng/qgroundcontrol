@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,15 +8,14 @@
  ****************************************************************************/
 
 #include "MissionCommandTree.h"
-#include "FactMetaData.h"
 #include "Vehicle.h"
 #include "FirmwarePluginManager.h"
 #include "QGCApplication.h"
+#include "FirmwarePlugin.h"
 #include "MissionCommandUIInfo.h"
 #include "MissionCommandList.h"
-#include "SettingsManager.h"
 
-#include <QQmlEngine>
+#include <QtQml/QtQml>
 
 MissionCommandTree::MissionCommandTree(QGCApplication* app, QGCToolbox* toolbox, bool unitTest)
     : QGCTool               (app, toolbox)
@@ -57,6 +56,8 @@ void MissionCommandTree::setToolbox(QGCToolbox* toolbox)
 #ifdef UNITTEST_BUILD
     }
 #endif
+
+    qmlRegisterUncreatableType<MissionCommandTree>("QGroundControl", 1, 0, "MissionCommandTree", "Reference only");
 }
 
 /// Add the next level of the hierarchy to a collapsed tree.

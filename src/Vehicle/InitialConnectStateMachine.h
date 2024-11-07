@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,8 +11,9 @@
 
 #include "StateMachine.h"
 #include "QGCMAVLink.h"
-#include "QGCLoggingCategory.h"
 #include "Vehicle.h"
+
+#include <QtCore/QLoggingCategory>
 
 Q_DECLARE_LOGGING_CATEGORY(InitialConnectStateMachineLog)
 
@@ -58,9 +59,31 @@ private:
 
     Vehicle* _vehicle;
 
-    static const StateFn    _rgStates[];
-    static const int        _rgProgressWeights[];
-    static const int        _cStates;
-
     int _progressWeightTotal;
+
+    static constexpr const StateMachine::StateFn _rgStates[] = {
+        _stateRequestAutopilotVersion,
+        _stateRequestProtocolVersion,
+        _stateRequestStandardModes,
+        _stateRequestCompInfo,
+        _stateRequestParameters,
+        _stateRequestMission,
+        _stateRequestGeoFence,
+        _stateRequestRallyPoints,
+        _stateSignalInitialConnectComplete
+    };
+
+    static constexpr const int _rgProgressWeights[] = {
+        1, //_stateRequestCapabilities
+        1, //_stateRequestProtocolVersion
+        1, //_stateRequestStandardModes
+        5, //_stateRequestCompInfo
+        5, //_stateRequestParameters
+        2, //_stateRequestMission
+        1, //_stateRequestGeoFence
+        1, //_stateRequestRallyPoints
+        1, //_stateSignalInitialConnectComplete
+    };
+
+    static constexpr int _cStates = sizeof(_rgStates) / sizeof(_rgStates[0]);
 };

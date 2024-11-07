@@ -86,7 +86,6 @@ Item {
     function showMouseArea() {
         if (!_mouseArea) {
             _mouseArea = mouseAreaComponent.createObject(map)
-            map.addMapItem(_mouseArea)
         }
     }
 
@@ -487,8 +486,8 @@ Item {
 
             sourceItem: HeightIndicator {
                 map:        _root.map
-                heightText: Math.floor(QGroundControl.unitsConversion.metersToAppSettingsHorizontalDistanceUnits(_transitionAltitudeMeters)) +
-                            QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString + "<sup>*</sup>"
+                heightText: Math.floor(QGroundControl.unitsConversion.metersToAppSettingsVerticalDistanceUnits(_transitionAltitudeMeters)) +
+                            QGroundControl.unitsConversion.appSettingsVerticalDistanceUnitsString + "<sup>*</sup>"
             }
 
             function recalc() {
@@ -519,8 +518,8 @@ Item {
 
             sourceItem: HeightIndicator {
                 map:        _root.map
-                heightText: Math.floor(QGroundControl.unitsConversion.metersToAppSettingsHorizontalDistanceUnits(_midSlopeAltitudeMeters)) +
-                            QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString + "<sup>*</sup>"
+                heightText: Math.floor(QGroundControl.unitsConversion.metersToAppSettingsVerticalDistanceUnits(_midSlopeAltitudeMeters)) +
+                            QGroundControl.unitsConversion.appSettingsVerticalDistanceUnitsString + "<sup>*</sup>"
             }
 
             function recalc() {

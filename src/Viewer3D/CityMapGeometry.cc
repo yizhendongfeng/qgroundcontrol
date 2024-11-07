@@ -1,9 +1,16 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "CityMapGeometry.h"
-
-#include<QThread>
-
 #include "QGCApplication.h"
 #include "SettingsManager.h"
+#include "OsmParser.h"
 
 
 CityMapGeometry::CityMapGeometry()
@@ -29,10 +36,6 @@ void CityMapGeometry::setModelName(QString modelName)
 
 void CityMapGeometry::setOsmFilePath(QVariant value)
 {
-    if(_osmFilePath.compare(value.toString()) == 0){
-        return;
-    }
-
     clearViewer();
     _mapLoadedFlag = 0;
     _osmFilePath = value.toString();
@@ -54,16 +57,12 @@ void CityMapGeometry::setOsmParser(OsmParser *newOsmParser)
 
 bool CityMapGeometry::loadOsmMap()
 {
-    if(_mapLoadedFlag){
-        return true;
-    }
-
     if(!_osmParser){
         return false;
     }
-    _mapLoadedFlag = 1;
+
     _osmParser->parseOsmFile(_osmFilePath);
-    return true;
+    return false;
 }
 
 void CityMapGeometry::updateViewer()
@@ -74,7 +73,7 @@ void CityMapGeometry::updateViewer()
         return;
     }
 
-    if(loadOsmMap()){
+    if(_osmParser->mapLoaded()){
         _vertexData = _osmParser->buildingToMesh();
 
         int stride = 3 * sizeof(float);

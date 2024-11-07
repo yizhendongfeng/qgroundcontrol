@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,20 +8,19 @@
  ****************************************************************************/
 
 
-#ifndef MAVLinkLogManager_H
-#define MAVLinkLogManager_H
+#pragma once
 
-#include <QObject>
-
-#include "QmlObjectListModel.h"
-#include "QGCLoggingCategory.h"
 #include "QGCToolbox.h"
-#include "Vehicle.h"
+#include "QmlObjectListModel.h"
+
+#include <QtCore/QObject>
+#include <QtCore/QLoggingCategory>
 
 Q_DECLARE_LOGGING_CATEGORY(MAVLinkLogManagerLog)
 
 class QNetworkAccessManager;
 class MAVLinkLogManager;
+class Vehicle;
 
 //-----------------------------------------------------------------------------
 class MAVLinkLogFiles : public QObject
@@ -104,7 +103,7 @@ private:
 class MAVLinkLogManager : public QGCTool
 {
     Q_OBJECT
-
+    Q_MOC_INCLUDE("QmlObjectListModel.h")
 public:
     MAVLinkLogManager    (QGCApplication* app, QGCToolbox* toolbox);
     ~MAVLinkLogManager   ();
@@ -228,6 +227,19 @@ private:
     QString                 _ulogExtension;
     bool                    _logginDenied;
 
+    static constexpr const char* kMAVLinkLogGroup         = "MAVLinkLogGroup";
+    static constexpr const char* kEmailAddressKey         = "Email";
+    static constexpr const char* kDescriptionsKey         = "Description";
+    static constexpr const char* kDefaultDescr            = "QGroundControl Session";
+    static constexpr const char* kPx4URLKey               = "LogURL";
+    static constexpr const char* kDefaultPx4URL           = "https://logs.px4.io/upload";
+    static constexpr const char* kEnableAutoUploadKey     = "EnableAutoUpload";
+    static constexpr const char* kEnableAutoStartKey      = "EnableAutoStart";
+    static constexpr const char* kEnableDeletetKey        = "EnableDelete";
+    static constexpr const char* kVideoURLKey             = "VideoURL";
+    static constexpr const char* kWindSpeedKey            = "WindSpeed";
+    static constexpr const char* kRateKey                 = "RateKey";
+    static constexpr const char* kPublicLogKey            = "PublicLog";
+    static constexpr const char* kFeedback                = "feedback";
+    static constexpr const char* kVideoURL                = "videoUrl";
 };
-
-#endif

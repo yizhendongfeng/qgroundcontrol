@@ -1,8 +1,16 @@
-#ifndef VIEWER3DQMLVARIABLETYPES_H
-#define VIEWER3DQMLVARIABLETYPES_H
-#include <QObject>
-#include <qqml.h>
-#include <QGeoCoordinate>
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+#pragma once
+
+#include <QtCore/QObject>
+#include <QtPositioning/QGeoCoordinate>
 
 #include "Viewer3DUtils.h"
 
@@ -93,8 +101,3 @@ private:
     QGeoCoordinate _coordinate;
     QVector3D _localCoordinate;
 };
-
-
-#endif // VIEWER3DQMLVARIABLETYPES_H
-
-

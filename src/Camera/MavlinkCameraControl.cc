@@ -8,6 +8,8 @@
  ****************************************************************************/
 
 #include "MavlinkCameraControl.h"
+#include "QmlObjectListModel.h"
+#include "QGCLoggingCategory.h"
 
 QGC_LOGGING_CATEGORY(CameraControlLog, "CameraControlLog")
 QGC_LOGGING_CATEGORY(CameraControlVerboseLog, "CameraControlVerboseLog")

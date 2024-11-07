@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -12,15 +12,12 @@
 ///     @author Don Gagne <don@thegagnes.com>
 
 #include "PX4ParameterMetaData.h"
-#include "QGCApplication.h"
 #include "QGCLoggingCategory.h"
 
-#include <QFile>
-#include <QFileInfo>
-#include <QDir>
-#include <QDebug>
-
-static const char* kInvalidConverstion = "Internal Error: No support for string parameters";
+#include <QtCore/QFile>
+#include <QtCore/QDir>
+#include <QtCore/QDebug>
+#include <QtCore/QXmlStreamReader>
 
 QGC_LOGGING_CATEGORY(PX4ParameterMetaDataLog, "PX4ParameterMetaDataLog")
 

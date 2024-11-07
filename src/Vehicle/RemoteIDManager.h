@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2022 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,18 +9,20 @@
 
 #pragma once
 
-#include <QObject>
-#include <QDateTime>
-#include <QGeoPositionInfo>
+#include <QtCore/QObject>
+#include <QtCore/QDateTime>
+#include <QtCore/QTimer>
+#include <QtPositioning/QGeoPositionInfo>
+#include <QtCore/QLoggingCategory>
 
-#include "QGCLoggingCategory.h"
 #include "QGCMAVLink.h"
-#include "Vehicle.h"
 
 Q_DECLARE_LOGGING_CATEGORY(RemoteIDManagerLog)
 
 class RemoteIDSettings;
 class QGCPositionManager;
+class Vehicle;
+class MAVLinkProtocol;
 
 // Supporting Open Drone ID protocol
 class RemoteIDManager : public QObject

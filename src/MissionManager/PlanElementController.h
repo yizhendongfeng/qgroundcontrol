@@ -1,30 +1,26 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#ifndef PlanElementController_H
-#define PlanElementController_H
+#pragma once
 
-#include <QObject>
-
-#include "Vehicle.h"
-#include "MultiVehicleManager.h"
+#include <QtCore/QObject>
 
 class PlanMasterController;
 
-Q_MOC_INCLUDE("PlanMasterController.h")
 
 /// This is the abstract base clas for Plan Element controllers.
 /// Examples of plan elements are: missions (MissionController), geofence (GeoFenceController)
 class PlanElementController : public QObject
 {
     Q_OBJECT
-    
+    Q_MOC_INCLUDE("PlanMasterController.h")
+
 public:
     PlanElementController(PlanMasterController* masterController, QObject* parent = nullptr);
     ~PlanElementController();
@@ -72,5 +68,3 @@ protected:
     PlanMasterController*   _masterController;
     bool                    _flyView;
 };
-
-#endif

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,16 +9,10 @@
 
 #include "Bootloader.h"
 #include "QGCLoggingCategory.h"
-#ifdef Q_OS_ANDROID
-#include "qserialport.h"
-#else
-#include <QSerialPort>
-#endif
-#include <QFile>
-#include <QDebug>
-#include <QElapsedTimer>
-
+#include "FirmwareImage.h"
 #include "QGC.h"
+#include <QtCore/QFile>
+#include <QtCore/QElapsedTimer>
 
 /// This class manages interactions with the bootloader
 Bootloader::Bootloader(bool sikRadio, QObject *parent)

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,25 +9,24 @@
 
 #pragma once
 
-#include <QObject>
-#include <QMap>
-#include <QXmlStreamReader>
-#include <QLoggingCategory>
-#include <QMutex>
-#include <QDir>
-#include <QJsonObject>
+#include <QtCore/QObject>
+#include <QtCore/QMap>
+#include <QtCore/QDir>
+#include <QtCore/QTimer>
+#include <QtCore/QString>
+#include <QtCore/QLoggingCategory>
 
-#include "FactSystem.h"
-#include "MAVLinkProtocol.h"
-#include "AutoPilotPlugin.h"
-#include "QGCMAVLink.h"
-#include "Vehicle.h"
+#include "Fact.h"
+#include "FactMetaData.h"
+#include "MAVLinkLib.h"
 
 Q_DECLARE_LOGGING_CATEGORY(ParameterManagerVerbose1Log)
 Q_DECLARE_LOGGING_CATEGORY(ParameterManagerVerbose2Log)
 Q_DECLARE_LOGGING_CATEGORY(ParameterManagerDebugCacheFailureLog)
 
 class ParameterEditorController;
+class Vehicle;
+class MAVLinkProtocol;
 
 class ParameterManager : public QObject
 {
@@ -71,7 +70,7 @@ public:
     void resetAllToVehicleConfiguration();
 
     /// Returns true if the specifed parameter exists
-    ///     @param componentId: Component id or FactSystem::defaultComponentId
+    ///     @param componentId: Component id or ParameterManager::defaultComponentId
     ///     @param name: Parameter name
     bool parameterExists(int componentId, const QString& paramName);
 
@@ -80,7 +79,7 @@ public:
 
     /// Returns the specified Parameter. Returns a default empty fact is parameter does not exists. Also will pop
     /// a missing parameter error to user if parameter does not exist.
-    ///     @param componentId: Component id or FactSystem::defaultComponentId
+    ///     @param componentId: Component id or ParameterManager::defaultComponentId
     ///     @param name: Parameter name
     Fact* getParameter(int componentId, const QString& paramName);
 
@@ -91,10 +90,12 @@ public:
 
     bool pendingWrites(void);
 
-    Vehicle* vehicle(void) { return _vehicle; }
+    Vehicle* vehicle(void);
 
     static MAV_PARAM_TYPE               factTypeToMavType(FactMetaData::ValueType_t factType);
     static FactMetaData::ValueType_t    mavTypeToFactType(MAV_PARAM_TYPE mavType);
+
+    static constexpr int defaultComponentId = -1;
 
 signals:
     void parametersReadyChanged     (bool parametersReady);

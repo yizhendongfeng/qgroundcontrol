@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,10 +11,6 @@
 #include "AppSettings.h"
 #include "KMLHelper.h"
 #include "SHPFileHelper.h"
-
-#include <QFile>
-
-const char* ShapeFileHelper::_errorPrefix = QT_TR_NOOP("Shape file load failed. %1");
 
 QVariantList ShapeFileHelper::determineShapeType(const QString& file)
 {

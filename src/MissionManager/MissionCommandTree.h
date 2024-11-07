@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,10 +11,9 @@
 
 #include "QGCToolbox.h"
 #include "QGCMAVLink.h"
-#include "Vehicle.h"
 
-#include <QVariantList>
-#include <QMap>
+#include <QtCore/QVariantList>
+#include <QtCore/QMap>
 
 class MissionCommandUIInfo;
 class MissionCommandList;
@@ -22,6 +21,7 @@ class SettingsManager;
 #ifdef UNITTEST_BUILD
 class MissionCommandTreeTest;
 #endif
+class Vehicle;
 
 /// Manages a hierarchy of MissionCommandUIInfo.
 ///

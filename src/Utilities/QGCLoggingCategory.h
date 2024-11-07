@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include <QLoggingCategory>
-#include <QStringList>
-#include <QObject>
+#include <QtCore/QLoggingCategory>
+#include <QtCore/QStringList>
+#include <QtCore/QObject>
 
 // Add Global logging categories (not class specific) here using Q_DECLARE_LOGGING_CATEGORY
 Q_DECLARE_LOGGING_CATEGORY(FirmwareUpgradeLog)
@@ -19,10 +19,7 @@ Q_DECLARE_LOGGING_CATEGORY(FirmwareUpgradeVerboseLog)
 Q_DECLARE_LOGGING_CATEGORY(MissionCommandsLog)
 Q_DECLARE_LOGGING_CATEGORY(MissionItemLog)
 Q_DECLARE_LOGGING_CATEGORY(ParameterManagerLog)
-Q_DECLARE_LOGGING_CATEGORY(GeotaggingLog)
-Q_DECLARE_LOGGING_CATEGORY(RTKGPSLog)
 Q_DECLARE_LOGGING_CATEGORY(GuidedActionsControllerLog)
-Q_DECLARE_LOGGING_CATEGORY(ADSBVehicleManagerLog)
 Q_DECLARE_LOGGING_CATEGORY(LocalizationLog)
 Q_DECLARE_LOGGING_CATEGORY(VideoAllLog) // turns on all individual QGC video logs
 Q_DECLARE_LOGGING_CATEGORY(JoystickLog)
@@ -63,7 +60,7 @@ private:
     QStringList _registeredCategories;
     QString     _commandLineLoggingOptions;
 
-    static const char* _filterRulesSettingsGroup;
+    static constexpr const char* _filterRulesSettingsGroup = "LoggingFilters";
 };
         
 class QGCLoggingCategory

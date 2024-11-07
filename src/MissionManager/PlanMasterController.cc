@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,6 +11,7 @@
 #include "QGCApplication.h"
 #include "QGCCorePlugin.h"
 #include "MultiVehicleManager.h"
+#include "Vehicle.h"
 #include "SettingsManager.h"
 #include "AppSettings.h"
 #include "JsonHelper.h"
@@ -20,18 +21,15 @@
 #include "StructureScanPlanCreator.h"
 #include "CorridorScanPlanCreator.h"
 #include "BlankPlanCreator.h"
+#include "QmlObjectListModel.h"
+#include "GeoFenceManager.h"
+#include "RallyPointManager.h"
+#include "QGCLoggingCategory.h"
 
-#include <QDomDocument>
-#include <QJsonDocument>
-#include <QFileInfo>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QFileInfo>
 
 QGC_LOGGING_CATEGORY(PlanMasterControllerLog, "PlanMasterControllerLog")
-
-const int   PlanMasterController::kPlanFileVersion =            1;
-const char* PlanMasterController::kPlanFileType =               "Plan";
-const char* PlanMasterController::kJsonMissionObjectKey =       "mission";
-const char* PlanMasterController::kJsonGeoFenceObjectKey =      "geoFence";
-const char* PlanMasterController::kJsonRallyPointsObjectKey =   "rallyPoints";
 
 PlanMasterController::PlanMasterController(QObject* parent)
     : QObject               (parent)
@@ -202,16 +200,15 @@ void PlanMasterController::_activeVehicleChanged(Vehicle* activeVehicle)
 
 void PlanMasterController::loadFromVehicle(void)
 {
-    WeakLinkInterfacePtr weakLink = _managerVehicle->vehicleLinkManager()->primaryLink();
-    if (weakLink.expired()) {
-        // Vehicle is shutting down
-        return;
-    } else {
-        SharedLinkInterfacePtr sharedLink = weakLink.lock();
+    SharedLinkInterfacePtr sharedLink = _managerVehicle->vehicleLinkManager()->primaryLink().lock();
+    if (sharedLink) {
         if (sharedLink->linkConfiguration()->isHighLatency()) {
             qgcApp()->showAppMessage(tr("Download not supported on high latency links."));
             return;
         }
+    } else {
+        // Vehicle is shutting down
+        return;
     }
 
     if (offline()) {
@@ -307,16 +304,15 @@ void PlanMasterController::_sendRallyPointsComplete(void)
 
 void PlanMasterController::sendToVehicle(void)
 {
-    WeakLinkInterfacePtr weakLink = _managerVehicle->vehicleLinkManager()->primaryLink();
-    if (weakLink.expired()) {
-        // Vehicle is shutting down
-        return;
-    } else {
-        SharedLinkInterfacePtr sharedLink = weakLink.lock();
+    SharedLinkInterfacePtr sharedLink = _managerVehicle->vehicleLinkManager()->primaryLink().lock();
+    if (sharedLink) {
         if (sharedLink->linkConfiguration()->isHighLatency()) {
             qgcApp()->showAppMessage(tr("Upload not supported on high latency links."));
             return;
         }
+    } else {
+        // Vehicle is shutting down
+        return;
     }
 
     if (offline()) {

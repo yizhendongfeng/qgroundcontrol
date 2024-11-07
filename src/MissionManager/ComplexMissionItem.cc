@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,18 +9,17 @@
 
 #include "ComplexMissionItem.h"
 #include "QGCApplication.h"
+#include "QGCToolbox.h"
 #include "QGCCorePlugin.h"
 #include "QGCOptions.h"
 #include "PlanMasterController.h"
 #include "FlightPathSegment.h"
 #include "MissionController.h"
+#include "KMLPlanDomDocument.h"
+#include "SettingsManager.h"
 
-#include <QCborValue>
-#include <QSettings>
-
-const char* ComplexMissionItem::jsonComplexItemTypeKey = "complexItemType";
-
-const char* ComplexMissionItem::_presetSettingsKey =        "_presets";
+#include <QtCore/QCborMap>
+#include <QtCore/QSettings>
 
 ComplexMissionItem::ComplexMissionItem(PlanMasterController* masterController, bool flyView)
     : VisualMissionItem (masterController, flyView)

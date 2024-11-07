@@ -1,14 +1,26 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 #include "JoystickAndroid.h"
 #include "JoystickManager.h"
+#include "MultiVehicleManager.h"
+#include "QGCLoggingCategory.h"
 
-#include <QQmlEngine>
-#include <QJniEnvironment>
-#include <QJniObject>
+#include <QtCore/QJniEnvironment>
+#include <QtCore/QJniObject>
 
 int JoystickAndroid::_androidBtnListCount;
 int *JoystickAndroid::_androidBtnList;
 int JoystickAndroid::ACTION_DOWN;
 int JoystickAndroid::ACTION_UP;
+int JoystickAndroid::AXIS_HAT_X;
+int JoystickAndroid::AXIS_HAT_Y;
 QMutex JoystickAndroid::m_mutex;
 
 static void clear_jni_exception()
@@ -201,18 +213,37 @@ int JoystickAndroid::_getAxis(int i) {
     return axisValue[ i ];
 }
 
-bool JoystickAndroid::_getHat(int hat,int i) {
-    Q_UNUSED(hat);
-    Q_UNUSED(i);
-    return false;
+int  JoystickAndroid::_getAndroidHatAxis(int axisHatCode) {
+    for(int i = 0; i < _axisCount; i++) {
+        if (axisCode[i] == axisHatCode) {
+            return _getAxis(i);
+        }
+    }
+    return 0;
 }
 
-static JoystickManager *_manager = nullptr;
+bool JoystickAndroid::_getHat(int hat,int i) {
+    // Android supports only one hat button
+    if (hat != 0) {
+        return false;
+    }
+
+    switch (i) {
+        case 0:
+            return _getAndroidHatAxis(AXIS_HAT_Y) < 0;
+        case 1:
+            return _getAndroidHatAxis(AXIS_HAT_Y) > 0;
+        case 2:
+            return _getAndroidHatAxis(AXIS_HAT_X) < 0;
+        case 3:
+            return _getAndroidHatAxis(AXIS_HAT_X) > 0;
+        default:
+            return false;
+    }
+}
 
 //helper method
-bool JoystickAndroid::init(JoystickManager *manager) {
-    _manager = manager;
-
+bool JoystickAndroid::init() {
     //this gets list of all possible buttons - this is needed to check how many buttons our gamepad supports
     //instead of the whole logic below we could have just a simple array of hardcoded int values as these 'should' not change
 
@@ -248,6 +279,8 @@ bool JoystickAndroid::init(JoystickManager *manager) {
 
     ACTION_DOWN = QJniObject::getStaticField<jint>("android/view/KeyEvent", "ACTION_DOWN");
     ACTION_UP = QJniObject::getStaticField<jint>("android/view/KeyEvent", "ACTION_UP");
+    AXIS_HAT_X = QJniObject::getStaticField<jint>("android/view/MotionEvent", "AXIS_HAT_X");
+    AXIS_HAT_Y = QJniObject::getStaticField<jint>("android/view/MotionEvent", "AXIS_HAT_Y");
 
     return true;
 }
@@ -259,10 +292,8 @@ static void jniUpdateAvailableJoysticks(JNIEnv *envA, jobject thizA)
     Q_UNUSED(envA);
     Q_UNUSED(thizA);
 
-    if (_manager != nullptr) {
-        qCDebug(JoystickLog) << "jniUpdateAvailableJoysticks triggered";
-        emit _manager->updateAvailableJoysticksSignal();
-    }
+    qCDebug(JoystickLog) << "jniUpdateAvailableJoysticks triggered";
+    emit JoystickManager::instance()->updateAvailableJoysticksSignal();
 }
 
 void JoystickAndroid::setNativeMethods()

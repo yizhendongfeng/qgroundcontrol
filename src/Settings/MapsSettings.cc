@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,8 +9,8 @@
 
 #include "MapsSettings.h"
 
-#include <QQmlEngine>
-#include <QtQml>
+#include <QtCore/QSettings>
+#include <QtQml/QQmlEngine>
 
 DECLARE_SETTINGGROUP(Maps, "Maps")
 {
@@ -18,8 +18,8 @@ DECLARE_SETTINGGROUP(Maps, "Maps")
 
     // Move deprecated keys to new location
 
-    static const char* kMaxDiskCacheKey = "MaxDiskCache";
-    static const char* kMaxMemCacheKey  = "MaxMemoryCache";
+    static constexpr const char* kMaxDiskCacheKey = "MaxDiskCache";
+    static constexpr const char* kMaxMemCacheKey  = "MaxMemoryCache";
 
     QSettings deprecatedSettings;
     QSettings newSettings;

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,24 +10,16 @@
 #include "FixedWingLandingComplexItem.h"
 #include "JsonHelper.h"
 #include "MissionController.h"
-#include "QGCGeo.h"
-#include "SimpleMissionItem.h"
+#include "MissionItem.h"
 #include "PlanMasterController.h"
 #include "FlightPathSegment.h"
+#include "QGCLoggingCategory.h"
 
-#include <QPolygonF>
+#include <QtCore/QJsonArray>
 
 QGC_LOGGING_CATEGORY(FixedWingLandingComplexItemLog, "FixedWingLandingComplexItemLog")
 
 const QString FixedWingLandingComplexItem::name(FixedWingLandingComplexItem::tr("Fixed Wing Landing"));
-
-const char* FixedWingLandingComplexItem::settingsGroup                      = "FixedWingLanding";
-const char* FixedWingLandingComplexItem::jsonComplexItemTypeValue           = "fwLandingPattern";
-
-const char* FixedWingLandingComplexItem::glideSlopeName                     = "GlideSlope";
-const char* FixedWingLandingComplexItem::valueSetIsDistanceName             = "ValueSetIsDistance";
-
-const char* FixedWingLandingComplexItem::_jsonValueSetIsDistanceKey         = "valueSetIsDistance";
 
 FixedWingLandingComplexItem::FixedWingLandingComplexItem(PlanMasterController* masterController, bool flyView)
     : LandingComplexItem        (masterController, flyView)

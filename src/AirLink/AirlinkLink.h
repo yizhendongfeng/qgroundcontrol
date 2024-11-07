@@ -1,8 +1,17 @@
-#ifndef AIRLINKLINK_H
-#define AIRLINKLINK_H
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
 
-#include <UDPLink.h>
-#include <QMutex>
+#pragma once
+
+#include <QtCore/QMutex>
+
+#include "UDPLink.h"
 
 class AirlinkConfiguration : public UDPConfiguration
 {
@@ -78,5 +87,3 @@ private:
     /// Access this varible only with _mutex locked
     bool _needToConnect {false};
 };
-
-#endif // AIRLINKLINK_H

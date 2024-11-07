@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,26 +11,27 @@
 /// @file
 ///     @author Don Gagne <don@thegagnes.com>
 
-#ifndef MultiVehicleManager_H
-#define MultiVehicleManager_H
+#pragma once
 
-#include "Vehicle.h"
-#include "QGCMAVLink.h"
-#include "QmlObjectListModel.h"
+#include <QtCore/QTimer>
+#include <QtPositioning/QGeoCoordinate>
+#include <QtCore/QLoggingCategory>
+
 #include "QGCToolbox.h"
-#include "QGCLoggingCategory.h"
+#include "QmlObjectListModel.h"
 
 class FirmwarePluginManager;
-class FollowMe;
-class JoystickManager;
 class QGCApplication;
 class MAVLinkProtocol;
+class LinkInterface;
+class Vehicle;
 
 Q_DECLARE_LOGGING_CATEGORY(MultiVehicleManagerLog)
 
 class MultiVehicleManager : public QGCTool
 {
     Q_OBJECT
+    Q_MOC_INCLUDE("Vehicle.h")
 
 public:
     MultiVehicleManager(QGCApplication* app, QGCToolbox* toolbox);
@@ -109,14 +110,11 @@ private:
     QmlObjectListModel  _vehicles;
 
     FirmwarePluginManager*      _firmwarePluginManager;
-    JoystickManager*            _joystickManager;
     MAVLinkProtocol*            _mavlinkProtocol;
     QGeoCoordinate              _lastKnownLocation;
 
     QTimer              _gcsHeartbeatTimer;             ///< Timer to emit heartbeats
     bool                _gcsHeartbeatEnabled;           ///< Enabled/disable heartbeat emission
-    static const int    _gcsHeartbeatRateMSecs = 1000;  ///< Heartbeat rate
-    static const char*  _gcsHeartbeatEnabledKey;
+    static constexpr int    _gcsHeartbeatRateMSecs = 1000;  ///< Heartbeat rate
+    static constexpr const char* _gcsHeartbeatEnabledKey = "gcsHeartbeatEnabled";
 };
-
-#endif

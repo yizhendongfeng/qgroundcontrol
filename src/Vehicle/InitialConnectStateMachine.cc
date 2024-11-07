@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -15,35 +15,12 @@
 #include "ParameterManager.h"
 #include "ComponentInformationManager.h"
 #include "MissionManager.h"
+#include "StandardModes.h"
+#include "GeoFenceManager.h"
+#include "RallyPointManager.h"
+#include "QGCLoggingCategory.h"
 
 QGC_LOGGING_CATEGORY(InitialConnectStateMachineLog, "InitialConnectStateMachineLog")
-
-const StateMachine::StateFn InitialConnectStateMachine::_rgStates[] = {
-    InitialConnectStateMachine::_stateRequestAutopilotVersion,
-    InitialConnectStateMachine::_stateRequestProtocolVersion,
-    InitialConnectStateMachine::_stateRequestStandardModes,
-    InitialConnectStateMachine::_stateRequestCompInfo,
-    InitialConnectStateMachine::_stateRequestParameters,
-    InitialConnectStateMachine::_stateRequestMission,
-    InitialConnectStateMachine::_stateRequestGeoFence,
-    InitialConnectStateMachine::_stateRequestRallyPoints,
-    InitialConnectStateMachine::_stateSignalInitialConnectComplete
-};
-
-const int InitialConnectStateMachine::_rgProgressWeights[] = {
-    1, //_stateRequestCapabilities
-    1, //_stateRequestProtocolVersion
-    1, //_stateRequestStandardModes
-    5, //_stateRequestCompInfo
-    5, //_stateRequestParameters
-    2, //_stateRequestMission
-    1, //_stateRequestGeoFence
-    1, //_stateRequestRallyPoints
-    1, //_stateSignalInitialConnectComplete
-};
-
-
-const int InitialConnectStateMachine::_cStates = sizeof(InitialConnectStateMachine::_rgStates) / sizeof(InitialConnectStateMachine::_rgStates[0]);
 
 InitialConnectStateMachine::InitialConnectStateMachine(Vehicle* vehicle)
     : _vehicle(vehicle)
@@ -103,7 +80,7 @@ void InitialConnectStateMachine::_stateRequestAutopilotVersion(StateMachine* sta
         qCDebug(InitialConnectStateMachineLog) << "Skipping REQUEST_MESSAGE:AUTOPILOT_VERSION request due to no primary link";
         connectMachine->advance();
     } else {
-        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isPX4Flow() || sharedLink->isLogReplay()) {
+        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isLogReplay()) {
             qCDebug(InitialConnectStateMachineLog) << "Skipping REQUEST_MESSAGE:AUTOPILOT_VERSION request due to link type";
             connectMachine->advance();
         } else {
@@ -215,7 +192,7 @@ void InitialConnectStateMachine::_stateRequestProtocolVersion(StateMachine* stat
         qCDebug(InitialConnectStateMachineLog) << "Skipping REQUEST_MESSAGE:PROTOCOL_VERSION request due to no primary link";
         connectMachine->advance();
     } else {
-        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isPX4Flow() || sharedLink->isLogReplay()) {
+        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isLogReplay()) {
             qCDebug(InitialConnectStateMachineLog) << "Skipping REQUEST_MESSAGE:PROTOCOL_VERSION request due to link type";
             connectMachine->advance();
         } else if (vehicle->apmFirmware()) {
@@ -335,7 +312,7 @@ void InitialConnectStateMachine::_stateRequestMission(StateMachine* stateMachine
         qCDebug(InitialConnectStateMachineLog) << "_stateRequestMission: Skipping first mission load request due to no primary link";
         connectMachine->advance();
     } else {
-        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isPX4Flow() || sharedLink->isLogReplay()) {
+        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isLogReplay()) {
             qCDebug(InitialConnectStateMachineLog) << "_stateRequestMission: Skipping first mission load request due to link type";
             vehicle->_firstMissionLoadComplete();
         } else {
@@ -360,7 +337,7 @@ void InitialConnectStateMachine::_stateRequestGeoFence(StateMachine* stateMachin
         qCDebug(InitialConnectStateMachineLog) << "_stateRequestGeoFence: Skipping first geofence load request due to no primary link";
         connectMachine->advance();
     } else {
-        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isPX4Flow() || sharedLink->isLogReplay()) {
+        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isLogReplay()) {
             qCDebug(InitialConnectStateMachineLog) << "_stateRequestGeoFence: Skipping first geofence load request due to link type";
             vehicle->_firstGeoFenceLoadComplete();
         } else {
@@ -390,7 +367,7 @@ void InitialConnectStateMachine::_stateRequestRallyPoints(StateMachine* stateMac
         qCDebug(InitialConnectStateMachineLog) << "_stateRequestRallyPoints: Skipping first rally point load request due to no primary link";
         connectMachine->advance();
     } else {
-        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isPX4Flow() || sharedLink->isLogReplay()) {
+        if (sharedLink->linkConfiguration()->isHighLatency() || sharedLink->isLogReplay()) {
             qCDebug(InitialConnectStateMachineLog) << "_stateRequestRallyPoints: Skipping first rally point load request due to link type";
             vehicle->_firstRallyPointLoadComplete();
         } else {

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,38 +10,20 @@
 #include "TransectStyleComplexItem.h"
 #include "JsonHelper.h"
 #include "MissionController.h"
-#include "QGCGeo.h"
-#include "QGCQGeoCoordinate.h"
-#include "SettingsManager.h"
-#include "AppSettings.h"
-#include "QGCQGeoCoordinate.h"
 #include "QGCApplication.h"
 #include "PlanMasterController.h"
 #include "FlightPathSegment.h"
 #include "MissionCommandTree.h"
 #include "MissionCommandUIInfo.h"
+#include "QGC.h"
+#include "FirmwarePlugin.h"
+#include "KMLPlanDomDocument.h"
+#include "Vehicle.h"
+#include "QGCLoggingCategory.h"
 
-#include <QPolygonF>
+#include <QtCore/QJsonArray>
 
 QGC_LOGGING_CATEGORY(TransectStyleComplexItemLog, "TransectStyleComplexItemLog")
-
-const char* TransectStyleComplexItem::turnAroundDistanceName                = "TurnAroundDistance";
-const char* TransectStyleComplexItem::turnAroundDistanceMultiRotorName      = "TurnAroundDistanceMultiRotor";
-const char* TransectStyleComplexItem::cameraTriggerInTurnAroundName         = "CameraTriggerInTurnAround";
-const char* TransectStyleComplexItem::hoverAndCaptureName                   = "HoverAndCapture";
-const char* TransectStyleComplexItem::refly90DegreesName                    = "Refly90Degrees";
-const char* TransectStyleComplexItem::terrainAdjustToleranceName            = "TerrainAdjustTolerance";
-const char* TransectStyleComplexItem::terrainAdjustMaxClimbRateName         = "TerrainAdjustMaxClimbRate";
-const char* TransectStyleComplexItem::terrainAdjustMaxDescentRateName       = "TerrainAdjustMaxDescentRate";
-
-const char* TransectStyleComplexItem::_jsonTransectStyleComplexItemKey      = "TransectStyleComplexItem";
-const char* TransectStyleComplexItem::_jsonCameraCalcKey                    = "CameraCalc";
-const char* TransectStyleComplexItem::_jsonVisualTransectPointsKey          = "VisualTransectPoints";
-const char* TransectStyleComplexItem::_jsonItemsKey                         = "Items";
-const char* TransectStyleComplexItem::_jsonTerrainFlightSpeed               = "TerrainFlightSpeed";
-const char* TransectStyleComplexItem::_jsonCameraShotsKey                   = "CameraShots";
-
-const char* TransectStyleComplexItem::_jsonTerrainFollowKeyDeprecated       = "FollowTerrain";
 
 TransectStyleComplexItem::TransectStyleComplexItem(PlanMasterController* masterController, bool flyView, QString settingsGroup)
     : ComplexMissionItem                (masterController, flyView)

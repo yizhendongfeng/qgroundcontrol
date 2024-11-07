@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,9 +10,6 @@
 
 #include "PX4AutoPilotPlugin.h"
 #include "PX4AirframeLoader.h"
-#include "AirframeComponentController.h"
-#include "FirmwarePlugin/PX4/PX4ParameterMetaData.h"  // FIXME: Hack
-#include "FirmwarePlugin/PX4/PX4FirmwarePlugin.h"  // FIXME: Hack
 #include "QGCApplication.h"
 #include "FlightModesComponent.h"
 #include "PX4RadioComponent.h"
@@ -20,6 +17,10 @@
 #include "PowerComponent.h"
 #include "SafetyComponent.h"
 #include "SensorsComponent.h"
+#include "ParameterManager.h"
+#include "Vehicle.h"
+#include "Actuators.h"
+#include "ActuatorComponent.h"
 
 /// @file
 ///     @brief This is the AutoPilotPlugin implementatin for the MAV_AUTOPILOT_PX4 type.
@@ -149,8 +150,8 @@ void PX4AutoPilotPlugin::parametersReadyPreChecks(void)
     AutoPilotPlugin::parametersReadyPreChecks();
 
     QString hitlParam("SYS_HITL");
-    if (_vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, hitlParam) &&
-            _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, hitlParam)->rawValue().toBool()) {
+    if (_vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, hitlParam) &&
+            _vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, hitlParam)->rawValue().toBool()) {
         qgcApp()->showAppMessage(tr("Warning: Hardware In The Loop (HITL) simulation is enabled for this vehicle."));
     }
 }

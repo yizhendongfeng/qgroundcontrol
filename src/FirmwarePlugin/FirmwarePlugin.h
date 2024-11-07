@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,21 +10,23 @@
 #pragma once
 /// @file
 
+#include <QtCore/QList>
+#include <QtCore/QString>
+#include <QtCore/QVariantList>
+#include <QtPositioning/QGeoCoordinate>
+
 #include "QGCMAVLink.h"
-#include "VehicleComponent.h"
-#include "AutoPilotPlugin.h"
-#include "GeoFenceManager.h"
-#include "RallyPointManager.h"
 #include "FollowMe.h"
+#include "FactMetaData.h"
 
-#include <QList>
-#include <QString>
-#include <QVariantList>
-
+class VehicleComponent;
+class AutoPilotPlugin;
 class Vehicle;
 class MavlinkCameraControl;
 class QGCCameraManager;
 class Autotune;
+class LinkInterface;
+class FactGroup;
 
 /// This is the base class for Firmware specific plugins
 ///
@@ -48,6 +50,7 @@ public:
         OrbitModeCapability =               1 << 3, ///< Vehicle supports orbit mode
         TakeoffVehicleCapability =          1 << 4, ///< Vehicle supports guided takeoff
         ROIModeCapability =                 1 << 5, ///< Vehicle supports ROI (both in Fly guided mode and from Plan creation)
+        ChangeHeadingCapability =           1 << 6, ///< Vehicle supports changing heading at current location
     } FirmwareCapabilities;
 
     /// Maps from on parameter name to another
@@ -142,8 +145,11 @@ public:
     /// Command vehicle to takeoff from current location to a firmware specific height.
     virtual void guidedModeTakeoff(Vehicle* vehicle, double takeoffAltRel);
 
+    /// Command vehicle to rotate towards specified location.
+    virtual void guidedModeChangeHeading(Vehicle *vehicle, const QGeoCoordinate &headingCoord);
+
     /// @return The minimum takeoff altitude (relative) for guided takeoff.
-    virtual double minimumTakeoffAltitude(Vehicle* /*vehicle*/) { return 10; }
+    virtual double minimumTakeoffAltitudeMeters(Vehicle* /*vehicle*/) { return 3.048; }
 
     /// @return The maximum horizontal groundspeed for a multirotor.
     virtual double maximumHorizontalSpeedMultirotor(Vehicle* /*vehicle*/) { return NAN; }
@@ -347,10 +353,7 @@ public:
     virtual void adjustMetaData(MAV_TYPE /*vehicleType*/, FactMetaData* /*metaData*/) {}
 
     /// Sends the appropriate mavlink message for follow me support
-    virtual void sendGCSMotionReport(Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities);
-
-    // FIXME: Hack workaround for non pluginize FollowMe support
-    static const QString px4FollowMeFlightMode;
+    virtual void sendGCSMotionReport(Vehicle *vehicle, FollowMe::GCSMotionReport &motionReport, uint8_t estimationCapabilities);
 
     // gets hobbs meter from autopilot. This should be reimplmeented for each firmware
     virtual QString getHobbsMeter(Vehicle* vehicle) { Q_UNUSED(vehicle); return "Not Supported"; }
@@ -385,40 +388,4 @@ protected:
     QVariantList _modeIndicatorList;
 
     static QVariantList _cameraList;    ///< Standard QGC camera list
-};
-
-class FirmwarePluginFactory : public QObject
-{
-    Q_OBJECT
-
-public:
-    FirmwarePluginFactory(void);
-
-    /// Returns appropriate plugin for autopilot type.
-    ///     @param autopilotType Type of autopilot to return plugin for.
-    ///     @param vehicleType Vehicle type of autopilot to return plugin for.
-    /// @return Singleton FirmwarePlugin instance for the specified MAV_AUTOPILOT.
-    virtual FirmwarePlugin* firmwarePluginForAutopilot(MAV_AUTOPILOT autopilotType, MAV_TYPE vehicleType) = 0;
-
-    /// @return List of firmware classes this plugin supports.
-    virtual QList<QGCMAVLink::FirmwareClass_t> supportedFirmwareClasses(void) const = 0;
-
-    /// @return List of vehicle classes this plugin supports.
-    virtual QList<QGCMAVLink::VehicleClass_t> supportedVehicleClasses(void) const;
-};
-
-class FirmwarePluginFactoryRegister : public QObject
-{
-    Q_OBJECT
-
-public:
-    static FirmwarePluginFactoryRegister* instance(void);
-
-    /// Registers the specified logging category to the system.
-    void registerPluginFactory(FirmwarePluginFactory* pluginFactory) { _factoryList.append(pluginFactory); }
-
-    QList<FirmwarePluginFactory*> pluginFactories(void) const { return _factoryList; }
-
-private:
-    QList<FirmwarePluginFactory*> _factoryList;
 };

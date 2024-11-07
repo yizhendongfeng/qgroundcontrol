@@ -1,3 +1,12 @@
+/****************************************************************************
+ *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
 /*=====================================================================
 
  QGroundControl Open Source Ground Control Station
@@ -24,10 +33,11 @@
 /// @file
 ///     @author Rustom Jehangir <rusty@bluerobotics.com>
 
-#ifndef ArduSubFirmwarePlugin_H
-#define ArduSubFirmwarePlugin_H
+#pragma once
 
 #include "APMFirmwarePlugin.h"
+#include "FactGroup.h"
+
 class APMSubmarineFactGroup : public FactGroup
 {
     Q_OBJECT
@@ -42,6 +52,7 @@ public:
     Q_PROPERTY(Fact* pilotGain           READ pilotGain           CONSTANT)
     Q_PROPERTY(Fact* inputHold           READ inputHold     CONSTANT)
     Q_PROPERTY(Fact* rangefinderDistance READ rangefinderDistance CONSTANT)
+    Q_PROPERTY(Fact* rangefinderTarget   READ rangefinderTarget CONSTANT)
 
     Fact* camTilt             (void) { return &_camTiltFact; }
     Fact* tetherTurns         (void) { return &_tetherTurnsFact; }
@@ -50,6 +61,7 @@ public:
     Fact* pilotGain           (void) { return &_pilotGainFact; }
     Fact* inputHold           (void) { return &_inputHoldFact; }
     Fact* rangefinderDistance (void) { return &_rangefinderDistanceFact; }
+    Fact* rangefinderTarget   (void) { return &_rangefinderTargetFact; }
 
     static const char* _camTiltFactName;
     static const char* _tetherTurnsFactName;
@@ -59,6 +71,7 @@ public:
     static const char* _inputHoldFactName;
     static const char* _rollPitchToggleFactName;
     static const char* _rangefinderDistanceFactName;
+    static const char* _rangefinderTargetFactName;
 
     static const char* _settingsGroup;
 
@@ -71,6 +84,7 @@ private:
     Fact            _inputHoldFact;
     Fact            _rollPitchToggleFact;
     Fact            _rangefinderDistanceFact;
+    Fact            _rangefinderTargetFact;
 };
 
 class APMSubMode : public APMCustomMode
@@ -98,6 +112,7 @@ public:
         RESERVED_18       = 18,
         MANUAL            = 19,
         MOTORDETECTION    = 20,
+        SURFTRAK          = 21,  // Surface (seafloor) tracking, aka hold range
     };
 
     APMSubMode(uint32_t mode, bool settable);
@@ -153,4 +168,3 @@ private:
     QMap<QString, FactGroup*> _nameToFactGroupMap;
     APMSubmarineFactGroup _infoFactGroup;
 };
-#endif

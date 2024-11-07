@@ -1,5 +1,14 @@
 /****************************************************************************
  *
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *
+ * QGroundControl is licensed according to the terms in the file
+ * COPYING.md in the root of the source code directory.
+ *
+ ****************************************************************************/
+
+/****************************************************************************
+ *
  *   Copyright (c) 2012-2014 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,16 +40,19 @@
  *
  ****************************************************************************/
 
+/* https://github.com/PX4/Firmware/blob/master/msg/SatelliteInfo.msg */
+
 #pragma once
+
 #include <stdint.h>
 
-/*
- * This file is auto-generated from https://github.com/PX4/Firmware/blob/master/msg/satellite_info.msg
- * and was manually copied here.
- */
+#include <QtCore/QMetaType>
 
-struct satellite_info_s {
+struct satellite_info_s
+{
 	uint64_t timestamp;
+	static constexpr uint8_t SAT_INFO_MAX_SATELLITES = 20;
+
 	uint8_t count;
 	uint8_t svid[20];
 	uint8_t used[20];
@@ -48,8 +60,5 @@ struct satellite_info_s {
 	uint8_t azimuth[20];
 	uint8_t snr[20];
 	uint8_t prn[20];
-#ifdef __cplusplus
-	static const uint8_t SAT_INFO_MAX_SATELLITES = 20;
-
-#endif
 };
+Q_DECLARE_METATYPE(satellite_info_s);

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,8 +11,7 @@
 /// @file
 ///     @author Pritam Ghanghas <pritam.ghanghas@gmail.com>
 
-#ifndef ArduPlaneFirmwarePlugin_H
-#define ArduPlaneFirmwarePlugin_H
+#pragma once
 
 #include "APMFirmwarePlugin.h"
 
@@ -68,5 +67,3 @@ private:
     static bool _remapParamNameIntialized;
     static FirmwarePlugin::remapParamNameMajorVersionMap_t  _remapParamName;
 };
-
-#endif

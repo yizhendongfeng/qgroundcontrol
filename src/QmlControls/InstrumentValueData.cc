@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,10 +11,11 @@
 #include "FactValueGrid.h"
 #include "QGCApplication.h"
 #include "QGCCorePlugin.h"
-
-#include <QSettings>
-
-const char*  InstrumentValueData::vehicleFactGroupName =   "Vehicle";
+#include "QGC.h"
+#include "QmlObjectListModel.h"
+#include "MultiVehicleManager.h"
+#include "Vehicle.h"
+#include "FactGroup.h"
 
 // Important: The indices of these strings must match the InstrumentValueData::RangeType enum
 const QStringList InstrumentValueData::_rangeTypeNames = {

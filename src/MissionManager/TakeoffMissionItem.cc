@@ -1,24 +1,21 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#include <QStringList>
-#include <QDebug>
-
 #include "TakeoffMissionItem.h"
-#include "FirmwarePluginManager.h"
 #include "QGCApplication.h"
-#include "JsonHelper.h"
 #include "MissionCommandTree.h"
-#include "MissionCommandUIInfo.h"
 #include "QGroundControlQmlGlobal.h"
 #include "SettingsManager.h"
 #include "PlanMasterController.h"
+#include "MissionSettingsItem.h"
+#include "MultiVehicleManager.h"
+#include "Vehicle.h"
 
 TakeoffMissionItem::TakeoffMissionItem(PlanMasterController* masterController, bool flyView, MissionSettingsItem* settingsItem, bool forLoad)
     : SimpleMissionItem (masterController, flyView, forLoad)
@@ -99,6 +96,11 @@ void TakeoffMissionItem::setLaunchTakeoffAtSameLocation(bool launchTakeoffAtSame
         emit launchTakeoffAtSameLocationChanged(_launchTakeoffAtSameLocation);
         setDirty(true);
     }
+}
+
+QGeoCoordinate TakeoffMissionItem::launchCoordinate(void) const
+{
+    return _settingsItem->coordinate();
 }
 
 void TakeoffMissionItem::setCoordinate(const QGeoCoordinate& coordinate)

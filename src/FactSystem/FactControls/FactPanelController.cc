@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,15 +11,19 @@
 #include "MultiVehicleManager.h"
 #include "QGCApplication.h"
 #include "ParameterManager.h"
+#include "AutoPilotPlugin.h"
+#include "Vehicle.h"
+#include "QGCLoggingCategory.h"
 
-#include <QQmlEngine>
+#include <QtQml/QQmlEngine>
 
 /// @file
 ///     @author Don Gagne <don@thegagnes.com>
 
 QGC_LOGGING_CATEGORY(FactPanelControllerLog, "FactPanelControllerLog")
 
-FactPanelController::FactPanelController()
+FactPanelController::FactPanelController(QObject *parent)
+    : QObject(parent)
 {
     _vehicle = qgcApp()->toolbox()->multiVehicleManager()->activeVehicle();
     if (_vehicle) {
@@ -35,7 +39,7 @@ FactPanelController::FactPanelController()
 
 void FactPanelController::_reportMissingParameter(int componentId, const QString& name)
 {
-    if (componentId == FactSystem::defaultComponentId) {
+    if (componentId == ParameterManager::defaultComponentId) {
         componentId = _vehicle->defaultComponentId();
     }
 

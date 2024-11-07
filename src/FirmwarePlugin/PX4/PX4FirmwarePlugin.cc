@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -15,11 +15,10 @@
 #include "AirframeComponentController.h"
 #include "SensorsComponentController.h"
 #include "PowerComponentController.h"
-#include "RadioComponentController.h"
-#include "QGCCameraManager.h"
-#include "QGCFileDownload.h"
 #include "SettingsManager.h"
 #include "PlanViewSettings.h"
+#include "ParameterManager.h"
+#include "Vehicle.h"
 
 #include <QDebug>
 
@@ -223,7 +222,7 @@ bool PX4FirmwarePlugin::isCapable(const Vehicle *vehicle, FirmwareCapabilities c
     int available = SetFlightModeCapability | PauseVehicleCapability | GuidedModeCapability;
     //-- This is arbitrary until I find how to really tell if ROI is avaiable
     if (vehicle->multiRotor()) {
-        available |= ROIModeCapability;
+        available |= ROIModeCapability | ChangeHeadingCapability;
     }
     if (vehicle->multiRotor() || vehicle->vtol()) {
         available |= TakeoffVehicleCapability | OrbitModeCapability;
@@ -415,8 +414,8 @@ double PX4FirmwarePlugin::maximumHorizontalSpeedMultirotor(Vehicle* vehicle)
 {
     QString speedParam("MPC_XY_VEL_MAX");
 
-    if (vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, speedParam)) {
-        return vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, speedParam)->rawValue().toDouble();
+    if (vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, speedParam)) {
+        return vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, speedParam)->rawValue().toDouble();
     }
 
     return FirmwarePlugin::maximumHorizontalSpeedMultirotor(vehicle);
@@ -426,8 +425,8 @@ double PX4FirmwarePlugin::maximumEquivalentAirspeed(Vehicle* vehicle)
 {
     QString airspeedMax("FW_AIRSPD_MAX");
 
-    if (vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, airspeedMax)) {
-        return vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, airspeedMax)->rawValue().toDouble();
+    if (vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, airspeedMax)) {
+        return vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, airspeedMax)->rawValue().toDouble();
     }
 
     return FirmwarePlugin::maximumEquivalentAirspeed(vehicle);
@@ -437,8 +436,8 @@ double PX4FirmwarePlugin::minimumEquivalentAirspeed(Vehicle* vehicle)
 {
     QString airspeedMin("FW_AIRSPD_MIN");
 
-    if (vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, airspeedMin)) {
-        return vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, airspeedMin)->rawValue().toDouble();
+    if (vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, airspeedMin)) {
+        return vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, airspeedMin)->rawValue().toDouble();
     }
 
     return FirmwarePlugin::minimumEquivalentAirspeed(vehicle);
@@ -446,13 +445,13 @@ double PX4FirmwarePlugin::minimumEquivalentAirspeed(Vehicle* vehicle)
 
 bool PX4FirmwarePlugin::mulirotorSpeedLimitsAvailable(Vehicle* vehicle)
 {
-    return vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, "MPC_XY_VEL_MAX");
+    return vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "MPC_XY_VEL_MAX");
 }
 
 bool PX4FirmwarePlugin::fixedWingAirSpeedLimitsAvailable(Vehicle* vehicle)
 {
-    return vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, "FW_AIRSPD_MIN") &&
-            vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, "FW_AIRSPD_MAX");
+    return vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "FW_AIRSPD_MIN") &&
+            vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, "FW_AIRSPD_MAX");
 }
 
 void PX4FirmwarePlugin::guidedModeGotoLocation(Vehicle* vehicle, const QGeoCoordinate& gotoCoord)
@@ -600,6 +599,27 @@ void PX4FirmwarePlugin::guidedModeChangeEquivalentAirspeedMetersSecond(Vehicle* 
         NAN, NAN,NAN);                        // param 5-7 unused
 }
 
+void PX4FirmwarePlugin::guidedModeChangeHeading(Vehicle* vehicle, const QGeoCoordinate &headingCoord)
+{
+    if (!isCapable(vehicle, FirmwarePlugin::ChangeHeadingCapability)) {
+        qgcApp()->showAppMessage(tr("Vehicle does not support guided rotate"));
+        return;
+    }
+
+    const float degrees = vehicle->coordinate().azimuthTo(headingCoord);
+
+    vehicle->sendMavCommand(
+        vehicle->defaultComponentId(),
+        MAV_CMD_DO_REPOSITION,
+        true,
+        -1.0f,                                  // no change in ground speed
+        MAV_DO_REPOSITION_FLAGS_CHANGE_MODE,    // switch to guided mode
+        0.0f,                                   // reserved
+        degrees,                                // change heading
+        NAN, NAN, NAN                           // no change lat, lon, alt
+    );
+}
+
 void PX4FirmwarePlugin::startMission(Vehicle* vehicle)
 {
     if (_setFlightModeAndValidate(vehicle, missionFlightMode())) {
@@ -714,10 +734,10 @@ QString PX4FirmwarePlugin::getHobbsMeter(Vehicle* vehicle)
     static const char* HOOBS_LO = "LND_FLIGHT_T_LO";
     uint64_t hobbsTimeSeconds = 0;
 
-    if (vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, HOOBS_HI) &&
-            vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, HOOBS_LO)) {
-        Fact* factHi = vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, HOOBS_HI);
-        Fact* factLo = vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, HOOBS_LO);
+    if (vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, HOOBS_HI) &&
+            vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, HOOBS_LO)) {
+        Fact* factHi = vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, HOOBS_HI);
+        Fact* factLo = vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, HOOBS_LO);
         hobbsTimeSeconds = ((uint64_t)factHi->rawValue().toUInt() << 32 | (uint64_t)factLo->rawValue().toUInt()) / 1000000;
         qCDebug(VehicleLog) << "Hobbs Meter raw PX4:" << "(" << factHi->rawValue().toUInt() << factLo->rawValue().toUInt() << ")";
     }
@@ -732,8 +752,8 @@ QString PX4FirmwarePlugin::getHobbsMeter(Vehicle* vehicle)
 
 bool PX4FirmwarePlugin::hasGripper(const Vehicle* vehicle) const
 {
-    if(vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, QStringLiteral("PD_GRIPPER_EN"))) {
-        bool _hasGripper = (vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, QStringLiteral("PD_GRIPPER_EN"))->rawValue().toInt()) != 0 ? true : false;
+    if(vehicle->parameterManager()->parameterExists(ParameterManager::defaultComponentId, QStringLiteral("PD_GRIPPER_EN"))) {
+        bool _hasGripper = (vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, QStringLiteral("PD_GRIPPER_EN"))->rawValue().toInt()) != 0 ? true : false;
         return _hasGripper;
     }
     return false;

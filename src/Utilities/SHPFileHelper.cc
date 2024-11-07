@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,12 +10,9 @@
 #include "SHPFileHelper.h"
 #include "QGCGeo.h"
 
-#include <QFile>
-#include <QVariant>
-#include <QtDebug>
-#include <QRegularExpression>
-
-const char* SHPFileHelper::_errorPrefix = QT_TR_NOOP("SHP file load failed. %1");
+#include <QtCore/QFile>
+#include <QtCore/QDebug>
+#include <QtCore/QRegularExpression>
 
 /// Validates the specified SHP file is truly a SHP file and is in the format we understand.
 ///     @param utmZone[out] Zone for UTM shape, 0 for lat/lon shape
@@ -142,7 +139,7 @@ bool SHPFileHelper::loadPolygonFromFile(const QString& shpFile, QList<QGeoCoordi
 
     for (int i=0; i<shpObject->nVertices; i++) {
         QGeoCoordinate coord;
-        if (!utmZone || !convertUTMToGeo(shpObject->padfX[i], shpObject->padfY[i], utmZone, utmSouthernHemisphere, coord)) {
+        if (!utmZone || !QGCGeo::convertUTMToGeo(shpObject->padfX[i], shpObject->padfY[i], utmZone, utmSouthernHemisphere, coord)) {
             coord.setLatitude(shpObject->padfY[i]);
             coord.setLongitude(shpObject->padfX[i]);
         }

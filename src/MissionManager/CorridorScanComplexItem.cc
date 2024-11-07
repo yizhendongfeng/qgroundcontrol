@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,26 +9,17 @@
 
 #include "CorridorScanComplexItem.h"
 #include "JsonHelper.h"
-#include "MissionController.h"
-#include "QGCGeo.h"
-#include "QGCQGeoCoordinate.h"
 #include "SettingsManager.h"
 #include "AppSettings.h"
-#include "QGCQGeoCoordinate.h"
 #include "PlanMasterController.h"
 #include "QGCApplication.h"
+#include "QGCLoggingCategory.h"
 
-#include <QPolygonF>
+#include <QtCore/QJsonArray>
 
 QGC_LOGGING_CATEGORY(CorridorScanComplexItemLog, "CorridorScanComplexItemLog")
 
 const QString CorridorScanComplexItem::name(CorridorScanComplexItem::tr("Corridor Scan"));
-
-const char* CorridorScanComplexItem::settingsGroup =            "CorridorScan";
-const char* CorridorScanComplexItem::corridorWidthName =        "CorridorWidth";
-const char* CorridorScanComplexItem::_jsonEntryPointKey =       "EntryPoint";
-
-const char* CorridorScanComplexItem::jsonComplexItemTypeValue = "CorridorScan";
 
 CorridorScanComplexItem::CorridorScanComplexItem(PlanMasterController* masterController, bool flyView, const QString& kmlFile)
     : TransectStyleComplexItem  (masterController, flyView, settingsGroup)

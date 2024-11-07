@@ -24,8 +24,7 @@ AnalyzePage {
     pageComponent:      pageComponent
     pageDescription:    qsTr("Log Download allows you to download binary log files from your vehicle. Click Refresh to get list of available logs.")
 
-    property real _margin:          ScreenTools.defaultFontPixelWidth
-    property real _butttonWidth:    ScreenTools.defaultFontPixelWidth * 10
+    property real _margin: ScreenTools.defaultFontPixelWidth
 
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
@@ -35,23 +34,6 @@ AnalyzePage {
         RowLayout {
             width:  availableWidth
             height: availableHeight
-
-            function columnWidthProvider(column) {
-                switch (column) {
-                case 0:
-                    return ScreenTools.defaultFontPixelWidth * 2
-                case 1:
-                    return ScreenTools.defaultFontPixelWidth * 2
-                case 2:
-                    return ScreenTools.defaultFontPixelWidth * 15
-                case 3:
-                    return ScreenTools.defaultFontPixelWidth * 10
-                case 4:
-                    return  ScreenTools.defaultFontPixelWidth * 15
-                default:
-                    return 0
-                }
-            }
 
             QGCFlickable {
                 Layout.fillWidth:   true
@@ -64,6 +46,7 @@ AnalyzePage {
                     rows:               logController.model.count + 1
                     columns:            5
                     flow:               GridLayout.TopToBottom
+                    columnSpacing:      ScreenTools.defaultFontPixelWidth
                     rowSpacing:         0
 
                     QGCCheckBox {
@@ -84,22 +67,19 @@ AnalyzePage {
                     }
 
                     QGCLabel {
-                        Layout.preferredWidth:  columnWidthProvider(1)
-                        text:                   qsTr("Id")
+                        text: qsTr("Id")
                     }
 
                     Repeater {
                         model: logController.model
 
                         QGCLabel {
-                            Layout.preferredWidth:  columnWidthProvider(1)
-                            text:                   object.id 
+                            text: object.id 
                         }
                     }
 
                     QGCLabel {
-                        Layout.preferredWidth:  columnWidthProvider(2)
-                        text:                   qsTr("Date")
+                        text: qsTr("Date")
                     }
 
                     Repeater {
@@ -120,8 +100,7 @@ AnalyzePage {
                     }
 
                     QGCLabel { 
-                        Layout.preferredWidth:  columnWidthProvider(3)
-                        text:                   qsTr("Size")
+                        text: qsTr("Size")
                     }
 
                     Repeater {
@@ -131,8 +110,7 @@ AnalyzePage {
                     }
 
                     QGCLabel { 
-                        Layout.preferredWidth:  columnWidthProvider(4)
-                        text:                   qsTr("Status")
+                        text: qsTr("Status")
                     }
 
                     Repeater {
@@ -143,13 +121,16 @@ AnalyzePage {
                 }
             }
 
-            Column {
+            ColumnLayout {
                 spacing:            _margin
-                Layout.alignment:   Qt.AlignTop | Qt.AlignLeft
+                Layout.alignment:   Qt.AlignTop
+                Layout.fillWidth:   false
+
                 QGCButton {
-                    enabled:    !logController.requestingList && !logController.downloadingLogs
-                    text:       qsTr("Refresh")
-                    width:      _butttonWidth
+                    Layout.fillWidth:   true
+                    enabled:            !logController.requestingList && !logController.downloadingLogs
+                    text:               qsTr("Refresh")
+
                     onClicked: {
                         if (!QGroundControl.multiVehicleManager.activeVehicle || QGroundControl.multiVehicleManager.activeVehicle.isOfflineEditingVehicle) {
                             mainWindow.showMessageDialog(qsTr("Log Refresh"), qsTr("You must be connected to a vehicle in order to download logs."))
@@ -158,10 +139,11 @@ AnalyzePage {
                         }
                     }
                 }
+
                 QGCButton {
-                    enabled:    !logController.requestingList && !logController.downloadingLogs
-                    text:       qsTr("Download")
-                    width:      _butttonWidth
+                    Layout.fillWidth:   true
+                    enabled:            !logController.requestingList && !logController.downloadingLogs
+                    text:               qsTr("Download")
 
                     onClicked: {
                         var logsSelected = false
@@ -198,20 +180,20 @@ AnalyzePage {
                 }
 
                 QGCButton {
-                    enabled:    !logController.requestingList && !logController.downloadingLogs && logController.model.count > 0
-                    text:       qsTr("Erase All")
-                    width:      _butttonWidth
-                    onClicked:  mainWindow.showMessageDialog(qsTr("Delete All Log Files"),
+                    Layout.fillWidth:   true
+                    enabled:            !logController.requestingList && !logController.downloadingLogs && logController.model.count > 0
+                    text:               qsTr("Erase All")
+                    onClicked:          mainWindow.showMessageDialog(qsTr("Delete All Log Files"),
                                                              qsTr("All log files will be erased permanently. Is this really what you want?"),
                                                              Dialog.Yes | Dialog.No,
                                                              function() { logController.eraseAll() })
                 }
 
                 QGCButton {
-                    text:       qsTr("Cancel")
-                    width:      _butttonWidth
-                    enabled:    logController.requestingList || logController.downloadingLogs
-                    onClicked:  logController.cancel()
+                    Layout.fillWidth:   true
+                    text:               qsTr("Cancel")
+                    enabled:            logController.requestingList || logController.downloadingLogs
+                    onClicked:          logController.cancel()
                 }
             }
         }

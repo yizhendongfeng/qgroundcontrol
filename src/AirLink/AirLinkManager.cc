@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,16 +8,14 @@
  ****************************************************************************/
 
 #include "AirLinkManager.h"
-#include "QGCApplication.h"
-#include "QGCCorePlugin.h"
-#include "LinkManager.h"
 #include "SettingsManager.h"
-#include "UDPLink.h"
 
-//#include "LinkInterface.h"
-
-#include <QSettings>
-#include <QDebug>
+#include <QtCore/QJsonDocument>
+#include <QtNetwork/QNetworkReply>
+#include <QtNetwork/QNetworkRequest>
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtCore/QJsonObject>
+#include <QtCore/QJsonArray>
 
 const QString AirLinkManager::airlinkHost = "air-link.space";
 

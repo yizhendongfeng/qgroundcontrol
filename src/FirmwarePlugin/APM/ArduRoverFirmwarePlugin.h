@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,8 +11,7 @@
 /// @file
 ///     @author Pritam Ghanghas <pritam.ghanghas@gmail.com>
 
-#ifndef ArduRoverFirmwarePlugin_H
-#define ArduRoverFirmwarePlugin_H
+#pragma once
 
 #include "APMFirmwarePlugin.h"
 
@@ -22,11 +21,14 @@ public:
     enum Mode {
         MANUAL          = 0,
         ACRO            = 1,
+        LEARNING        = 2, // Deprecated
         STEERING        = 3,
         HOLD            = 4,
         LOITER          = 5,
         FOLLOW          = 6,
         SIMPLE          = 7,
+        DOCK            = 8,
+        CIRCLE          = 9,
         AUTO            = 10,
         RTL             = 11,
         SMART_RTL       = 12,
@@ -53,11 +55,8 @@ public:
     bool    supportsNegativeThrust                  (Vehicle *) final;
     bool    supportsSmartRTL                        (void) const override { return true; }
     QString offlineEditingParamFile                 (Vehicle* vehicle) override { Q_UNUSED(vehicle); return QStringLiteral(":/FirmwarePlugin/APM/Rover.OfflineEditing.params"); }
-    void    sendGCSMotionReport                     (Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities) override;
 
 private:
     static bool _remapParamNameIntialized;
     static FirmwarePlugin::remapParamNameMajorVersionMap_t  _remapParamName;
 };
-
-#endif

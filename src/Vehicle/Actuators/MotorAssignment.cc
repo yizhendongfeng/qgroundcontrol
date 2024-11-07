@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * (c) 2021 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,9 +8,9 @@
  ****************************************************************************/
 
 #include "MotorAssignment.h"
-#include "ActuatorOutputs.h"
-
 #include "QGCApplication.h"
+#include "ActuatorOutputs.h"
+#include "QmlObjectListModel.h"
 
 #include <vector>
 
