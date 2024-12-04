@@ -41,6 +41,9 @@ add_qgc_test(AudioOutputTest)
 # add_subdirectory(AutoPilotPlugins)
 # add_qgc_test(RadioConfigTest)
 
+add_subdirectory(Camera)
+add_qgc_test(QGCCameraManagerTest)
+
 add_subdirectory(Comms)
 add_qgc_test(QGCSerialPortInfoTest)
 
@@ -95,6 +98,7 @@ add_subdirectory(QmlControls)
 
 add_subdirectory(Terrain)
 add_qgc_test(TerrainQueryTest)
+add_qgc_test(TerrainTileTest)
 
 add_subdirectory(UI)
 
@@ -109,6 +113,7 @@ add_qgc_test(ComponentInformationCacheTest)
 add_qgc_test(ComponentInformationTranslationTest)
 add_qgc_test(FTPManagerTest)
 # add_qgc_test(InitialConnectTest)
+add_qgc_test(MAVLinkLogManagerTest)
 # add_qgc_test(RequestMessageTest)
 # add_qgc_test(SendMavCommandWithHandlerTest)
 # add_qgc_test(SendMavCommandWithSignalingTest)
@@ -132,6 +137,7 @@ target_link_libraries(qgctest
         ADSBTest
         AnalyzeViewTest
         AudioTest
+        CameraTest
         CommsTest
         CompressionTest
         FactSystemTest
@@ -145,7 +151,6 @@ target_link_libraries(qgctest
         UITest
         VehicleTest
         VehicleComponentsTest
-        QGC
         Utilities
         UtilitiesTest
     PUBLIC

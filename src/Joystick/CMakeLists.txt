@@ -17,8 +17,6 @@ target_link_libraries(Joystick
         Vehicle
     PUBLIC
         Qt6::Core
-        Comms
-        QGC
         QmlControls
 )
 

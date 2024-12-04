@@ -56,6 +56,8 @@ target_sources(GPS
         GPSProvider.h
         GPSRtk.cc
         GPSRtk.h
+        GPSRTKFactGroup.cc
+        GPSRTKFactGroup.h
         RTCMMavlink.cc
         RTCMMavlink.h
         satellite_info.h
@@ -67,7 +69,6 @@ target_link_libraries(GPS
     PRIVATE
         Comms
         MAVLink
-        QGC
         Settings
         Utilities
         Vehicle

@@ -28,6 +28,9 @@
 // AutoPilotPlugins
 // #include "RadioConfigTest.h"
 
+// Camera
+#include "QGCCameraManagerTest.h"
+
 // Comms
 #include "QGCSerialPortInfoTest.h"
 
@@ -84,6 +87,7 @@
 
 // Terrain
 #include "TerrainQueryTest.h"
+#include "TerrainTileTest.h"
 
 // UI
 
@@ -98,6 +102,7 @@
 #include "ComponentInformationTranslationTest.h"
 #include "FTPManagerTest.h"
 // #include "InitialConnectTest.h"
+#include "MAVLinkLogManagerTest.h"
 // #include "RequestMessageTest.h"
 // #include "SendMavCommandWithHandlerTest.h"
 // #include "SendMavCommandWithSignalingTest.h"
@@ -128,6 +133,9 @@ int runTests(bool stress, QStringView unitTestOptions)
 
     // AutoPilotPlugins
     // UT_REGISTER_TEST(RadioConfigTest)
+
+    // Camera
+    UT_REGISTER_TEST(QGCCameraManagerTest)
 
     // Comms
     UT_REGISTER_TEST(QGCSerialPortInfoTest)
@@ -183,13 +191,14 @@ int runTests(bool stress, QStringView unitTestOptions)
 
     // Terrain
     UT_REGISTER_TEST(TerrainQueryTest)
+    UT_REGISTER_TEST(TerrainTileTest)
 
     // UI
 
     // Utilities
     // Compression
     UT_REGISTER_TEST(DecompressionTest)
-    // UT_REGISTER_TEST(QGCFileDownloadTest)
+    UT_REGISTER_TEST(QGCFileDownloadTest)
 
     // Vehicle
     // Components
@@ -197,6 +206,7 @@ int runTests(bool stress, QStringView unitTestOptions)
     UT_REGISTER_TEST(ComponentInformationTranslationTest)
     UT_REGISTER_TEST(FTPManagerTest)
     // UT_REGISTER_TEST(InitialConnectTest)
+    UT_REGISTER_TEST(MAVLinkLogManagerTest)
     // UT_REGISTER_TEST(RequestMessageTest)
     // UT_REGISTER_TEST(SendMavCommandWithHandlerTest)
     // UT_REGISTER_TEST(SendMavCommandWithSignalingTest)

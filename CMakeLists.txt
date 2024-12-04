@@ -206,7 +206,6 @@ qt_policy(
 #                QGroundControl Options
 #######################################################
 
-option(QGC_STABLE_BUILD "Stable build option" OFF)
 if(NOT QGC_STABLE_BUILD)
     add_compile_definitions(DAILY_BUILD)
 endif()
@@ -226,10 +225,12 @@ if(QGC_DEBUG_QML)
     add_compile_definitions(QT_QML_DEBUG)
 endif()
 
-cmake_dependent_option(QGC_NO_SERIAL_LINK "Build QGroundControl without Serial Support Support." OFF "NOT IOS" ON)
-
 if(QGC_DISABLE_APM_MAVLINK)
     add_compile_definitions(NO_ARDUPILOT_DIALECT)
+endif()
+
+if(QGC_VIEWER3D)
+    add_compile_definitions(QGC_VIEWER3D)
 endif()
 
 if("${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm64;x86_64" OR "${CMAKE_OSX_ARCHITECTURES}" MATCHES "x86_64;arm64")
@@ -247,10 +248,6 @@ cmake_dependent_option(QGC_BUILD_DEPENDENCIES "Force Building of Dependencies." 
 
 if(QGC_CUSTOM_BUILD)
     add_subdirectory(custom)
-endif()
-
-if(QGC_DISABLE_APM_MAVLINK)
-    add_compile_definitions(NO_ARDUPILOT_DIALECT)
 endif()
 
 #######################################################
@@ -273,7 +270,6 @@ list(APPEND QGC_RESOURCES
 )
 
 if(QGC_UTM_ADAPTER)
-    add_definitions(-DQGC_UTM_ADAPTER)
     list(APPEND QGC_RESOURCES ${CMAKE_SOURCE_DIR}/src/UTMSP/utmsp.qrc)
 else()
     list(APPEND QGC_RESOURCES ${CMAKE_SOURCE_DIR}/src/UTMSP/dummy/utmsp_dummy.qrc)
@@ -420,12 +416,38 @@ elseif(ANDROID)
     endif()
     set(ANDROID_VERSION_CODE "${ANDROID_PLATFORM_ARCHITECTURE_CODE}${PROJECT_VERSION_MAJOR}${PROJECT_VERSION_MINOR}")
 
+    if(NOT QGC_CUSTOM_BUILD)
+        set(QGC_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/android)
+    else()
+        set(CUSTOM_ANDROID_DIR "${CMAKE_SOURCE_DIR}/custom/android")
+        if(EXISTS "${CUSTOM_ANDROID_DIR}")
+            file(GLOB CUSTOM_ANDROID_FILES "${CUSTOM_ANDROID_DIR}/*")
+            if(CUSTOM_ANDROID_FILES)
+                message(STATUS "Custom Android package template found. Overlaying custom files...")
+                set(DEFAULT_ANDROID_DIR "${CMAKE_SOURCE_DIR}/android")
+                set(FINAL_ANDROID_DIR "${CMAKE_BINARY_DIR}/custom/android")
+                file(COPY "${DEFAULT_ANDROID_DIR}/." DESTINATION "${FINAL_ANDROID_DIR}")
+                file(COPY "${CUSTOM_ANDROID_DIR}/." DESTINATION "${FINAL_ANDROID_DIR}")
+                set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                                "${DEFAULT_ANDROID_DIR}/"
+                                "${CUSTOM_ANDROID_DIR}/"
+                            )
+                set(QGC_ANDROID_PACKAGE_SOURCE_DIR "${FINAL_ANDROID_DIR}" CACHE STRING "Path to a custom Android package template" FORCE)
+                message(STATUS "Android package template path will be set to: ${QGC_ANDROID_PACKAGE_SOURCE_DIR}")
+            else()
+                message(STATUS "Custom Android package template empty. Using default.")
+            endif()
+        else()
+            message(STATUS "No custom Android package template found. Using default.")
+        endif()
+    endif()
+
     set_target_properties(${PROJECT_NAME}
         PROPERTIES
             # QT_ANDROID_ABIS ${ANDROID_ABI}
-            QT_ANDROID_MIN_SDK_VERSION 25
-            QT_ANDROID_TARGET_SDK_VERSION 35
-            QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/android
+            QT_ANDROID_MIN_SDK_VERSION ${QGC_QT_ANDROID_MIN_SDK_VERSION}
+            QT_ANDROID_TARGET_SDK_VERSION ${QGC_QT_ANDROID_TARGET_SDK_VERSION}
+            QT_ANDROID_PACKAGE_SOURCE_DIR "${QGC_ANDROID_PACKAGE_SOURCE_DIR}"
             QT_ANDROID_VERSION_NAME ${CMAKE_PROJECT_VERSION}
             QT_ANDROID_VERSION_CODE ${ANDROID_VERSION_CODE}
             # QT_QML_ROOT_PATH ${CMAKE_SOURCE_DIR}
@@ -436,7 +458,7 @@ elseif(LINUX)
 endif()
 
 add_compile_definitions(
-    QGC_APP_NAME="${CMAKE_PROJECT_NAME}"
+    QGC_APP_NAME="${QGC_APP_NAME}"
     QGC_ORG_NAME="${QGC_ORG_NAME}"
     QGC_ORG_DOMAIN="${QGC_ORG_DOMAIN}"
     QGC_APP_VERSION_STR="${QGC_APP_VERSION_STR}"

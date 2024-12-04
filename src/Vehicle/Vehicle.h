@@ -39,6 +39,7 @@
 #include "VehicleHygrometerFactGroup.h"
 #include "VehicleLocalPositionFactGroup.h"
 #include "VehicleLocalPositionSetpointFactGroup.h"
+#include "VehicleRPMFactGroup.h"
 #include "VehicleSetpointFactGroup.h"
 #include "VehicleTemperatureFactGroup.h"
 #include "VehicleVibrationFactGroup.h"
@@ -51,7 +52,6 @@ class Autotune;
 class ComponentInformationManager;
 class EventHandler;
 class FirmwarePlugin;
-class FirmwarePluginManager;
 class FTPManager;
 class GeoFenceManager;
 class ImageProtocolManager;
@@ -59,8 +59,7 @@ class StatusTextHandler;
 class InitialConnectStateMachine;
 class Joystick;
 class LinkInterface;
-class LinkManager;
-class MAVLinkProtocol;
+class MAVLinkLogManager;
 class MissionManager;
 class ParameterManager;
 class QGCCameraManager;
@@ -69,14 +68,12 @@ class RemoteIDManager;
 class RequestMessageTest;
 class SendMavCommandWithHandlerTest;
 class SendMavCommandWithSignallingTest;
-class SettingsManager;
 class StandardModes;
 class TerrainAtCoordinateQuery;
 class TerrainProtocolHandler;
 class TrajectoryPoints;
 class VehicleBatteryFactGroup;
 class VehicleObjectAvoidance;
-class QGCToolbox;
 class GimbalController;
 #ifdef QGC_UTM_ADAPTER
 class UTMSPVehicle;
@@ -116,7 +113,6 @@ public:
             int                     defaultComponentId,
             MAV_AUTOPILOT           firmwareType,
             MAV_TYPE                vehicleType,
-            FirmwarePluginManager*  firmwarePluginManager,
             QObject*                parent = nullptr);
 
     // Pass these into the offline constructor to create an offline vehicle which tracks the offline vehicle settings
@@ -126,7 +122,6 @@ public:
     // The following is used to create a disconnected Vehicle for use while offline editing.
     Vehicle(MAV_AUTOPILOT           firmwareType,
             MAV_TYPE                vehicleType,
-            FirmwarePluginManager*  firmwarePluginManager,
             QObject*                parent = nullptr);
 
     ~Vehicle();
@@ -607,6 +602,7 @@ public:
     FactGroup* hygrometerFactGroup          () { return &_hygrometerFactGroup; }
     FactGroup* generatorFactGroup           () { return &_generatorFactGroup; }
     FactGroup* efiFactGroup                 () { return &_efiFactGroup; }
+    FactGroup* rpmFactGroup                 () { return &_rpmFactGroup; }
     QmlObjectListModel* batteries           () { return &_batteryFactGroupListModel; }
 
     MissionManager*                 missionManager      () { return _missionManager; }
@@ -995,10 +991,7 @@ private:
     FirmwarePlugin*     _firmwarePlugin = nullptr;
     QObject*            _firmwarePluginInstanceData = nullptr;
     AutoPilotPlugin*    _autopilotPlugin = nullptr;
-    MAVLinkProtocol*    _mavlink = nullptr;
     bool                _soloFirmware = false;
-    QGCToolbox*         _toolbox = nullptr;
-    SettingsManager*    _settingsManager = nullptr;
 
     QTimer              _csvLogTimer;
     QFile               _csvLogFile;
@@ -1055,9 +1048,7 @@ private:
 
     bool                _initialPlanRequestComplete = false;
 
-    LinkManager*                    _linkManager                    = nullptr;
     ParameterManager*               _parameterManager               = nullptr;
-    FirmwarePluginManager*          _firmwarePluginManager          = nullptr;
     ComponentInformationManager*    _componentInformationManager    = nullptr;
     VehicleObjectAvoidance*         _objectAvoidance                = nullptr;
     Autotune*                       _autotune                       = nullptr;
@@ -1092,8 +1083,6 @@ private:
     TrajectoryPoints*               _trajectoryPoints = nullptr;
     QmlObjectListModel              _cameraTriggerPoints;
     //QMap<QString, ADSBVehicle*>     _trafficVehicleMap;
-
-    // Toolbox references
 
     bool _allLinksRemovedSent = false; ///< true: allLinkRemoved signal already sent one time
 
@@ -1242,6 +1231,7 @@ private:
     const QString _hygrometerFactGroupName =         QStringLiteral("hygrometer");
     const QString _generatorFactGroupName =          QStringLiteral("generator");
     const QString _efiFactGroupName =                QStringLiteral("efi");
+    const QString _rpmFactGroupName =                QStringLiteral("rpm");
 
     VehicleFactGroup*               _vehicleFactGroup;
     VehicleGPSFactGroup             _gpsFactGroup;
@@ -1259,6 +1249,7 @@ private:
     VehicleHygrometerFactGroup      _hygrometerFactGroup;
     VehicleGeneratorFactGroup       _generatorFactGroup;
     VehicleEFIFactGroup             _efiFactGroup;
+    VehicleRPMFactGroup             _rpmFactGroup;
     TerrainFactGroup                _terrainFactGroup;
     QmlObjectListModel              _batteryFactGroupListModel;
 
@@ -1306,7 +1297,7 @@ private:
     uint16_t _lastSetMsgIntervalMsgId = 0;
 
 /*===========================================================================*/
-/*                         STATUS TEXT HANDLER                               */
+/*                         Status Text Handler                               */
 /*===========================================================================*/
 private:
     Q_PROPERTY(bool    messageTypeNone    READ messageTypeNone    NOTIFY messageTypeChanged)
@@ -1370,7 +1361,24 @@ private:
     void _createImageProtocolManager();
 
     ImageProtocolManager *_imageProtocolManager = nullptr;
-};
 /*---------------------------------------------------------------------------*/
+/*===========================================================================*/
+/*                         MAVLink Log Manager                               */
+/*===========================================================================*/
+private:
+    Q_PROPERTY(MAVLinkLogManager *mavlinkLogManager READ mavlinkLogManager NOTIFY mavlinkLogManagerChanged)
 
+public:
+    MAVLinkLogManager *mavlinkLogManager() const;
+
+signals:
+    void mavlinkLogManagerChanged();
+
+private:
+    void _createMAVLinkLogManager();
+
+    MAVLinkLogManager *_mavlinkLogManager = nullptr;
+
+/*---------------------------------------------------------------------------*/
+};
 Q_DECLARE_METATYPE(Vehicle::MavCmdResultFailureCode_t)
