@@ -5,8 +5,8 @@ import Qt5Compat.GraphicalEffects
 import QGroundControl.Palette
 
 Item {
-    property color color: "white"   // Image color
-
+    property color color:               "white"   // Image color
+    property bool  checked:             false
     property alias asynchronous:        image.asynchronous
     property alias cache:               image.cache
     property alias fillMode:            image.fillMode

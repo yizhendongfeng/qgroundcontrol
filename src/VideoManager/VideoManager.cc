@@ -55,6 +55,7 @@ VideoManager::VideoManager(QObject *parent)
     : QObject(parent)
     , _subtitleWriter(new SubtitleWriter(this))
     , _videoSettings(SettingsManager::instance()->videoSettings())
+    , _gcu(new GCU(_videoSettings))
 {
     // qCDebug(VideoManagerLog) << Q_FUNC_INFO << this;
 
@@ -377,6 +378,10 @@ bool VideoManager::hasVideo() const
 {
     return (autoStreamConfigured() || _videoSettings->streamConfigured());
 }
+bool VideoManager::hasVideo2() const
+{
+    return (autoStreamConfigured() || _videoSettings2->streamConfigured());
+}
 
 bool VideoManager::isStreamSource() const
 {
@@ -399,6 +404,10 @@ bool VideoManager::isStreamSource() const
 bool VideoManager::isUvc() const
 {
     return (uvcEnabled() && (hasVideo() && !_uvcVideoSourceID.isEmpty()));
+}
+bool VideoManager::isUvc2() const
+{
+    return (uvcEnabled() && (hasVideo2() && !_uvcVideoSourceID2.isEmpty()));
 }
 
 bool VideoManager::gstreamerEnabled() const
@@ -529,16 +538,22 @@ bool VideoManager::_updateUVC()
 
 #ifndef QGC_DISABLE_UVC
     const QString oldUvcVideoSrcID = _uvcVideoSourceID;
+    const QString oldUvcVideoSrcID2 = _uvcVideoSourceID2;
     if (!hasVideo() || isStreamSource()) {
         _uvcVideoSourceID = "";
+        _uvcVideoSourceID2 = "";
     } else {
         const QString videoSource = _videoSettings->videoSource()->rawValue().toString();
+        const QString videoSource2 = _videoSettings->videoSource2()->rawValue().toString();
         const QList<QCameraDevice> videoInputs = QMediaDevices::videoInputs();
         for (const auto& cameraDevice: videoInputs) {
             if (cameraDevice.description() == videoSource) {
                 _uvcVideoSourceID = cameraDevice.description();
                 qCDebug(VideoManagerLog) << "Found USB source:" << _uvcVideoSourceID << " Name:" << videoSource;
-                break;
+                // break;
+            } else if (cameraDevice.description() == videoSource2) {
+                _uvcVideoSourceID2 = cameraDevice.description();
+                qCDebug(VideoManagerLog) << "Found USB source2:" << _uvcVideoSourceID << " Name:" << videoSource;
             }
         }
     }
@@ -554,7 +569,21 @@ bool VideoManager::_updateUVC()
             });
         }
         result = true;
-        emit uvcVideoSourceIDChanged();
+        emit uvcVideoSourceID2Changed();
+        emit isUvcChanged();
+    }
+    if (oldUvcVideoSrcID2 != _uvcVideoSourceID2) {
+        qCDebug(VideoManagerLog) << "UVC 2 changed from [" << oldUvcVideoSrcID2 << "] to [" << _uvcVideoSourceID2 << "]";
+        const QCameraPermission cameraPermission;
+        if (qgcApp()->checkPermission(cameraPermission) == Qt::PermissionStatus::Undetermined) {
+            qgcApp()->requestPermission(cameraPermission, [this](const QPermission &permission) {
+                if (permission.status() == Qt::PermissionStatus::Granted) {
+                    qgcApp()->showRebootAppMessage(tr("Restart application for changes to take effect."));
+                }
+            });
+        }
+        result = true;
+        emit uvcVideoSourceID2Changed();
         emit isUvcChanged();
     }
 #endif

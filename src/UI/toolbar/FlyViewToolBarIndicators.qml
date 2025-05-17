@@ -22,12 +22,12 @@ Row {
     spacing:            ScreenTools.defaultFontPixelWidth * 1.75
 
     property var  _activeVehicle:           QGroundControl.multiVehicleManager.activeVehicle
-    property real _toolIndicatorMargins:    ScreenTools.defaultFontPixelHeight * 0.66
+    property real _toolIndicatorMargins:    ScreenTools.defaultFontPixelHeight * 0.33
 
     function dropMessageIndicatorTool() {
         toolIndicatorsRepeater.dropMessageIndicatorTool();
     }
-
+    //
     Repeater {
         id:     appRepeater
         model:  QGroundControl.corePlugin.toolBarIndicators
@@ -38,7 +38,7 @@ Row {
             visible:            item.showIndicator
         }
     }
-
+    // 飞行模式、信息提示、卫星状态等显示
     Repeater {
         id:     toolIndicatorsRepeater
         model:  _activeVehicle ? _activeVehicle.toolIndicators : []

@@ -11,6 +11,13 @@
     "default":     ""
 },
 {
+    "name":             "videoSource2",
+    "shortDesc": "Video source 2",
+    "longDesc":  "Source for video. UDP, TCP, RTSP and UVC Cameras may be supported depending on Vehicle and ground station version.",
+    "type":             "string",
+    "default":     ""
+},
+{
     "name":             "udpPort",
     "shortDesc": "Video UDP Port",
     "longDesc":  "UDP port to bind to for video stream.",
@@ -31,6 +38,20 @@
     "longDesc":  "TCP url address and port to bind to for video stream. Example: 192.168.143.200:3001",
     "type":             "string",
     "default":     ""
+},
+{
+    "name":             "podIp",
+    "shortDesc": "Pod control Ip",
+    "longDesc":  "Used to control pod rotation",
+    "type":             "string",
+    "default":     "192.168.144.121"
+},
+{
+    "name":             "podPort",
+    "shortDesc": "Pod control Port",
+    "longDesc":  "Pod Port",
+    "type":             "uint32",
+    "default":     2332
 },
 {
     "name":             "videoSavePath",

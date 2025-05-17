@@ -13,6 +13,7 @@ qt_add_library(Camera STATIC
     SimulatedCameraControl.h
     VehicleCameraControl.cc
     VehicleCameraControl.h
+    GCU.h GCU.cpp
 )
 
 target_link_libraries(Camera

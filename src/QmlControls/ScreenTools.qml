@@ -107,6 +107,7 @@ Item {
     // The implicit heights/widths for our custom control set
     property real implicitButtonWidth:              Math.round(defaultFontPixelWidth *  (isMobile ? 7.0 : 5.0))
     property real implicitButtonHeight:             Math.round(defaultFontPixelHeight * (isMobile ? 2.0 : 1.6))
+    property real implicitIconButtonHeight:         Math.round(defaultFontPixelHeight)// * (isMobile ? 1.0 : 1.0))
     property real implicitCheckBoxHeight:           Math.round(defaultFontPixelHeight * (isMobile ? 1.2 : 1.0))
     property real implicitRadioButtonHeight:        implicitCheckBoxHeight
     property real implicitTextFieldWidth:           defaultFontPixelWidth * 13
@@ -117,7 +118,7 @@ Item {
     property real implicitSliderHeight:             isMobile ? Math.max(defaultFontPixelHeight, minTouchPixels) : defaultFontPixelHeight
     property real buttonBorderRadius:               defaultFontPixelWidth / 2
     // It's not possible to centralize an even number of pixels, checkBoxIndicatorSize should be an odd number to allow centralization
-    property real checkBoxIndicatorSize:            2 * Math.floor(defaultFontPixelHeight * (isMobile ? 1.5 : 1.0) / 2) + 1
+    property real checkBoxIndicatorSize:            2 * Math.floor(defaultFontPixelHeight * (isMobile ? 1.0 : 0.8) / 2) + 1
     property real radioButtonIndicatorSize:         checkBoxIndicatorSize
 
     readonly property string normalFontFamily:      ScreenToolsController.normalFontFamily
@@ -163,15 +164,18 @@ Item {
         minTouchPixels          = Math.round(minTouchMillimeters * realPixelDensity)
         if (minTouchPixels / Screen.height > 0.15) {
             // If using physical sizing takes up too much of the vertical real estate fall back to font based sizing
-            minTouchPixels      = defaultFontPixelHeight * 3
+            minTouchPixels      = defaultFontPixelHeight * 3//2
         }
-        toolbarHeight           = defaultFontPixelHeight * 3
+        toolbarHeight           = defaultFontPixelHeight * 3//2.5
+        console.log("1************toolbarHeight:", toolbarHeight, "defaultFontPixelHeight: ", defaultFontPixelHeight)
         toolbarHeight           = toolbarHeight * QGroundControl.corePlugin.options.toolbarHeightMultiplier
+        console.log("2************toolbarHeight:", toolbarHeight)
     }
 
     Text {
         id:     _defaultFont
         text:   "X"
+        Component.onCompleted: console.log("_defaultFont: ",_defaultFont.contentHeight, "font.pointSize: ", font.pointSize)
     }
 
     Text {
@@ -203,13 +207,15 @@ Item {
             }
             //-- See if we are using a custom size
             var _appFontPointSizeFact = QGroundControl.settingsManager.appSettings.appFontPointSize
-            var baseSize = _appFontPointSizeFact.value
+            var baseSize = _appFontPointSizeFact.value //value:9, min:6, max:48
+            console.log("baseSize:", baseSize, "min:",_appFontPointSizeFact.min, "max:", _appFontPointSizeFact.max)
             //-- Sanity check
             if(baseSize < _appFontPointSizeFact.min || baseSize > _appFontPointSizeFact.max) {
                 baseSize = platformFontPointSize;
                 _appFontPointSizeFact.value = baseSize
             }
             //-- Set size saved in settings
+            console.log("##########fontHeight: ", fontHeight, "contentHeight: ", contentHeight, "platformFontPointSize: ", platformFontPointSize, "baseSize: ", baseSize, normalFontFamily)
             _screenTools._setBasePointSize(baseSize);
         }
     }

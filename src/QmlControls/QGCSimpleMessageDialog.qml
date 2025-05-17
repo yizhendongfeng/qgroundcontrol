@@ -15,7 +15,9 @@ import QGroundControl.ScreenTools
 
 QGCPopupDialog {
     property alias  text:           label.text
+    property alias  inputText:      textFieldInput.text
     property var    acceptFunction: null        // Mainly used by MainRootWindow.showMessage to specify accept function in call
+    property bool   enableInput:    false
 
     onAccepted: {
         if (acceptFunction) {
@@ -24,10 +26,17 @@ QGCPopupDialog {
     }
 
     ColumnLayout {
+        spacing: 10
         QGCLabel {
             id:                     label
             Layout.preferredWidth:  Math.max(mainWindow.width / (ScreenTools.isMobile ? 2 : 3), headerMinWidth)
             wrapMode:               Text.WordWrap
+        }
+        QGCTextField {
+            id:                     textFieldInput
+            visible:                enableInput
+            Layout.fillWidth:       true
+            text:                   qsTr("新建航线任务")
         }
     }
 }

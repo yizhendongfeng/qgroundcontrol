@@ -25,7 +25,7 @@ Item {
     signal windowAboutToOpen    // Catch this signal to do something special prior to the item transition to windowed mode
     signal windowAboutToClose   // Catch this signal to do special processing prior to the item transition back to pip mode
 
-    property var _viewControl: control.parent
+    property var _viewControl:       control.parent // 地图或视频
 
     states: [
         State {
@@ -47,17 +47,17 @@ Item {
         State {
             name: fullState
 
-            AnchorChanges {
+            AnchorChanges {     // 占据飞行界面中左侧面板以外的所有空间
                 target:         _viewControl
-                anchors.top:    pipView.parent.top
-                anchors.bottom: pipView.parent.bottom
-                anchors.left:   pipView.parent.left
-                anchors.right:  pipView.parent.right
+                anchors.top:    pipView._pipFullParent.top
+                anchors.bottom: pipView._pipFullParent.bottom
+                anchors.left:   pipView._pipFullParent.left
+                anchors.right:  pipView._pipFullParent.right
             }
 
             ParentChange {
                 target: _viewControl
-                parent: pipView.parent
+                parent: pipView._pipFullParent  // 地图及视频的父元素Item，占据飞行界面中左侧面板以外的所有空间
             }
         },
         State {

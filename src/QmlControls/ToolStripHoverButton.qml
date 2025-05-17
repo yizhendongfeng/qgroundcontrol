@@ -20,10 +20,10 @@ Button {
     hoverEnabled:   !ScreenTools.isMobile
     enabled:        toolStripAction.enabled
     visible:        toolStripAction.visible
-    imageSource:    toolStripAction.showAlternateIcon ? modelData.alternateIconSource : modelData.iconSource
+    imageSource:    toolStripAction.showAlternateIcon ? toolStripAction.alternateIconSource : toolStripAction.iconSource
     text:           toolStripAction.text
     checked:        toolStripAction.checked
-    checkable:      toolStripAction.dropPanelComponent || modelData.checkable
+    checkable:      toolStripAction.dropPanelComponent || toolStripAction.checkable
 
     property var    toolStripAction:    undefined
     property var    dropPanel:          undefined
@@ -36,7 +36,7 @@ Button {
     property real imageScale:        forceImageScale11 && (text == "") ? 0.8 : 0.6
     property real contentMargins:    innerText.height * 0.1
 
-    property color _currentContentColor:  (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.buttonText
+    property color _currentContentColor:  /*(checked || pressed) ? qgcPal.buttonHighlightText :*/ qgcPal.buttonText
     property color _currentContentColorSecondary:  (checked || pressed) ? qgcPal.buttonText : qgcPal.buttonHighlight
 
     signal dropped(int index)
@@ -78,7 +78,7 @@ Button {
                 sourceSize.width:           width
                 anchors.horizontalCenter:   parent.horizontalCenter
                 source:                     control.imageSource
-                visible:                    source != "" && modelData.fullColorIcon
+                visible:                    source != "" && toolStripAction.fullColorIcon
             }
 
             QGCColoredImage {
@@ -93,23 +93,23 @@ Button {
                 sourceSize.height:          height
                 sourceSize.width:           width
                 anchors.horizontalCenter:   parent.horizontalCenter
-                visible:                    source != "" && !modelData.fullColorIcon
+                visible:                    source != "" && !toolStripAction.fullColorIcon
                 
-                QGCColoredImage {
-                    id:                         innerImageSecondColor
-                    source:                     modelData.alternateIconSource
-                    height:                     contentLayoutItem.height * imageScale
-                    width:                      contentLayoutItem.width  * imageScale
-                    smooth:                     true
-                    mipmap:                     true
-                    color:                      _currentContentColorSecondary
-                    fillMode:                   Image.PreserveAspectFit
-                    antialiasing:               true
-                    sourceSize.height:          height
-                    sourceSize.width:           width
-                    anchors.horizontalCenter:   parent.horizontalCenter
-                    visible:                    source != "" && modelData.biColorIcon
-                }
+                // QGCColoredImage {
+                //     id:                         innerImageSecondColor
+                //     source:                     modelData.alternateIconSource
+                //     height:                     contentLayoutItem.height * imageScale
+                //     width:                      contentLayoutItem.width  * imageScale
+                //     smooth:                     true
+                //     mipmap:                     true
+                //     color:                      _currentContentColorSecondary
+                //     fillMode:                   Image.PreserveAspectFit
+                //     antialiasing:               true
+                //     sourceSize.height:          height
+                //     sourceSize.width:           width
+                //     anchors.horizontalCenter:   parent.horizontalCenter
+                //     visible:                    source != "" && modelData.biColorIcon
+                // }
             }
 
             QGCLabel {

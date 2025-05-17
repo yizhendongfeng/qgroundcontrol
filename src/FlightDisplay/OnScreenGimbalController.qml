@@ -33,6 +33,7 @@ Item {
     property bool shouldProcessClicks:          gimbalControllerSettings.EnableOnScreenControl.value && activeGimbal && !cameraTrackingEnabled ? true : false
 
     function clickControl() {
+        console.log("clickControl()")
         if (!shouldProcessClicks) {
             return
         }

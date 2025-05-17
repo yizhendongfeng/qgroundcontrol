@@ -83,6 +83,8 @@ public:
     Q_INVOKABLE void saveToKml(const QString& filename);
     Q_INVOKABLE void removeAll(void);                       ///< Removes all from controller only, synce required to remove from vehicle
     Q_INVOKABLE void removeAllFromVehicle(void);            ///< Removes all from vehicle and controller
+    Q_INVOKABLE bool removeSelectedFiles(QString fileName);
+    Q_INVOKABLE bool renameCurrentFile(QString fileName);
 
     MissionController*      missionController(void)     { return &_missionController; }
     GeoFenceController*     geoFenceController(void)    { return &_geoFenceController; }
@@ -149,7 +151,7 @@ private:
     bool                    _loadRallyPoints =          false;
     bool                    _sendGeoFence =             false;
     bool                    _sendRallyPoints =          false;
-    QString                 _currentPlanFile;
+    QString                 _currentPlanFile;                   // 不包含后缀名
     bool                    _deleteWhenSendCompleted =  false;
     QmlObjectListModel*     _planCreators =             nullptr;
 };

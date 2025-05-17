@@ -67,6 +67,7 @@ PreFlightCheckButton                    1.0 PreFlightCheckButton.qml
 PreFlightCheckGroup                     1.0 PreFlightCheckGroup.qml
 PreFlightCheckModel                     1.0 PreFlightCheckModel.qml
 QGCButton                               1.0 QGCButton.qml
+QGCIconButton                           1.0 QGCIconButton.qml
 QGCColumnButton                         1.0 QGCColumnButton.qml
 AutotuneUI                              1.0 AutotuneUI.qml
 QGCCheckBox                             1.0 QGCCheckBox.qml
@@ -121,6 +122,7 @@ TransectStyleComplexItemTabBar          1.0 TransectStyleComplexItemTabBar.qml
 TransectStyleComplexItemTerrainFollow   1.0 TransectStyleComplexItemTerrainFollow.qml
 TransectStyleMapVisuals                 1.0 TransectStyleMapVisuals.qml
 ToolStrip                               1.0 ToolStrip.qml
+ToolStripColumn                         1.0 ToolStripColumn.qml
 ToolStripHoverButton                    1.0 ToolStripHoverButton.qml
 VehicleRotationCal                      1.0 VehicleRotationCal.qml
 VehicleSummaryRow                       1.0 VehicleSummaryRow.qml

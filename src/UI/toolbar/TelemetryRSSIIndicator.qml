@@ -60,37 +60,37 @@ Item {
 
                         LabelledLabel {
                             label:      qsTr("Local RSSI:")
-                            labelText:  _activeVehicle.telemetryLRSSI + " " + qsTr("dBm")
+                            labelText:  _activeVehicle ? _activeVehicle.telemetryLRSSI : "" + " " + qsTr("dBm")
                         }
 
                         LabelledLabel {
                             label:      qsTr("Remote RSSI:")
-                            labelText:  _activeVehicle.telemetryRRSSI + " " + qsTr("dBm")
+                            labelText:  _activeVehicle ? _activeVehicle.telemetryRRSSI : "" + " " + qsTr("dBm")
                         }
 
                         LabelledLabel {
                             label:      qsTr("RX Errors:")
-                            labelText:  _activeVehicle.telemetryRXErrors
+                            labelText:  _activeVehicle ? _activeVehicle.telemetryRXErrors : ""
                         }
 
                         LabelledLabel {
                             label:      qsTr("Errors Fixed:")
-                            labelText:  _activeVehicle.telemetryFixed
+                            labelText:  _activeVehicle ? _activeVehicle.telemetryFixed : ""
                         }
 
                         LabelledLabel {
                             label:      qsTr("TX Buffer:")
-                            labelText:  _activeVehicle.telemetryTXBuffer
+                            labelText:  _activeVehicle ? _activeVehicle.telemetryTXBuffer: ""
                         }
 
                         LabelledLabel {
                             label:      qsTr("Local Noise:")
-                            labelText:  _activeVehicle.telemetryLNoise
+                            labelText:  _activeVehicle ? _activeVehicle.telemetryLNoise : ""
                         }
 
                         LabelledLabel {
                             label:      qsTr("Remote Noise:")
-                            labelText:  _activeVehicle.telemetryRNoise
+                            labelText:  _activeVehicle ? _activeVehicle.telemetryRNoise : ""
                         }
                     }
                 }

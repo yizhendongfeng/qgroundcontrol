@@ -28,6 +28,7 @@
 
 #include <QtCore/QJsonDocument>
 #include <QtCore/QFileInfo>
+#include <QtDebug>
 
 QGC_LOGGING_CATEGORY(PlanMasterControllerLog, "PlanMasterControllerLog")
 
@@ -335,7 +336,7 @@ void PlanMasterController::loadFromFile(const QString& filename)
     if (filename.isEmpty()) {
         return;
     }
-
+    qDebug() << "loadFromFile(const QString& filename): " << filename;
     QFileInfo fileInfo(filename);
     QFile file(filename);
 
@@ -399,7 +400,7 @@ void PlanMasterController::loadFromFile(const QString& filename)
     }
 
     if(success){
-        _currentPlanFile = QString::asprintf("%s/%s.%s", fileInfo.path().toLocal8Bit().data(), fileInfo.completeBaseName().toLocal8Bit().data(), AppSettings::planFileExtension);
+        _currentPlanFile = filename;//QString::asprintf("%s/%s.%s", fileInfo.path().toLocal8Bit().data(), fileInfo.completeBaseName().toLocal8Bit().data(), AppSettings::planFileExtension);
     } else {
         _currentPlanFile.clear();
     }
@@ -438,6 +439,7 @@ PlanMasterController::saveToCurrent()
     if(!_currentPlanFile.isEmpty()) {
         saveToFile(_currentPlanFile);
     }
+    qDebug() << "saveToCurrent(): " << _currentPlanFile;
 }
 
 void PlanMasterController::saveToFile(const QString& filename)
@@ -524,6 +526,33 @@ void PlanMasterController::removeAllFromVehicle(void)
     } else {
         qWarning() << "PlanMasterController::removeAllFromVehicle called while offline";
     }
+}
+
+bool PlanMasterController::removeSelectedFiles(QString fileName)
+{
+    return QFile::remove(fileName + QString(".%1").arg(fileExtension()));
+}
+
+bool PlanMasterController::renameCurrentFile(QString fileName)
+{
+    if (QFileInfo(fileName).fileName().isEmpty())
+        return false;
+    QString planFilename = QFileInfo(_currentPlanFile).dir().absolutePath() + "/" + fileName;
+
+    if (!QFileInfo(fileName).fileName().contains(".")) {
+        planFilename += QString(".%1").arg(fileExtension());
+    }
+    //    QFileInfo(planFilename).exists() ?
+    QFile file(_currentPlanFile);
+    bool success = file.rename(planFilename);
+    qDebug() << "renameCurrentFile, _currentPlanFile:" << _currentPlanFile << ", new fileName:"  << fileName << "planFilename:" << planFilename << success << file.error() << file.errorString();
+    if (!success)
+        qgcApp()->showAppMessage(file.errorString());
+    else {
+        _currentPlanFile = planFilename;
+        //    emit currentPlanFileChanged();
+    }
+    return success;
 }
 
 bool PlanMasterController::containsItems(void) const

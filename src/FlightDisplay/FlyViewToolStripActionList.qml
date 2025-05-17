@@ -18,14 +18,14 @@ ToolStripActionList {
     signal displayPreFlightChecklist
 
     model: [
-        ToolStripAction {
-            text:           qsTr("Plan")
-            iconSource:     "/qmlimages/Plan.svg"
-            onTriggered:{
-                mainWindow.showPlanView()
-                viewer3DWindow.close()
-            }
-        },
+        // ToolStripAction {
+        //     text:           qsTr("Plan")
+        //     iconSource:     "/qmlimages/Plan.svg"
+        //     onTriggered:{
+        //         mainWindow.showPlanView()
+        //         viewer3DWindow.close()
+        //     }
+        // },
         ToolStripAction {
             property bool _is3DViewOpen:            viewer3DWindow.isOpen
             property bool   _viewer3DEnabled:       QGroundControl.settingsManager.viewer3DSettings.enabled.rawValue

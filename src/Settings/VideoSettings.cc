@@ -58,6 +58,7 @@ DECLARE_SETTINGGROUP(Video, "Video")
     }
 
     _nameToMetaDataMap[videoSourceName]->setEnumInfo(videoSourceCookedList, videoSourceList);
+    _nameToMetaDataMap[videoSource2Name]->setEnumInfo(videoSourceCookedList, videoSourceList);
 
 #ifdef QGC_GST_STREAMING
     const QVariantList removeForceVideoDecodeList{
@@ -124,6 +125,22 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, videoSource)
     }
     return _videoSourceFact;
 }
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, videoSource2)
+{
+    if (!_videoSource2Fact) {
+        _videoSource2Fact = _createSettingsFact(videoSource2Name);
+        //-- Check for sources no longer available
+        if(!_videoSource2Fact->enumValues().contains(_videoSource2Fact->rawValue().toString())) {
+            if (_noVideo) {
+                _videoSource2Fact->setRawValue(videoSourceNoVideo);
+            } else {
+                _videoSource2Fact->setRawValue(videoDisabled);
+            }
+        }
+        connect(_videoSource2Fact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
+    }
+    return _videoSource2Fact;
+}
 
 DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, forceVideoDecoder)
 {
@@ -168,6 +185,23 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, tcpUrl)
         connect(_tcpUrlFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
     }
     return _tcpUrlFact;
+}
+
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, podIp)
+{
+    if (!_podIpFact) {
+        _podIpFact = _createSettingsFact(podIpName);
+        connect(_podIpFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
+    }
+    return _podIpFact;
+}
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, podPort)
+{
+    if (!_podPortFact) {
+        _podPortFact = _createSettingsFact(podPortName);
+        connect(_podPortFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
+    }
+    return _podPortFact;
 }
 
 bool VideoSettings::streamConfigured(void)

@@ -21,14 +21,14 @@ Rectangle {
     width:      ScreenTools.defaultFontPixelWidth * 8
     height:     Math.min(maxHeight, toolStripColumn.height + (flickable.anchors.margins * 2))
     radius:     ScreenTools.defaultFontPixelWidth / 2
-
+    property alias   contentHeightTest: flickable.contentHeight
+    property alias   heightTest:        flickable.height
     property alias  model:              repeater.model
     property real   maxHeight           ///< Maximum height for control, determines whether text is hidden to make control shorter
     property alias  title:              titleLabel.text
     property var    fontSize:           ScreenTools.smallFontPointSize
 
     property var _dropPanel: dropPanel
-
     function simulateClick(buttonIndex) {
         buttonIndex = buttonIndex + 1 // skip over title label
         var button = toolStripColumn.children[buttonIndex]
@@ -36,6 +36,17 @@ Rectangle {
             button.checked = !button.checked
         }
         button.clicked()
+    }
+
+    Behavior on anchors.leftMargin {
+        NumberAnimation { duration: 300 }
+    }
+
+    function showWidget(slipIn) {
+        if (slipIn)
+            anchors.leftMargin = 1
+        else
+            anchors.leftMargin = -width
     }
 
     signal dropped(int index)
@@ -50,7 +61,7 @@ Rectangle {
         anchors.top:        parent.top
         anchors.left:       parent.left
         anchors.right:      parent.right
-        height:             parent.height - anchors.margins * 2
+        height:             parent.height - anchors.margins * 2 + 1
         contentHeight:      toolStripColumn.height
         flickableDirection: Flickable.VerticalFlick
         clip:               true

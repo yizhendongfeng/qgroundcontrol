@@ -19,9 +19,9 @@ Item {
 
     property Item pipView
     property Item pipState: videoPipState
-
     property int    _track_rec_x:       0
     property int    _track_rec_y:       0
+    property bool   useVideoSource2:    false
 
     PipState {
         id:         videoPipState

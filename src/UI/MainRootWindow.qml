@@ -262,17 +262,74 @@ ApplicationWindow {
         color:          QGroundControl.globalPalette.window
     }
 
-    FlyView { 
-        id:                     flyView
-        anchors.fill:           parent
-        utmspSendActTrigger:    _utmspSendActTrigger
+    MainToolStrip {
+        id: leftMainToolStrip
+        currentVehicleSetupComplete: QGroundControl.multiVehicleManager.activeVehicle.autopilot.setupComplete
     }
 
-    PlanView {
-        id:             planView
-        anchors.fill:   parent
-        visible:        false
+    header: FlyViewToolBar {
+        id:         toolbar
+        visible:    !QGroundControl.videoManager.fullScreen
     }
+
+    // 主界面层叠布局
+    StackLayout {
+        id:                     stackLayoutMain
+        anchors.top:            toolbar.bottom
+        anchors.bottom:         parent.bottom
+        anchors.left:           leftMainToolStrip.right
+        anchors.right:          parent.right
+        FlyView {
+            id:                     flyView
+            Layout.fillWidth:       true
+            Layout.fillHeight:      true
+        }
+
+        PlanView {
+            id:                     planView
+            Layout.fillWidth:       true
+            Layout.fillHeight:      true
+        }
+
+        ParameterEditor {
+            id:                     parameterEdito
+            Layout.fillWidth:       true
+            Layout.fillHeight:      true
+        }
+
+        AppSettings {
+            id:                     appSettingView
+            Layout.fillWidth:       true
+            Layout.fillHeight:      true
+        }
+
+        UserSettings {
+            id:                     userSettingView
+            Layout.fillWidth:       true
+            Layout.fillHeight:      true
+        }
+    }
+
+
+    // FlyView {
+    //     id:                     flyView
+    //     anchors.top:            toolbar.bottom
+    //     anchors.bottom:         parent.bottom
+    //     anchors.left:           leftMainToolStrip.right
+    //     anchors.right:          parent.right
+    //     // anchors.fill:           parent
+    //     utmspSendActTrigger:    _utmspSendActTrigger
+    // }
+
+    // PlanView {
+    //     id:             planView
+    //     anchors.top:            toolbar.bottom
+    //     anchors.bottom:         parent.bottom
+    //     anchors.left:           leftMainToolStrip.right
+    //     anchors.right:          parent.right
+    //     // anchors.fill:   parent
+    //     visible:        false
+    // }
 
     footer: LogReplayStatusBar {
         visible: QGroundControl.settingsManager.flyViewSettings.showLogReplayStatusBar.rawValue
@@ -483,7 +540,6 @@ ApplicationWindow {
             anchors.top:    parent.top
             height:         ScreenTools.toolbarHeight
             color:          qgcPal.toolbarBackground
-
             RowLayout {
                 anchors.leftMargin: ScreenTools.defaultFontPixelWidth
                 anchors.left:       parent.left
@@ -493,8 +549,8 @@ ApplicationWindow {
 
                 QGCColoredImage {
                     id:                     backIcon
-                    width:                  ScreenTools.defaultFontPixelHeight * 2
-                    height:                 ScreenTools.defaultFontPixelHeight * 2
+                    width:                  ScreenTools.defaultFontPixelHeight// * 2
+                    height:                 ScreenTools.defaultFontPixelHeight// * 2
                     fillMode:               Image.PreserveAspectFit
                     mipmap:                 true
                     color:                  qgcPal.text
@@ -512,8 +568,8 @@ ApplicationWindow {
 
                 QGCColoredImage {
                     id:                     toolIcon
-                    width:                  ScreenTools.defaultFontPixelHeight * 2
-                    height:                 ScreenTools.defaultFontPixelHeight * 2
+                    width:                  ScreenTools.defaultFontPixelHeight// * 2
+                    height:                 ScreenTools.defaultFontPixelHeight// * 2
                     fillMode:               Image.PreserveAspectFit
                     mipmap:                 true
                     color:                  qgcPal.text
@@ -722,10 +778,14 @@ ApplicationWindow {
         indicatorDrawer.close()
     }
 
+    function showUserInfoDrawer() {
+        userInfoDrawer.open()
+    }
+
     Popup {
         id:             indicatorDrawer
         x:              calcXPosition()
-        y:              ScreenTools.toolbarHeight + _margins
+        y:              /*ScreenTools.toolbarHeight + */_margins // 因为最上方toolbar已经变更为窗口的header，应该不计算在内
         leftInset:      0
         rightInset:     0
         topInset:       0
@@ -745,6 +805,7 @@ ApplicationWindow {
         function calcXPosition() {
             if (indicatorItem) {
                 var xCenter = indicatorItem.mapToItem(mainWindow.contentItem, indicatorItem.width / 2, 0).x
+                // console.log("min:", xCenter - (contentItem.implicitWidth / 2), ", ", mainWindow.contentItem.width - contentItem.implicitWidth - _margins - (indicatorDrawer.padding * 2) - (ScreenTools.defaultFontPixelHeight / 2))
                 return Math.max(_margins, Math.min(xCenter - (contentItem.implicitWidth / 2), mainWindow.contentItem.width - contentItem.implicitWidth - _margins - (indicatorDrawer.padding * 2) - (ScreenTools.defaultFontPixelHeight / 2)))
             } else {
                 return _margins
@@ -754,6 +815,7 @@ ApplicationWindow {
         onOpened: {
             _expanded                               = false;
             indicatorDrawerLoader.sourceComponent   = indicatorDrawer.sourceComponent
+            // console.log("indicatorDrawer.opened, y: ", y, "ScreenTools.toolbarHeight: ", ScreenTools.toolbarHeight, "_margins:", _margins)
         }
         onClosed: {
             _expanded                               = false
@@ -816,6 +878,20 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    // 右侧用户信息窗体
+    Popup {
+        id:               userInfoDrawer
+        // anchors.right:    parent.right
+        // anchors.top:      parent.top
+        // // anchors.bottom:   parent.bottom
+        // width:            ScreenTools.defaultFontPixelWidth * 30
+        // height:           parent.height - ScreenTools.toolbarHeight
+        // Rectangle{
+        //     color:        "black"
+        //     anchors.fill: parent
+        // }
     }
 
     // We have to create the popup windows for the Analyze pages here so that the creation context is rooted

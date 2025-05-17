@@ -20,8 +20,11 @@ public:
     DEFINE_SETTING_NAME_GROUP()
 
     DEFINE_SETTINGFACT(videoSource)
+    DEFINE_SETTINGFACT(videoSource2)
     DEFINE_SETTINGFACT(udpPort)
     DEFINE_SETTINGFACT(tcpUrl)
+    DEFINE_SETTINGFACT(podIp)
+    DEFINE_SETTINGFACT(podPort)
     DEFINE_SETTINGFACT(rtspUrl)
     DEFINE_SETTINGFACT(aspectRatio)
     DEFINE_SETTINGFACT(videoFit)
@@ -35,6 +38,9 @@ public:
     DEFINE_SETTINGFACT(disableWhenDisarmed)
     DEFINE_SETTINGFACT(lowLatencyMode)
     DEFINE_SETTINGFACT(forceVideoDecoder)
+
+    // DEFINE_SETTINGFACT(tcpVideoControlIp)
+    // DEFINE_SETTINGFACT(tcpVideoControlPort)
 
     Q_PROPERTY(bool     streamConfigured        READ streamConfigured       NOTIFY streamConfiguredChanged)
     Q_PROPERTY(QString  rtspVideoSource         READ rtspVideoSource        CONSTANT)

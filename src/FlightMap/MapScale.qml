@@ -208,7 +208,13 @@ Item {
         width:              height
         opacity:            0.75
         visible:            _zoomButtonsVisible
-        onClicked:          mapControl.zoomLevel += 0.5
+        onClicked:          {
+
+            mapControl.zoomLevel += 0.5
+
+            var globalPos = scale.mapToItem(null, 0, 0);
+            console.log("**************zoomUpButton.x: ", globalPos.x, "zoomUpButton.y: ", globalPos.y, "scale.x: ", scale.x, "scale.y: ", scale.y)
+        }
     }
 
     QGCButton {

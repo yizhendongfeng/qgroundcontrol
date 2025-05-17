@@ -18,17 +18,19 @@ import QGroundControl.Palette
 import QGroundControl.MultiVehicleManager
 import QGroundControl.ScreenTools
 import QGroundControl.Controllers
+import Qt5Compat.GraphicalEffects
 
 Rectangle {
     id:     _root
     width:  parent.width
     height: ScreenTools.toolbarHeight
     color:  qgcPal.toolbarBackground
+    // opacity: 0.5
 
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
     property bool   _communicationLost: _activeVehicle ? _activeVehicle.vehicleLinkManager.communicationLost : false
     property color  _mainStatusBGColor: qgcPal.brandingPurple
-
+    property real   _percentBatteryLeft: 1//battery.percentRemaining//
     function dropMessageIndicatorTool() {
         toolIndicators.dropMessageIndicatorTool();
     }
@@ -66,9 +68,14 @@ Rectangle {
         QGCToolBarButton {
             id:                     currentButton
             Layout.preferredHeight: viewButtonRow.height
-            icon.source:            "/res/QGCLogoFull"
+            icon.source:            "/qmlimages/Quad.svg"//flyView.visible ? "/qmlimages/PaperPlane.svg" : "/qmlimages/Plan.svg"
             logo:                   true
-            onClicked:              mainWindow.showToolSelectDialog()
+            // onClicked:              {
+            //     if (flyView.visible)
+            //         mainWindow.showPlanView()//mainWindow.showToolSelectDialog()
+            //     else
+            //         mainWindow.showFlyView()
+            // }
         }
 
         MainStatusIndicator {
@@ -98,58 +105,108 @@ Rectangle {
     }
 
     //-------------------------------------------------------------------------
-    //-- Branding Logo
-    Image {
-        anchors.right:          parent.right
-        anchors.top:            parent.top
-        anchors.bottom:         parent.bottom
-        anchors.margins:        ScreenTools.defaultFontPixelHeight * 0.66
-        visible:                _activeVehicle && !_communicationLost && x > (toolsFlickable.x + toolsFlickable.contentWidth + ScreenTools.defaultFontPixelWidth)
-        fillMode:               Image.PreserveAspectFit
-        source:                 _outdoorPalette ? _brandImageOutdoor : _brandImageIndoor
-        mipmap:                 true
+    // RowLayout {
+    //     anchors.right:          parent.right
+    //     anchors.verticalCenter: parent.verticalCenter
+    //     //-- Vehicle Settings
+    //     QGCToolBarButton {
+    //         id:                     vehicleButton
+    //         // height:                 28
+    //         // width:                  height
+    //         icon.source:            "/res/QGCLogoFull"
+    //         logo:                   true
+    //         ToolTip.visible:        hovered
+    //         ToolTip.text:           qsTr("Vehicle")
+    //         property bool showRightPanel: false
+    //         onClicked:              {
+    //             mainWindow.closeIndicatorDrawer()
+    //             mainWindow.showVehicleSetupTool()
+    //         }
+    //     }
 
-        property bool   _outdoorPalette:        qgcPal.globalTheme === QGCPalette.Light
-        property bool   _corePluginBranding:    QGroundControl.corePlugin.brandImageIndoor.length != 0
-        property string _userBrandImageIndoor:  QGroundControl.settingsManager.brandImageSettings.userBrandImageIndoor.value
-        property string _userBrandImageOutdoor: QGroundControl.settingsManager.brandImageSettings.userBrandImageOutdoor.value
-        property bool   _userBrandingIndoor:    QGroundControl.settingsManager.brandImageSettings.visible && _userBrandImageIndoor.length != 0
-        property bool   _userBrandingOutdoor:   QGroundControl.settingsManager.brandImageSettings.visible && _userBrandImageOutdoor.length != 0
-        property string _brandImageIndoor:      brandImageIndoor()
-        property string _brandImageOutdoor:     brandImageOutdoor()
+    //     //-- Settings
+    //     QGCToolBarButton {
+    //         id:                     settingsButton
+    //         // height:                 28
+    //         // width:                  height
 
-        function brandImageIndoor() {
-            if (_userBrandingIndoor) {
-                return _userBrandImageIndoor
-            } else {
-                if (_userBrandingOutdoor) {
-                    return _userBrandImageOutdoor
-                } else {
-                    if (_corePluginBranding) {
-                        return QGroundControl.corePlugin.brandImageIndoor
-                    } else {
-                        return _activeVehicle ? _activeVehicle.brandImageIndoor : ""
-                    }
-                }
-            }
-        }
+    //         icon.source:            "/qmlimages/Gears.svg"
+    //         logo:                   true
+    //         ToolTip.visible:        hovered
+    //         ToolTip.text:           qsTr("Settings")
+    //         property bool showRightPanel: false
+    //         onClicked:              {
+    //             mainWindow.closeIndicatorDrawer()
+    //             mainWindow.showSettingsTool()
+    //         }
+    //     }
+    //     //-- User
+    //     QGCToolBarButton {
+    //         id:                     userButton
+    //         // height:                 28
+    //         // width:                  height
+    //         icon.source:            "/qmlimages/User.svg"
+    //         logo:                   true
+    //         ToolTip.visible:        hovered
+    //         ToolTip.text:           "zjm"
+    //         property bool showRightPanel: false
+    //         onClicked:              showRightPanel = !showRightPanel
+    //     }
+    // }
+    // Image {
+    //     anchors.right:          parent.right
+    //     anchors.verticalCenter: parent.verticalCenter
+    //     anchors.margins:        ScreenTools.defaultFontPixelHeight * 0.66
+    //     visible:                true//_activeVehicle && !_communicationLost && x > (toolsFlickable.x + toolsFlickable.contentWidth + ScreenTools.defaultFontPixelWidth)
+    //     fillMode:               Image.PreserveAspectFit
+    //     source:                 "/qmlimages/User.svg"//_outdoorPalette ? _brandImageOutdoor : _brandImageIndoor
+    //     sourceSize.width:  28
+    //     sourceSize.height: 28
+        // ToolTip:                "zjm"
+        // mipmap:                 true
 
-        function brandImageOutdoor() {
-            if (_userBrandingOutdoor) {
-                return _userBrandImageOutdoor
-            } else {
-                if (_userBrandingIndoor) {
-                    return _userBrandImageIndoor
-                } else {
-                    if (_corePluginBranding) {
-                        return QGroundControl.corePlugin.brandImageOutdoor
-                    } else {
-                        return _activeVehicle ? _activeVehicle.brandImageOutdoor : ""
-                    }
-                }
-            }
-        }
-    }
+        // property bool   _outdoorPalette:        qgcPal.globalTheme === QGCPalette.Light
+        // property bool   _corePluginBranding:    QGroundControl.corePlugin.brandImageIndoor.length != 0
+        // property string _userBrandImageIndoor:  QGroundControl.settingsManager.brandImageSettings.userBrandImageIndoor.value
+        // property string _userBrandImageOutdoor: QGroundControl.settingsManager.brandImageSettings.userBrandImageOutdoor.value
+        // property bool   _userBrandingIndoor:    QGroundControl.settingsManager.brandImageSettings.visible && _userBrandImageIndoor.length != 0
+        // property bool   _userBrandingOutdoor:   QGroundControl.settingsManager.brandImageSettings.visible && _userBrandImageOutdoor.length != 0
+        // property string _brandImageIndoor:      brandImageIndoor()
+        // property string _brandImageOutdoor:     brandImageOutdoor()
+
+        // function brandImageIndoor() {
+        //     if (_userBrandingIndoor) {
+        //         return _userBrandImageIndoor
+        //     } else {
+        //         if (_userBrandingOutdoor) {
+        //             return _userBrandImageOutdoor
+        //         } else {
+        //             if (_corePluginBranding) {
+        //                 return QGroundControl.corePlugin.brandImageIndoor
+        //             } else {
+        //                 return _activeVehicle ? _activeVehicle.brandImageIndoor : ""
+        //             }
+        //         }
+        //     }
+        // }
+
+        // function brandImageOutdoor() {
+        //     if (_userBrandingOutdoor) {
+        //         return _userBrandImageOutdoor
+        //     } else {
+        //         if (_userBrandingIndoor) {
+        //             return _userBrandImageIndoor
+        //         } else {
+        //             if (_corePluginBranding) {
+        //                 return QGroundControl.corePlugin.brandImageOutdoor
+        //             } else {
+        //                 return _activeVehicle ? _activeVehicle.brandImageOutdoor : ""
+        //             }
+        //         }
+        //     }
+        // }
+    // }
+
 
     // Small parameter download progress bar
     Rectangle {
@@ -159,6 +216,67 @@ Rectangle {
         color:          qgcPal.colorGreen
         visible:        !largeProgressBar.visible
     }
+    // 电量进度条
+    Row {
+        id:             rowFlyTimeLeft
+        anchors.bottom: parent.bottom
+        anchors.left:   parent.left
+        width:          parent.width
+        spacing:        5
+        // visible:       !largeProgressBar.visible
+        Rectangle {
+            id:             rectFlyTimeProgress
+            anchors.bottom: parent.bottom
+            width:          parent.width - 60
+            height:         3//parent.height
+            property real progress: 1
+            color:          "transparent"
+            Item {
+                anchors.left:  parent.left
+                anchors.top:   parent.top
+                height: parent.height
+                width:  parent.width * _percentBatteryLeft
+                LinearGradient {
+                    anchors.fill: parent
+                    start: Qt.point(0, 0)
+                    end: Qt.point(parent.parent.width, 0)
+
+                    // 前五分之一为红色，后五分之四为绿色
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "red" } // 红色
+                        GradientStop { position: 0.2; color: "red" } // 红色结束
+                        GradientStop { position: 0.20001; color: "green" } // 绿色开始
+                        GradientStop { position: 1.0; color: "green" } // 绿色结束
+                    }
+                }
+                Rectangle {
+                    id:                     progressDotMarker
+                    anchors.horizontalCenter:    parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width:                  10
+                    height:                 width
+                    radius:                 width / 2
+                    color:                  qgcPal.text
+                }
+                Rectangle {
+                    anchors.left:           progressDotMarker.right
+                    anchors.leftMargin:     5
+                    color :                 qgcPal.windowShadeLight
+                    anchors.verticalCenter: parent.verticalCenter
+                    width:   50
+                    height:  20
+                    radius:  5
+                    QGCLabel {
+                        anchors.centerIn:  parent
+                        text: "25:46"
+                        font.pointSize: 12
+                    }
+                }
+            }
+        }
+    }
+
+
 
     // Large parameter download progress bar
     Rectangle {

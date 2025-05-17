@@ -187,7 +187,7 @@ public:
     Q_ENUM(SendToVehiclePreCheckState)
 
     Q_INVOKABLE SendToVehiclePreCheckState sendToVehiclePreCheck(void);
-
+    Q_INVOKABLE void removeAllVisualItems(void) { removeAll(); };
     /// Determines if the mission has all data needed to be saved or sent to the vehicle.
     /// IMPORTANT NOTE: The return value is a VisualMissionItem::ReadForSaveState value. It is an int here to work around
     /// a nightmare of circular header dependency problems.

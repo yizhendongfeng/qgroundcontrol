@@ -2,11 +2,11 @@
 
 # General
 
-set(QGC_APP_NAME "QGroundControl" CACHE STRING "App Name")
-set(QGC_APP_COPYRIGHT "Copyright (c) 2024 QGroundControl. All rights reserved." CACHE STRING "Copyright")
-set(QGC_APP_DESCRIPTION "Open Source Ground Control App" CACHE STRING "Description")
-set(QGC_ORG_NAME "QGroundControl.org" CACHE STRING "Org Name")
-set(QGC_ORG_DOMAIN "org.qgroundcontrol" CACHE STRING "Domain")
+set(QGC_APP_NAME "DGCS" CACHE STRING "App Name")
+set(QGC_APP_COPYRIGHT "Copyright (c) 2024 DGCS. All rights reserved." CACHE STRING "Copyright")
+set(QGC_APP_DESCRIPTION "Ground Control App" CACHE STRING "Description")
+set(QGC_ORG_NAME "DGCS.org" CACHE STRING "Org Name")
+set(QGC_ORG_DOMAIN "org.DGCS" CACHE STRING "Domain")
 
 option(QGC_STABLE_BUILD "Stable Build" OFF)
 

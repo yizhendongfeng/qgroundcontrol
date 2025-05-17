@@ -59,41 +59,42 @@ Item {
         leftEdgeTopInset:       toolStrip.leftEdgeTopInset
         leftEdgeCenterInset:    toolStrip.leftEdgeCenterInset
         leftEdgeBottomInset:    virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.leftEdgeBottomInset : parentToolInsets.leftEdgeBottomInset
-        rightEdgeTopInset:      topRightColumnLayout.rightEdgeTopInset
-        rightEdgeCenterInset:   topRightColumnLayout.rightEdgeCenterInset
-        rightEdgeBottomInset:   bottomRightRowLayout.rightEdgeBottomInset
+        rightEdgeTopInset:      _layoutMargin//topRightColumnLayout.rightEdgeTopInset
+        rightEdgeCenterInset:   _layoutMargin//topRightColumnLayout.rightEdgeCenterInset
+        rightEdgeBottomInset:   _layoutMargin//bottomRightRowLayout.rightEdgeBottomInset
         topEdgeLeftInset:       toolStrip.topEdgeLeftInset
         topEdgeCenterInset:     mapScale.topEdgeCenterInset
-        topEdgeRightInset:      topRightColumnLayout.topEdgeRightInset
+        topEdgeRightInset:      _layoutMargin//topRightColumnLayout.topEdgeRightInset
         bottomEdgeLeftInset:    virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeLeftInset : parentToolInsets.bottomEdgeLeftInset
-        bottomEdgeCenterInset:  bottomRightRowLayout.bottomEdgeCenterInset
-        bottomEdgeRightInset:   virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeRightInset : bottomRightRowLayout.bottomEdgeRightInset
+        bottomEdgeCenterInset:  _layoutMargin//bottomRightRowLayout.bottomEdgeCenterInset
+        bottomEdgeRightInset:   virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeRightInset : _layoutMargin//bottomRightRowLayout.bottomEdgeRightInset
     }
 
-    FlyViewTopRightColumnLayout {
-        id:                 topRightColumnLayout
-        anchors.margins:    _layoutMargin
-        anchors.top:        parent.top
-        anchors.bottom:     bottomRightRowLayout.top
-        anchors.right:      parent.right
-        spacing:            _layoutSpacing
+    // FlyViewTopRightColumnLayout {
+    //     id:                 topRightColumnLayout
+    //     anchors.margins:    _layoutMargin
+    //     anchors.top:        parent.top
+    //     anchors.bottom:     bottomRightRowLayout.top
+    //     anchors.right:      parent.right
+    //     spacing:            _layoutSpacing
+    //     visible:            false
 
-        property real topEdgeRightInset:    childrenRect.height + _layoutMargin
-        property real rightEdgeTopInset:    width + _layoutMargin
-        property real rightEdgeCenterInset: rightEdgeTopInset
-    }
+    //     property real topEdgeRightInset:    childrenRect.height + _layoutMargin
+    //     property real rightEdgeTopInset:    width + _layoutMargin
+    //     property real rightEdgeCenterInset: rightEdgeTopInset
+    // }
 
-    FlyViewBottomRightRowLayout {
-        id:                 bottomRightRowLayout
-        anchors.margins:    _layoutMargin
-        anchors.bottom:     parent.bottom
-        anchors.right:      parent.right
-        spacing:            _layoutSpacing
-
-        property real bottomEdgeRightInset:     height + _layoutMargin
-        property real bottomEdgeCenterInset:    bottomEdgeRightInset
-        property real rightEdgeBottomInset:     width + _layoutMargin
-    }
+    // FlyViewBottomRightRowLayout {
+    //     id:                 bottomRightRowLayout
+    //     anchors.margins:    _layoutMargin
+    //     anchors.bottom:     parent.bottom
+    //     anchors.right:      parent.right
+    //     spacing:            _layoutSpacing
+    //     visible: false      // 隐藏右下角状态窗体
+    //     property real bottomEdgeRightInset:     height + _layoutMargin
+    //     property real bottomEdgeCenterInset:    bottomEdgeRightInset
+    //     property real rightEdgeBottomInset:     width + _layoutMargin
+    // }
 
     FlyViewMissionCompleteDialog {
         missionController:      _missionController
@@ -131,7 +132,7 @@ Item {
         property bool _virtualJoystickEnabled: QGroundControl.settingsManager.appSettings.virtualJoystick.rawValue
         property real bottomEdgeRightInset:    parent.height-y
         property var  _pipViewMargin:          _pipView.visible ? parentToolInsets.bottomEdgeLeftInset + ScreenTools.defaultFontPixelHeight * 2 : 
-                                               bottomRightRowLayout.height + ScreenTools.defaultFontPixelHeight * 1.5
+                                               /*bottomRightRowLayout.height +*/ ScreenTools.defaultFontPixelHeight * 1.5
 
         property var  bottomLoaderMargin:      _pipViewMargin >= parent.height / 2 ? parent.height / 2 : _pipViewMargin
 
@@ -163,7 +164,7 @@ Item {
         anchors.left:           parent.left
         anchors.top:            parent.top
         z:                      QGroundControl.zOrderWidgets
-        maxHeight:              parent.height - y - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
+        maxHeight:              parent.height - y// - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
         visible:                !QGroundControl.videoManager.fullScreen
 
         onDisplayPreFlightChecklist: preFlightChecklistPopup.createObject(mainWindow).open()
@@ -186,8 +187,8 @@ Item {
     MapScale {
         id:                 mapScale
         anchors.margins:    _toolsMargin
-        anchors.left:       toolStrip.right
-        anchors.top:        parent.top
+        anchors.left:      toolStrip.right
+        anchors.top:       parent.top
         mapControl:         _mapControl
         buttonsOnLeft:      true
         visible:            !ScreenTools.isTinyScreen && QGroundControl.corePlugin.options.flyView.showMapScale && !isViewer3DOpen && mapControl.pipState.state === mapControl.pipState.fullState

@@ -19,7 +19,7 @@ import QGroundControl.Controls
 import QGroundControl.ScreenTools
 
 SettingsPage {
-    property var    _settingsManager:            QGroundControl.settingsManager
+    property var    _settingsManager:           QGroundControl.settingsManager
     property var    _videoManager:              QGroundControl.videoManager
     property var    _videoSettings:             _settingsManager.videoSettings
     property string _videoSource:               _videoSettings.videoSource.rawValue
@@ -47,36 +47,39 @@ SettingsPage {
             fact:               _videoSettings.videoSource
             visible:            fact.visible
         }
-    }
 
-    SettingsGroupLayout {
-        Layout.fillWidth:   true
-        heading:            qsTr("Connection")
-        visible:            !_videoAutoStreamConfig && (_isTCP || _isRTSP | _requiresUDPPort)
 
-        LabelledFactTextField {
-            Layout.fillWidth:           true
-            textFieldPreferredWidth:    _urlFieldWidth
-            label:                      qsTr("RTSP URL")
-            fact:                       _videoSettings.rtspUrl
-            visible:                    _isRTSP && _videoSettings.rtspUrl.visible
-        }
-
-        LabelledFactTextField {
-            Layout.fillWidth:           true
-            label:                      qsTr("TCP URL")
-            textFieldPreferredWidth:    _urlFieldWidth
-            fact:                       _videoSettings.tcpUrl
-            visible:                    _isTCP && _videoSettings.tcpUrl.visible
-        }
-
-        LabelledFactTextField {
+        SettingsGroupLayout {
             Layout.fillWidth:   true
-            label:              qsTr("UDP Port")
-            fact:               _videoSettings.udpPort
-            visible:            _requiresUDPPort && _videoSettings.udpPort.visible
+            heading:            qsTr("Connection")
+            visible:            !_videoAutoStreamConfig && (_isTCP || _isRTSP | _requiresUDPPort)
+
+            LabelledFactTextField {
+                Layout.fillWidth:           true
+                textFieldPreferredWidth:    _urlFieldWidth
+                label:                      qsTr("RTSP URL")
+                fact:                       _videoSettings.rtspUrl
+                visible:                    _isRTSP && _videoSettings.rtspUrl.visible
+            }
+
+            LabelledFactTextField {
+                Layout.fillWidth:           true
+                label:                      qsTr("TCP URL")
+                textFieldPreferredWidth:    _urlFieldWidth
+                fact:                       _videoSettings.tcpUrl
+                visible:                    _isTCP && _videoSettings.tcpUrl.visible
+            }
+
+            LabelledFactTextField {
+                Layout.fillWidth:   true
+                label:              qsTr("UDP Port")
+                fact:               _videoSettings.udpPort
+                visible:            _requiresUDPPort && _videoSettings.udpPort.visible
+            }
         }
     }
+
+
 
     SettingsGroupLayout {
         Layout.fillWidth:   true

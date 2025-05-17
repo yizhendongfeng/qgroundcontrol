@@ -18,7 +18,7 @@
         <file alias="counter-clockwise-arrow.svg">resources/counter-clockwise-arrow.svg</file>
         <file alias="chevron-down.svg">resources/chevron-down.svg</file>
         <file alias="chevron-up.svg">resources/chevron-up.svg</file>
-		<file alias="DropArrow.svg">resources/DropArrow.svg</file>
+        <file alias="DropArrow.svg">resources/DropArrow.svg</file>
         <file alias="gear-black.svg">resources/gear-black.svg</file>
         <file alias="gear-white.svg">resources/gear-white.svg</file>
         <file alias="helicoptericon.svg">resources/helicoptericon.svg</file>
@@ -38,7 +38,7 @@
         <file alias="Play">resources/Play.svg</file>
         <file alias="PowerButton">resources/PowerButton.svg</file>
         <file alias="QGCLogoBlack">resources/QGCLogoBlack.svg</file>
-		<file alias="QGCLogoFull">resources/QGCLogoFull.svg</file>
+        <file alias="QGCLogoFull">resources/QGCLogoFull.svg</file>
         <file alias="QGCLogoWhite">resources/QGCLogoWhite.svg</file>
         <file alias="QGCLogoArrow">resources/QGCLogoArrow.svg</file>
         <file alias="QGroundControlConnect">resources/QGroundControlConnect.svg</file>
@@ -60,6 +60,8 @@
         <file alias="GripperRelease.svg">resources/GripperRelease.svg</file>
         <file alias="GripperGrab.svg">resources/GripperGrab.svg</file>
         <file alias="qgroundcontrol.ico">resources/icons/qgroundcontrol.ico</file>
+        <file>resources/ArrowDownload.svg</file>
+        <file alias="TrafficPolice.png">resources/TrafficPolice.png</file>
     </qresource>
     <qresource prefix="/res/firmware">
         <file alias="3drradio.png">resources/firmware/3drradio.png</file>
@@ -111,5 +113,13 @@
     </qresource>
     <qresource prefix="/gimbal">
         <file alias="payload.svg">resources/gimbal/payload.svg</file>
+    </qresource>
+    <qresource prefix="/CapturedPictures">
+        <file alias="1.jpg">resources/CapturedPictures/OIP-C.jpg</file>
+        <file alias="2.jpg">resources/CapturedPictures/R-C.jpg</file>
+        <file alias="3.png">resources/CapturedPictures/u379.png</file>
+        <file alias="4.png">resources/CapturedPictures/u389.png</file>
+        <file alias="5.jpg">resources/CapturedPictures/高速拥堵.jpg</file>
+        <file alias="6.jpg">resources/CapturedPictures/收费站堵车.jpg</file>
     </qresource>
 </RCC>

@@ -14,6 +14,7 @@
 #include <QtCore/QRunnable>
 #include <QtCore/QSize>
 #include <QtQmlIntegration/QtQmlIntegration>
+#include "Camera/GCU.h"
 
 Q_DECLARE_LOGGING_CATEGORY(VideoManagerLog)
 
@@ -41,6 +42,7 @@ class VideoManager : public QObject
     Q_PROPERTY(bool     hasVideo                READ hasVideo                                   NOTIFY hasVideoChanged)
     Q_PROPERTY(bool     isStreamSource          READ isStreamSource                             NOTIFY isStreamSourceChanged)
     Q_PROPERTY(bool     isUvc                   READ isUvc                                      NOTIFY isUvcChanged)
+    Q_PROPERTY(bool     isUvc2                   READ isUvc2                                      NOTIFY isUvc2Changed)
     Q_PROPERTY(bool     recording               READ recording                                  NOTIFY recordingChanged)
     Q_PROPERTY(bool     streaming               READ streaming                                  NOTIFY streamingChanged)
     Q_PROPERTY(double   aspectRatio             READ aspectRatio                                NOTIFY aspectRatioChanged)
@@ -50,6 +52,9 @@ class VideoManager : public QObject
     Q_PROPERTY(QSize    videoSize               READ videoSize                                  NOTIFY videoSizeChanged)
     Q_PROPERTY(QString  imageFile               READ imageFile                                  NOTIFY imageFileChanged)
     Q_PROPERTY(QString  uvcVideoSourceID        READ uvcVideoSourceID                           NOTIFY uvcVideoSourceIDChanged)
+    Q_PROPERTY(QString  uvcVideoSourceID2        READ uvcVideoSourceID2                           NOTIFY uvcVideoSourceID2Changed)
+    Q_PROPERTY(QObject*  gcu                         READ gcu)
+
 
     friend class FinishVideoInitialization;
 
@@ -75,8 +80,10 @@ public:
     bool gstreamerEnabled() const;
     bool hasThermal() const;
     bool hasVideo() const;
+    bool hasVideo2() const;
     bool isStreamSource() const;
     bool isUvc() const;
+    bool isUvc2() const;
     bool qtmultimediaEnabled() const;
     bool recording() const { return _recording; }
     bool streaming() const { return _streaming; }
@@ -88,7 +95,9 @@ public:
     QSize videoSize() const { return QSize((_videoSize >> 16) & 0xFFFF, _videoSize & 0xFFFF); }
     QString imageFile() const { return _imageFile; }
     QString uvcVideoSourceID() const { return _uvcVideoSourceID; }
+    QString uvcVideoSourceID2() const { return _uvcVideoSourceID2; }
     void setfullScreen(bool on);
+    GCU* gcu() {return _gcu;};
 
 signals:
     void aspectRatioChanged();
@@ -100,10 +109,12 @@ signals:
     void isAutoStreamChanged();
     void isStreamSourceChanged();
     void isUvcChanged();
+    void isUvc2Changed();
     void recordingChanged();
     void recordingStarted();
     void streamingChanged();
     void uvcVideoSourceIDChanged();
+    void uvcVideoSourceID2Changed();
     void videoSizeChanged();
 
 private slots:
@@ -144,9 +155,12 @@ private:
     QAtomicInteger<quint32> _videoSize = 0;
     QString _imageFile;
     QString _uvcVideoSourceID;
+    QString _uvcVideoSourceID2;
     QString _videoFile;
     Vehicle *_activeVehicle = nullptr;
     VideoSettings *_videoSettings = nullptr;
+    VideoSettings *_videoSettings2 = nullptr;
+    GCU *_gcu = nullptr;
 };
 
 /*===========================================================================*/

@@ -351,6 +351,12 @@
         <file alias="Viewer3D/Models3D/Line3D.qml">src/Viewer3D/Viewer3DQml/Models3D/Line3D.qml</file>
         <file alias="Viewer3D/Models3D/Viewer3DVehicleItems.qml">src/Viewer3D/Viewer3DQml/Models3D/Viewer3DVehicleItems.qml</file>
         <file alias="Viewer3D/Viewer3DProgressBar.qml">src/Viewer3D/Viewer3DQml/Viewer3DProgressBar.qml</file>
+        <file alias="PlanListView.qml">src/PlanView/PlanListView.qml</file>
+        <file alias="QGroundControl/Controls/QGCIconButton.qml">src/QmlControls/QGCIconButton.qml</file>
+        <file alias="MainToolStrip.qml">src/UI/MainToolStrip.qml</file>
+        <file alias="QGroundControl/Controls/ToolStripColumn.qml">src/QmlControls/ToolStripColumn.qml</file>
+        <file alias="DialogueVideoSettings.qml">src/QmlControls/DialogueVideoSettings.qml</file>
+        <file alias="UserSettings.qml">src/UI/UserSettings.qml</file>
     </qresource>
     <qresource prefix="/FirstRunPromptDialogs">
         <file alias="UnitsFirstRunPrompt.qml">src/FirstRunPromptDialogs/UnitsFirstRunPrompt.qml</file>

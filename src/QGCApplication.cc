@@ -65,7 +65,7 @@
 #include "Vehicle.h"
 #include "VehicleComponent.h"
 #include "VideoManager.h"
-
+#include "GCU.h"
 #ifndef QGC_DISABLE_MAVLINK_INSPECTOR
 #include "MAVLinkInspectorController.h"
 #endif
@@ -291,7 +291,8 @@ void QGCApplication::init()
     qmlRegisterType<GeoTagController>        ("QGroundControl.Controllers", 1, 0, "GeoTagController");
     qmlRegisterType<LogDownloadController>   ("QGroundControl.Controllers", 1, 0, "LogDownloadController");
     qmlRegisterType<MAVLinkConsoleController>("QGroundControl.Controllers", 1, 0, "MAVLinkConsoleController");
-
+    // 注册吊舱控制，与GCU的通信 zjm
+    qmlRegisterUncreatableType<GCU>("QGroundControl.GCU", 1, 0, "GcuCameraControl", "Reference only");
 
     qmlRegisterUncreatableType<AutoPilotPlugin>("QGroundControl.AutoPilotPlugin", 1, 0, "AutoPilotPlugin", "Reference only");
     qmlRegisterType<ESP8266ComponentController>("QGroundControl.Controllers",     1, 0, "ESP8266ComponentController");

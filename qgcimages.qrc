@@ -214,5 +214,16 @@
         <file alias="ZoomMinus.svg">src/FlightMap/Images/ZoomMinus.svg</file>
         <file alias="ZoomPlus.svg">src/FlightMap/Images/ZoomPlus.svg</file>
         <file alias="Viewer3D/City3DMapIcon.svg">src/Viewer3D/Images/city_3d_map_icon.svg</file>
+        <file alias="User.svg">resources/User.svg</file>
+        <file alias="DeleteFile.svg">src/FlightMap/Images/DeleteFile.svg</file>
+        <file alias="Done.svg">src/FlightMap/Images/Done.svg</file>
+        <file alias="Edit.svg">src/FlightMap/Images/Edit.svg</file>
+        <file alias="ArrowUp.svg">src/FlightMap/Images/ArrowUp.svg</file>
+        <file alias="ZoomInCircle.svg">src/FlightMap/Images/ZoomInCircle.svg</file>
+        <file alias="ZoomOutCircle.svg">src/FlightMap/Images/ZoomOutCircle.svg</file>
+        <file alias="Minus.svg">src/FlightMap/Images/Minus.svg</file>
+        <file alias="Plus.svg">src/FlightMap/Images/Plus.svg</file>
+        <file alias="Mic.svg">src/FlightMap/Images/Mic.svg</file>
+        <file alias="Speaker.svg">src/FlightMap/Images/Speaker.svg</file>
     </qresource>
 </RCC>

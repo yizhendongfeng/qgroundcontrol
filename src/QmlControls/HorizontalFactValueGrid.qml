@@ -110,7 +110,7 @@ T.HorizontalFactValueGrid {
                 }
             }
 
-            ColumnLayout {
+            ColumnLayout {    //右侧加减号（增减列）
                 spacing: 1
                 visible: settingsUnlocked
 
@@ -140,7 +140,7 @@ T.HorizontalFactValueGrid {
             }
         }
 
-        RowLayout {
+        RowLayout {     //下方加减号（增减行）
             Layout.fillWidth:   true
             spacing:            1
             visible:            settingsUnlocked

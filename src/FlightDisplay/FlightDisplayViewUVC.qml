@@ -21,7 +21,8 @@ Rectangle {
     anchors.centerIn:   parent
     visible:            _videoManager.isUvc
 
-    property var _videoManager: QGroundControl.videoManager
+    property var _videoManager   :    QGroundControl.videoManager
+    property bool useVideoSource2:    false
 
     function adjustAspectRatio() {
         //-- Set aspect ratio
@@ -38,6 +39,7 @@ Rectangle {
         function findCameraDevice(cameraId) {
             var videoInputs = mediaDevices.videoInputs
             for (var i = 0; i < videoInputs.length; i++) {
+                console.log("findCameraDevice length:", videoInputs.length,"i:", i, videoInputs[i].description, "cameraId:", cameraId, "_root.useVideoSource2:", _root.useVideoSource2, "_videoManager.uvcVideoSourceID2:", _videoManager.uvcVideoSourceID2, "_videoManager.uvcVideoSourceID:", _videoManager.uvcVideoSourceID2)
                 if (videoInputs[i].description === cameraId) {
                     return videoInputs[i]
                 }
@@ -49,7 +51,8 @@ Rectangle {
     CaptureSession {
         camera: Camera {
             id:             camera
-            cameraDevice:   mediaDevices.findCameraDevice(_videoManager.uvcVideoSourceID)
+            // cameraDevice:   mediaDevices.findCameraDevice(_videoManager.uvcVideoSourceID)
+            cameraDevice:   mediaDevices.findCameraDevice(_root.useVideoSource2 ? _videoManager.uvcVideoSourceID2 : _videoManager.uvcVideoSourceID)
             active:         _videoManager.isUvc
 
             onCameraDeviceChanged: {
@@ -62,6 +65,7 @@ Rectangle {
                 if (active) {
                     adjustAspectRatio()
                 }
+                console.log("cameraDevice: ", cameraDevice.description, _root.useVideoSource2, _videoManager.uvcVideoSourceID2 , _videoManager.uvcVideoSourceID)
             }
         }
         videoOutput: videoOutput
@@ -70,6 +74,6 @@ Rectangle {
     VideoOutput {
         id:             videoOutput
         anchors.fill:   parent
-        fillMode:       VideoOutput.PreserveAspectCrop
+        fillMode:       VideoOutput.PreserveAspectFit//PreserveAspectCrop
     }
 }
