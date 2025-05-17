@@ -16,10 +16,8 @@
 #ifdef QGC_GST_STREAMING
 #include "GStreamer.h"
 #endif
-
 #ifndef QGC_DISABLE_UVC
-#include <QtMultimedia/QMediaDevices>
-#include <QtMultimedia/QCameraDevice>
+#include "UVCReceiver.h"
 #endif
 
 DECLARE_SETTINGGROUP(Video, "Video")
@@ -28,6 +26,7 @@ DECLARE_SETTINGGROUP(Video, "Video")
 
     // Setup enum values for videoSource settings into meta data
     QVariantList videoSourceList;
+#if defined(QGC_GST_STREAMING) || defined(QGC_QT_STREAMING)
     videoSourceList.append(videoSourceRTSP);
     videoSourceList.append(videoSourceUDPH264);
     videoSourceList.append(videoSourceUDPH265);
@@ -36,17 +35,20 @@ DECLARE_SETTINGGROUP(Video, "Video")
     videoSourceList.append(videoSource3DRSolo);
     videoSourceList.append(videoSourceParrotDiscovery);
     videoSourceList.append(videoSourceYuneecMantisG);
-    videoSourceList.append(videoSourceHerelinkAirUnit);
-    videoSourceList.append(videoSourceHerelinkHotspot);
+
+    #ifdef QGC_HERELINK_AIRUNIT_VIDEO
+        videoSourceList.append(videoSourceHerelinkAirUnit);
+    #else
+        videoSourceList.append(videoSourceHerelinkHotspot);
+    #endif
+#endif
 #ifndef QGC_DISABLE_UVC
-    QList<QCameraDevice> videoInputs = QMediaDevices::videoInputs();
-    for (const auto& cameraDevice: videoInputs) {
-        videoSourceList.append(cameraDevice.description());
-    }
+    videoSourceList.append(UVCReceiver::getDeviceNameList());
 #endif
     if (videoSourceList.count() == 0) {
         _noVideo = true;
         videoSourceList.append(videoSourceNoVideo);
+        setVisible(false);
     } else {
         videoSourceList.insert(0, videoDisabled);
     }
@@ -59,29 +61,7 @@ DECLARE_SETTINGGROUP(Video, "Video")
 
     _nameToMetaDataMap[videoSourceName]->setEnumInfo(videoSourceCookedList, videoSourceList);
 
-#ifdef QGC_GST_STREAMING
-    const QVariantList removeForceVideoDecodeList{
-#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderDirectX3D,
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
-#elif defined(Q_OS_WIN)
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderVAAPI,
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
-#elif defined(Q_OS_MAC)
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderDirectX3D,
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderVAAPI,
-#elif defined(Q_OS_ANDROID)
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderDirectX3D,
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderVAAPI,
-        GStreamer::VideoDecoderOptions::ForceVideoDecoderNVIDIA,
-#endif
-    };
-
-    for (const auto &value : removeForceVideoDecodeList) {
-        _nameToMetaDataMap[forceVideoDecoderName]->removeEnumInfo(value);
-    }
-#endif
+    _setForceVideoDecodeList();
 
     // Set default value for videoSource
     _setDefaults();
@@ -103,10 +83,8 @@ DECLARE_SETTINGSFACT(VideoSettings, showRecControl)
 DECLARE_SETTINGSFACT(VideoSettings, recordingFormat)
 DECLARE_SETTINGSFACT(VideoSettings, maxVideoSize)
 DECLARE_SETTINGSFACT(VideoSettings, enableStorageLimit)
-DECLARE_SETTINGSFACT(VideoSettings, rtspTimeout)
 DECLARE_SETTINGSFACT(VideoSettings, streamEnabled)
 DECLARE_SETTINGSFACT(VideoSettings, disableWhenDisarmed)
-DECLARE_SETTINGSFACT(VideoSettings, lowLatencyMode)
 
 DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, videoSource)
 {
@@ -143,13 +121,49 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, forceVideoDecoder)
     return _forceVideoDecoderFact;
 }
 
-DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, udpPort)
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, lowLatencyMode)
 {
-    if (!_udpPortFact) {
-        _udpPortFact = _createSettingsFact(udpPortName);
-        connect(_udpPortFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
+    if (!_lowLatencyModeFact) {
+        _lowLatencyModeFact = _createSettingsFact(lowLatencyModeName);
+
+        _lowLatencyModeFact->setVisible(
+#ifdef QGC_GST_STREAMING
+            true
+#else
+            false
+#endif
+        );
+
+        connect(_lowLatencyModeFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
     }
-    return _udpPortFact;
+    return _lowLatencyModeFact;
+}
+
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, rtspTimeout)
+{
+    if (!_rtspTimeoutFact) {
+        _rtspTimeoutFact = _createSettingsFact(rtspTimeoutName);
+
+        _rtspTimeoutFact->setVisible(
+#ifdef QGC_GST_STREAMING
+            true
+#else
+            false
+#endif
+        );
+
+        connect(_rtspTimeoutFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
+    }
+    return _rtspTimeoutFact;
+}
+
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, udpUrl)
+{
+    if (!_udpUrlFact) {
+        _udpUrlFact = _createSettingsFact(udpUrlName);
+        connect(_udpUrlFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
+    }
+    return _udpUrlFact;
 }
 
 DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, rtspUrl)
@@ -182,10 +196,10 @@ bool VideoSettings::streamConfigured(void)
     if(vSource == videoSourceNoVideo || vSource == videoDisabled) {
         return false;
     }
-    //-- If UDP, check if port is set
+    //-- If UDP, check for URL
     if(vSource == videoSourceUDPH264 || vSource == videoSourceUDPH265) {
-        qCDebug(VideoManagerLog) << "Testing configuration for UDP Stream:" << udpPort()->rawValue().toInt();
-        return udpPort()->rawValue().toInt() != 0;
+        qCDebug(VideoManagerLog) << "Testing configuration for UDP Stream:" << udpUrl()->rawValue().toString();
+        return !udpUrl()->rawValue().toString().isEmpty();
     }
     //-- If RTSP, check for URL
     if(vSource == videoSourceRTSP) {
@@ -197,10 +211,10 @@ bool VideoSettings::streamConfigured(void)
         qCDebug(VideoManagerLog) << "Testing configuration for TCP Stream:" << tcpUrl()->rawValue().toString();
         return !tcpUrl()->rawValue().toString().isEmpty();
     }
-    //-- If MPEG-TS, check if port is set
+    //-- If MPEG-TS, check for URL
     if(vSource == videoSourceMPEGTS) {
-        qCDebug(VideoManagerLog) << "Testing configuration for MPEG-TS Stream:" << udpPort()->rawValue().toInt();
-        return udpPort()->rawValue().toInt() != 0;
+        qCDebug(VideoManagerLog) << "Testing configuration for MPEG-TS Stream:" << udpUrl()->rawValue().toString();
+        return !udpUrl()->rawValue().toString().isEmpty();
     }
     //-- If Herelink Air unit, good to go
     if(vSource == videoSourceHerelinkAirUnit) {
@@ -213,12 +227,9 @@ bool VideoSettings::streamConfigured(void)
         return true;
     }
 #ifndef QGC_DISABLE_UVC
-    const QList<QCameraDevice> videoInputs = QMediaDevices::videoInputs();
-    for (const auto& cameraDevice: videoInputs) {
-        if(vSource == cameraDevice.description()) {
-            qCDebug(VideoManagerLog) << "Stream configured for UVC";
-            return true;
-        }
+    if (UVCReceiver::enabled() && UVCReceiver::deviceExists(vSource)) {
+        qCDebug(VideoManagerLog) << "Stream configured for UVC";
+        return true;
     }
 #endif
     return false;
@@ -227,4 +238,37 @@ bool VideoSettings::streamConfigured(void)
 void VideoSettings::_configChanged(QVariant)
 {
     emit streamConfiguredChanged(streamConfigured());
+}
+
+void VideoSettings::_setForceVideoDecodeList()
+{
+#ifdef QGC_GST_STREAMING
+    static const QList<GStreamer::VideoDecoderOptions> removeForceVideoDecodeList{
+#if defined(Q_OS_ANDROID)
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderDirectX3D,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderVAAPI,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderNVIDIA,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderIntel,
+#elif defined(Q_OS_LINUX)
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderDirectX3D,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
+#elif defined(Q_OS_WIN)
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderVideoToolbox,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderVulkan,
+#elif defined(Q_OS_MACOS)
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderDirectX3D,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderVAAPI,
+#elif defined(Q_OS_IOS)
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderDirectX3D,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderVAAPI,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderNVIDIA,
+    GStreamer::VideoDecoderOptions::ForceVideoDecoderIntel,
+#endif
+    };
+
+    for (const auto &value : removeForceVideoDecodeList) {
+        _nameToMetaDataMap[forceVideoDecoderName]->removeEnumInfo(value);
+    }
+#endif
 }

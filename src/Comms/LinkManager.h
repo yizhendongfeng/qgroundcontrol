@@ -17,7 +17,7 @@
 
 #include "LinkConfiguration.h"
 #include "LinkInterface.h"
-#ifndef NO_SERIAL_LINK
+#ifndef QGC_NO_SERIAL_LINK
     #include "QGCSerialPortInfo.h"
 #endif
 
@@ -47,7 +47,7 @@ class LinkManager : public QObject
     Q_PROPERTY(bool mavlinkSupportForwardingEnabled READ mavlinkSupportForwardingEnabled NOTIFY mavlinkSupportForwardingEnabledChanged)
 
 public:
-    LinkManager(QObject *parent = nullptr);
+    explicit LinkManager(QObject *parent = nullptr);
     ~LinkManager();
 
     static LinkManager *instance();
@@ -75,9 +75,6 @@ public:
 
     void loadLinkConfigurationList();
     void saveLinkConfigurationList();
-
-    /// Suspend automatic confguration updates (during link maintenance for instance)
-    void suspendConfigurationUpdates(bool suspend) { _configUpdateSuspended = suspend; }
 
     /// Sets the flag to suspend the all new connections
     ///     @param reason User visible reason to suspend connections
@@ -127,6 +124,7 @@ signals:
 
 private slots:
     void _linkDisconnected();
+    void _communicationError(const QString &title, const QString &error);
 
 private:
     QmlObjectListModel *_qmlLinkConfigurations();
@@ -167,7 +165,7 @@ private:
     static constexpr int _autoconnectConnectDelayMSecs = 1000;
 #endif
 
-#ifndef NO_SERIAL_LINK
+#ifndef QGC_NO_SERIAL_LINK
 private:
     Q_PROPERTY(QStringList serialBaudRates   READ serialBaudRates   CONSTANT)
     Q_PROPERTY(QStringList serialPortStrings READ serialPortStrings NOTIFY commPortStringsChanged)
@@ -198,5 +196,5 @@ private:
     QString _nmeaDeviceName;
     uint32_t _nmeaBaud = 0;
     QSerialPort *_nmeaPort = nullptr;
-#endif // NO_SERIAL_LINK
+#endif // QGC_NO_SERIAL_LINK
 };
