@@ -417,6 +417,9 @@ Item {
             onMapClicked: (mouse) => {
                 // Take focus to close any previous editing
                 editorMap.focus = true
+                if (!mainWindow.allowViewSwitch()) {
+                    return
+                }
                 var coordinate = editorMap.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */)
                 coordinate.latitude = coordinate.latitude.toFixed(_decimalPlaces)
                 coordinate.longitude = coordinate.longitude.toFixed(_decimalPlaces)
@@ -754,7 +757,6 @@ Item {
             anchors.top:        parent.top
             z:                  QGroundControl.zOrderWidgets
             maxHeight:          parent.height - toolStrip.y
-            // title:              qsTr("Plan")
 
             readonly property int flyButtonIndex:       0
             readonly property int fileButtonIndex:      1
@@ -772,11 +774,6 @@ Item {
             ToolStripActionList {
                 id: toolStripActionList
                 model: [
-                    // ToolStripAction {
-                    //     text:           qsTr("Fly")
-                    //     iconSource:     "/qmlimages/PaperPlane.svg"
-                    //     onTriggered:    mainWindow.showFlyView()
-                    // },
                     ToolStripAction {
                         text:                   qsTr("File")
                         enabled:                !_planMasterController.syncInProgress
@@ -835,7 +832,11 @@ Item {
                     //     }
                     // },
                     ToolStripAction {
-                        text:       _planMasterController.controllerVehicle.multiRotor ? qsTr("Return") : qsTr("Land")
+                        text:       _planMasterController.controllerVehicle.multiRotor
+                                    ? qsTr("Return")
+                                    : _missionController.isInsertLandValid && _missionController.hasLandItem
+                                      ? qsTr("Alt Land")
+                                      : qsTr("Land")
                         iconSource: "/res/rtl.svg"
                         enabled:    _missionController.isInsertLandValid
                         visible:    toolStrip._isMissionLayer || toolStrip._isUtmspLayer
@@ -1256,7 +1257,7 @@ Item {
                                                       UTMSPStateStorage.currentStateIndex = 0}})
     }
 
-    //- ToolStrip DropPanel Components
+    //- ToolStrip ToolStripDropPanel Components
 
     Component {
         id: centerMapDropPanel

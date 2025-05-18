@@ -18,10 +18,17 @@ QGCPopupDialog {
     property alias  inputText:      textFieldInput.text
     property var    acceptFunction: null        // Mainly used by MainRootWindow.showMessage to specify accept function in call
     property bool   enableInput:    false
+    property var    closeFunction:  null
 
     onAccepted: {
         if (acceptFunction) {
             acceptFunction()
+        }
+    }
+
+    onClosed: {
+        if (closeFunction) {
+            closeFunction()
         }
     }
 

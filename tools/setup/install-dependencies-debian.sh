@@ -30,6 +30,7 @@ DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
     python3 \
     python3-pip \
     rsync \
+    wget2 \
     zsync
 
 # Qt Required - https://doc.qt.io/qt-6/linux-requirements.html
@@ -83,7 +84,6 @@ DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
     gstreamer1.0-gl \
     gstreamer1.0-libav \
     gstreamer1.0-rtsp \
-    gstreamer1.0-vaapi \
     gstreamer1.0-x
 
 if apt-cache show gstreamer1.0-qt6 >/dev/null 2>&1 && apt-cache show gstreamer1.0-qt6 2>/dev/null | grep -q "^Package: gstreamer1.0-qt6"; then
@@ -96,6 +96,7 @@ DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
     libcurl4-openssl-dev \
     libexiv2-dev \
     libexpat1-dev \
+    libfmt-dev \
     libinih-dev \
     libssh-dev \
     libxml2-utils \
@@ -112,7 +113,18 @@ DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
     speech-dispatcher-audio-plugins \
     speech-dispatcher-espeak \
     speech-dispatcher-espeak-ng \
-    speech-dispatcher-flite \
+    speech-dispatcher-flite
+
+# Joystick
+DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
+    libsdl2-dev
+
+# Shapelib
+DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
+    libshp-dev
+
+# DNS
+# DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install libavahi-compat-libdnssd-dev
 
 # Additional
 DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
@@ -120,7 +132,6 @@ DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
     flex \
     gobject-introspection \
     gvfs \
-    intel-media-va-driver \
     libasound2-dev \
     libass-dev \
     libdrm-dev \
@@ -150,10 +161,9 @@ DEBIAN_FRONTEND=noninteractive apt-get -y --quiet install \
     libopenjp2-7-dev \
     libopus-dev \
     liborc-0.4-dev \
+    libpipewire-0.3-dev \
     libpng-dev \
     libpulse-dev \
-    libsdl2-dev \
-    libshp-dev \
     libsoup2.4-dev \
     libssl-dev \
     libtheora-dev \
@@ -193,3 +203,22 @@ if apt-cache show libgeographic-dev >/dev/null 2>&1 && apt-cache show libgeograp
 elif apt-cache show libgeographiclib-dev >/dev/null 2>&1 && apt-cache show libgeographiclib-dev 2>/dev/null | grep -q "^Package: libgeographiclib-dev"; then
     DEBIAN_FRONTEND=noninteractive apt-get install -y --quiet libgeographiclib-dev
 fi
+
+if apt-cache show intel-media-va-driver >/dev/null 2>&1 && apt-cache show intel-media-va-driver 2>/dev/null | grep -q "^Package: intel-media-va-driver"; then
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --quiet intel-media-va-driver
+fi
+
+# Vulkan
+# Ubuntu 20.04
+# wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+# wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.283-focal.list https://packages.lunarg.com/vulkan/1.3.283/lunarg-vulkan-1.3.283-focal.list
+
+# Ubuntu 22.04
+# wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+# wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list http://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
+
+# GCC 11
+# add-apt-repository ppa:ubuntu-toolchain-r/test
+# apt-get install gcc-11 g++-11
+# update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 --slave /usr/bin/g++ g++ /usr/bin/g++-11 --slave /usr/bin/gcov gcov /usr/bin/gcov-11
+# update-alternatives --set gcc /usr/bin/gcc-11

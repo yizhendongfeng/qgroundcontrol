@@ -65,6 +65,12 @@ Item {
         topEdgeLeftInset:       toolStrip.topEdgeLeftInset
         topEdgeCenterInset:     mapScale.topEdgeCenterInset
         topEdgeRightInset:      _layoutMargin//topRightColumnLayout.topEdgeRightInset
+        // rightEdgeTopInset:      topRightPanel.rightEdgeTopInset
+        // rightEdgeCenterInset:   topRightPanel.rightEdgeCenterInset
+        // rightEdgeBottomInset:   bottomRightRowLayout.rightEdgeBottomInset
+        // topEdgeLeftInset:       toolStrip.topEdgeLeftInset
+        // topEdgeCenterInset:     mapScale.topEdgeCenterInset
+        // topEdgeRightInset:      topRightPanel.topEdgeRightInset
         bottomEdgeLeftInset:    virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeLeftInset : parentToolInsets.bottomEdgeLeftInset
         bottomEdgeCenterInset:  _layoutMargin//bottomRightRowLayout.bottomEdgeCenterInset
         bottomEdgeRightInset:   virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeRightInset : _layoutMargin//bottomRightRowLayout.bottomEdgeRightInset
@@ -78,7 +84,13 @@ Item {
     //     anchors.right:      parent.right
     //     spacing:            _layoutSpacing
     //     visible:            false
-
+    // FlyViewTopRightPanel {
+    //     id:                     topRightPanel
+    //     anchors.top:            parent.top
+    //     anchors.right:          parent.right
+    //     anchors.topMargin:      _layoutMargin
+    //     anchors.rightMargin:    _layoutMargin
+    //     maximumHeight:          parent.height - (bottomRightRowLayout.height + _margins * 5)
     //     property real topEdgeRightInset:    childrenRect.height + _layoutMargin
     //     property real rightEdgeTopInset:    width + _layoutMargin
     //     property real rightEdgeCenterInset: rightEdgeTopInset
@@ -129,6 +141,7 @@ Item {
 
         property real bottomEdgeLeftInset:     parent.height-y
         property bool autoCenterThrottle:      QGroundControl.settingsManager.appSettings.virtualJoystickAutoCenterThrottle.rawValue
+        property bool leftHandedMode:          QGroundControl.settingsManager.appSettings.virtualJoystickLeftHandedMode.rawValue
         property bool _virtualJoystickEnabled: QGroundControl.settingsManager.appSettings.virtualJoystick.rawValue
         property real bottomEdgeRightInset:    parent.height-y
         property var  _pipViewMargin:          _pipView.visible ? parentToolInsets.bottomEdgeLeftInset + ScreenTools.defaultFontPixelHeight * 2 : 
@@ -167,8 +180,12 @@ Item {
         maxHeight:              parent.height - y// - parentToolInsets.bottomEdgeLeftInset - _toolsMargin
         visible:                !QGroundControl.videoManager.fullScreen
 
-        onDisplayPreFlightChecklist: preFlightChecklistPopup.createObject(mainWindow).open()
-
+        onDisplayPreFlightChecklist: {
+            if (!preFlightChecklistLoader.active) {
+                preFlightChecklistLoader.active = true
+            }
+            preFlightChecklistLoader.item.open()
+        }
 
         property real topEdgeLeftInset:     visible ? y + height : 0
         property real leftEdgeTopInset:     visible ? x + width : 0
@@ -194,6 +211,12 @@ Item {
         visible:            !ScreenTools.isTinyScreen && QGroundControl.corePlugin.options.flyView.showMapScale && !isViewer3DOpen && mapControl.pipState.state === mapControl.pipState.fullState
 
         property real topEdgeCenterInset: visible ? y + height : 0
+    }
+
+    Loader {
+        id: preFlightChecklistLoader
+        sourceComponent: preFlightChecklistPopup
+        active: false
     }
 
     Component {

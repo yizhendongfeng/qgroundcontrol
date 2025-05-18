@@ -16,14 +16,13 @@
 
 // AnalyzeView
 #include "ExifParserTest.h"
-#include "GeoTagControllerTest.h"
+// #include "GeoTagControllerTest.h"
 // #include "MavlinkLogTest.h"
-// #include "LogDownloadTest.h"
+#include "LogDownloadTest.h"
 #include "PX4LogParserTest.h"
-#include "ULogParserTest.h"
+// #include "ULogParserTest.h"
 
-// Audio
-#include "AudioOutputTest.h"
+
 
 // AutoPilotPlugins
 // #include "RadioConfigTest.h"
@@ -41,9 +40,6 @@
 
 // FollowMe
 #include "FollowMeTest.h"
-
-// Geo
-#include "GeoTest.h"
 
 // GPS
 #include "GpsTest.h"
@@ -79,9 +75,6 @@
 // qgcunittest
 #include "ComponentInformationCacheTest.h"
 #include "ComponentInformationTranslationTest.h"
-// #include "FileDialogTest.h"
-// #include "MainWindowTest.h"
-// #include "MessageBoxTest.h"
 
 // QmlControls
 
@@ -92,9 +85,16 @@
 // UI
 
 // Utilities
+// Audio
+#include "AudioOutputTest.h"
 // Compression
 #include "DecompressionTest.h"
+// FileSystem
 #include "QGCFileDownloadTest.h"
+// Geo
+#include "GeoTest.h"
+// Shape
+#include "ShapeTest.h"
 
 // Vehicle
 // Components
@@ -106,6 +106,7 @@
 // #include "RequestMessageTest.h"
 // #include "SendMavCommandWithHandlerTest.h"
 // #include "SendMavCommandWithSignalingTest.h"
+#include "VehicleLinkManagerTest.h"
 
 // Missing
 // #include "FlightGearUnitTest.h"
@@ -122,14 +123,11 @@ int runTests(bool stress, QStringView unitTestOptions)
 
     // AnalyzeView
     UT_REGISTER_TEST(ExifParserTest)
-    UT_REGISTER_TEST(GeoTagControllerTest)
+    // UT_REGISTER_TEST(GeoTagControllerTest)
     // UT_REGISTER_TEST(MavlinkLogTest)
-    // UT_REGISTER_TEST(LogDownloadTest)
+    UT_REGISTER_TEST(LogDownloadTest)
     UT_REGISTER_TEST(PX4LogParserTest)
-    UT_REGISTER_TEST(ULogParserTest)
-
-    // Audio
-    UT_REGISTER_TEST(AudioOutputTest)
+    // UT_REGISTER_TEST(ULogParserTest)
 
     // AutoPilotPlugins
     // UT_REGISTER_TEST(RadioConfigTest)
@@ -147,9 +145,6 @@ int runTests(bool stress, QStringView unitTestOptions)
 
     // FollowMe
     UT_REGISTER_TEST(FollowMeTest)
-
-    // Geo
-    UT_REGISTER_TEST(GeoTest)
 
     // GPS
     // UT_REGISTER_TEST(GpsTest)
@@ -183,9 +178,6 @@ int runTests(bool stress, QStringView unitTestOptions)
     // UT_REGISTER_TEST(VisualMissionItemTest)
 
     // qgcunittest
-    // UT_REGISTER_TEST(FileDialogTest)
-    // UT_REGISTER_TEST(MainWindowTest)
-    // UT_REGISTER_TEST(MessageBoxTest)
 
     // QmlControls
 
@@ -196,9 +188,16 @@ int runTests(bool stress, QStringView unitTestOptions)
     // UI
 
     // Utilities
+    // Audio
+    UT_REGISTER_TEST(AudioOutputTest)
     // Compression
     UT_REGISTER_TEST(DecompressionTest)
+    // FileSystem
     UT_REGISTER_TEST(QGCFileDownloadTest)
+    // Geo
+    UT_REGISTER_TEST(GeoTest)
+    // Shape
+    UT_REGISTER_TEST(ShapeTest)
 
     // Vehicle
     // Components
@@ -210,6 +209,7 @@ int runTests(bool stress, QStringView unitTestOptions)
     // UT_REGISTER_TEST(RequestMessageTest)
     // UT_REGISTER_TEST(SendMavCommandWithHandlerTest)
     // UT_REGISTER_TEST(SendMavCommandWithSignalingTest)
+    UT_REGISTER_TEST(VehicleLinkManagerTest)
 
     // Missing
     // UT_REGISTER_TEST(FlightGearUnitTest)

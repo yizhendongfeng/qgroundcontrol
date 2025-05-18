@@ -18,6 +18,8 @@
 #include "AutoPilotPlugin.h"
 #include "MultiSignalSpy.h"
 
+#include <QtTest/QTest>
+
 /// @file
 ///     @brief QRadioComponentController Widget unit test
 ///
@@ -246,9 +248,6 @@ void RadioConfigTest::cleanup(void)
 {
     Q_ASSERT(_calWidget);
     delete _calWidget;
-    
-    // Disconnecting the link will prompt for log file save
-    setExpectedFileDialog(getSaveFileName, QStringList());
     
     UnitTest::cleanup();
 }

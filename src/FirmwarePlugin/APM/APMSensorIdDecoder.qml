@@ -55,7 +55,8 @@ QGCLabel {
         0x14: 'AK09918',
         0x15: 'AK09915',
         0x16: 'QMC5883P',
-        0x17: 'BMM350'
+        0x17: 'BMM350',
+        0x18: 'IIS2MDC'
     }
 
     property var imuTypes: {
@@ -147,9 +148,9 @@ QGCLabel {
             return ""
         }
         if (deviceName.startsWith('COMPASS')) {
-            if (busType === 3 && devtype === 1) {
+            if (busType === 'UAVCAN') {
                 decodedDevname = 'UAVCAN'
-            } else if (busType === 6 && devtype === 1) {
+            } else if (busType === 'EAHRS') {
                 decodedDevname = 'EAHRS'
             } else {
                 decodedDevname = compassTypes[devtype] || '?'

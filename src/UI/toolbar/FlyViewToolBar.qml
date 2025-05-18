@@ -35,6 +35,10 @@ Rectangle {
         toolIndicators.dropMessageIndicatorTool();
     }
 
+    function dropMainStatusIndicatorTool() {
+        mainStatusIndicator.dropMainStatusIndicator();
+    }
+
     QGCPalette { id: qgcPal }
 
     /// Bottom single pixel divider
@@ -69,6 +73,7 @@ Rectangle {
             id:                     currentButton
             Layout.preferredHeight: viewButtonRow.height
             icon.source:            "/qmlimages/Quad.svg"//flyView.visible ? "/qmlimages/PaperPlane.svg" : "/qmlimages/Plan.svg"
+            // icon.source:            "/res/QGCLogoFull.svg"
             logo:                   true
             // onClicked:              {
             //     if (flyView.visible)
@@ -79,6 +84,7 @@ Rectangle {
         }
 
         MainStatusIndicator {
+            id: mainStatusIndicator
             Layout.preferredHeight: viewButtonRow.height
         }
 
@@ -93,6 +99,7 @@ Rectangle {
     QGCFlickable {
         id:                     toolsFlickable
         anchors.leftMargin:     ScreenTools.defaultFontPixelWidth * ScreenTools.largeFontPointRatio * 1.5
+        anchors.rightMargin:    ScreenTools.defaultFontPixelWidth / 2
         anchors.left:           viewButtonRow.right
         anchors.bottomMargin:   1
         anchors.top:            parent.top
