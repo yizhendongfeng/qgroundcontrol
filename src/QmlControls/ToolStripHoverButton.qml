@@ -45,7 +45,7 @@ Button {
 
     onClicked: {
         if (mainWindow.allowViewSwitch()) {
-            dropPanel.hide()
+            dropPanel.close()   // dropPanel.hide()
             if (!toolStripAction.dropPanelComponent) {
                 toolStripAction.triggered(this)
             } else if (checked) {

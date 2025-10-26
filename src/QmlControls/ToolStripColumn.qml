@@ -85,7 +85,7 @@ Rectangle {
             Repeater {
                 id: repeater
                 ToolStripHoverButton {
-                    id:                 buttonTemplate
+                    // id:                 buttonTemplate
                     anchors.left:       parent.left
                     anchors.right:      parent.right
                     height:             width
@@ -99,7 +99,9 @@ Rectangle {
                         // We deal with exclusive check state manually since usinug autoExclusive caused all sorts of crazt problems
                         if (checked) {
                             for (var i=0; i<repeater.count; i++) {
-                                if (i != index) {
+                                console.log("repeater.count: ", repeater.count, "i:", i, "index:", index)
+                                console.log("repeater.itemAt(i) text:" << repeater.itemAt(i).text)//  << repeater.itemAt(i).checked)
+                                if (i !== index) {
                                     var button = repeater.itemAt(i)
                                     if (button.checked) {
                                         button.checked = false
@@ -117,7 +119,7 @@ Rectangle {
 
     DropPanel {
         id:         dropPanel
-        toolStrip:  _root
+        // toolStrip:  _root
     }
 
     Behavior on anchors.leftMargin {

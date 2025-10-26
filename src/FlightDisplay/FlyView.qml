@@ -820,14 +820,13 @@ Item {
             useVideoSource2: false
             HorizontalFactValueGrid {
                 id:                     valueArea
-                width:                  240
+                width:                  380
                 height:                 50
                 anchors.bottom:         parent.bottom
-                // anchors.top:              parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottomMargin:   2
-                userSettingsGroup:      telemetryBarUserSettingsGroup
-                defaultSettingsGroup:   telemetryBarDefaultSettingsGroup
+                anchors.horizontalCenter: parent.horizontalCenter
+                settingsGroup:          telemetryBarSettingsGroup
+                specificVehicleForCard: null
             }
             PhotoVideoControl {
                 anchors.verticalCenter:  parent.verticalCenter
