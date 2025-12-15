@@ -187,6 +187,7 @@ Popup {
         if (buttons & Dialog.Cancel) {
             closePolicy |= Popup.CloseOnEscape
         }
+        console.log("buttons:", buttons, "ok:", Dialog.Ok, "no:", Dialog.No, acceptButton.text, acceptButton.visible, rejectButton.text, rejectButton.visible, "Dialog.Ok | Dialog.No:", Dialog.Ok | Dialog.No)
     }
 
     function disableAcceptButton() {

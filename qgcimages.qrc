@@ -225,5 +225,7 @@
         <file alias="Plus.svg">src/FlightMap/Images/Plus.svg</file>
         <file alias="Mic.svg">src/FlightMap/Images/Mic.svg</file>
         <file alias="Speaker.svg">src/FlightMap/Images/Speaker.svg</file>
+        <file alias="Media.svg">resources/Media.svg</file>
     </qresource>
+    <qresource prefix="/"/>
 </RCC>

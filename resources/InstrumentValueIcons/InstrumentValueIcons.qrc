@@ -301,5 +301,6 @@
         <file alias="gimbal-1.svg">gimbal-1.svg</file>
         <file alias="gimbal-2.svg">gimbal-2.svg</file>
         <file alias="OpenFolder.svg">OpenFolder.svg</file>
+        <file alias="CloudServer.svg">CloudServer.svg</file>
     </qresource>
 </RCC>

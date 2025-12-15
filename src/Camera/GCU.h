@@ -5,7 +5,6 @@
 #include <QObject>
 #include <QTimer>
 #include <QTcpSocket>
-#include <Vehicle.h>
 
 #define MAXBUFFERLENGTH 128 //目前最长帧长度为84
 
@@ -31,7 +30,7 @@ enum CameraCommand {
     EULERCONTROL = 0x14,
     GAZEGEO      = 0x15,   //凝视（地理坐标引导），需要上传目标点经纬高类型均为int32_t
     GAZETARGET   = 0x16,   // 凝视（地理目标锁定）,锁定吊舱画面中心的地理坐标
-    TRACK        =0x17,    //跟踪，框选目标跟踪，需传入左上角，右下角像素点
+    TRACK        = 0x17,    //跟踪，框选目标跟踪，需传入左上角，右下角像素点
     POINTANDMOVE = 0x1a,   // 指点平移，应该是画面上点一下作为相机画面中心
     FPV          = 0x1c,   //横滚、俯仰、偏航的期望相对角度
 
@@ -69,7 +68,7 @@ enum CameraCommand {
 
 };
 
-struct MessageSend
+struct GcuMessageSend
 {
     uint16_t length;
     uint8_t  version;
@@ -112,7 +111,7 @@ struct MessageSend
     uint8_t  reserved1[9] ={}; //预留 0x00
     CameraCommand command;
 };
-
+Q_DECLARE_METATYPE(GcuMessageSend);
 struct MessageRsv {
     uint16_t  length;
     uint8_t   version;
@@ -190,6 +189,7 @@ public:
 
     Q_PROPERTY(QString cameraName READ cameraName  NOTIFY cameraNameChanged FINAL)
     Q_PROPERTY(bool visualLight READ visualLight WRITE setVisualLight NOTIFY visualLightChanged FINAL)
+    Q_PROPERTY(double roll  READ roll   NOTIFY rollChanged FINAL)
     Q_PROPERTY(double pitch READ pitch  NOTIFY pitchChanged FINAL)
     Q_PROPERTY(double yaw READ yaw NOTIFY yawChanged FINAL)
     Q_PROPERTY(double zoom READ zoom  NOTIFY zoomChanged FINAL)
@@ -197,6 +197,10 @@ public:
     Q_PROPERTY(int port READ port WRITE setPort NOTIFY portChanged FINAL)
     Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged FINAL)
     Q_PROPERTY(bool recording READ recording  NOTIFY recordingChanged FINAL)
+    Q_PROPERTY(int podMode READ podMode WRITE setPodMode NOTIFY podModeChanged FINAL)
+    Q_PROPERTY(bool fillLight READ fillLight WRITE setFillLight NOTIFY fillLightChanged FINAL)
+    Q_PROPERTY(bool nightVision READ nightVision WRITE setNightVision NOTIFY nightVisionChanged FINAL)
+
 
     Q_INVOKABLE void connectToGcu(bool connect);
     Q_INVOKABLE void startRecording(bool start);
@@ -205,15 +209,76 @@ public:
     Q_INVOKABLE void adjustPitch(double pitch);
     Q_INVOKABLE void adjustYaw(double yaw);
     Q_INVOKABLE void setDirection(CameraDirection direction, const double pitch);
+    Q_INVOKABLE void setCameraCommand(CameraCommand command);
     /**
-     * @brief setZoom
+     * @brief continuousZoom
      * @param zoom 1：放大，-1：缩小，0：停止缩放
      */
-    Q_INVOKABLE void setZoom(const double zoom);
+    Q_INVOKABLE void continuousZoom(const double zoom);
     Q_INVOKABLE void setVisualLight(const bool visualLight);
+    Q_INVOKABLE void setOsd(const bool open);
+    /**
+     * @brief setPodHeadMode 设置吊舱模式，如指向的锁定，跟随等
+     * @param mode
+     */
+    Q_INVOKABLE void setPodHeadMode(const int mode);
+
+    /**
+     * @brief rotatePod 旋转吊舱
+     * @param axis 0: 偏航， 1： 俯仰
+     * @param rate 偏航正：向右转，负：向左转。俯仰正：向下，负：向上
+     */
+    Q_INVOKABLE void rotatePod(const int axis, float rate);
+
+    /**
+     * @brief setPodAngle
+     * @param axis 0: 偏航， 1： 俯仰，2：横滚
+     * @param angle
+     */
+    Q_INVOKABLE void setPodAngle(const int axis, const float angle);
+    /**
+     * @brief setZoom 设置放大倍数
+     * @param value [-400, -10]表示1~40倍
+     */
+    Q_INVOKABLE void setZoom(const float value);
+
+    /**
+     * @brief moveToPoint指点平移,X 轴向右为正，Y 轴向下为正，左上角坐标为 [0,0],
+     * 右下角坐标为 [10000,10000]；执行过程中，控制量需置为无效。此命令执行后，
+     * 吊舱将切换为指向锁定模式
+     * @param x 为目标点水平坐标
+     * @param y 为目标点垂直坐标
+     */
+    Q_INVOKABLE void moveToPoint(const int x, const int y);
+
+    /**
+     * @brief calibratePod 吊舱校准
+     */
+    Q_INVOKABLE void calibratePod();
+    /**
+     * @brief turnOnFillLight 打开补光灯
+     * @param brightness，照明亮度[0,255]
+     */
+    Q_INVOKABLE void turnOnFillLight(int brightness);
+
+    /**
+     * @brief podCentering 吊舱回中
+     */
+    Q_INVOKABLE void podCentering();
+
+    /**
+     * @brief podTrack 跟踪选中框中物体
+     * @param start  进入或退出跟踪模式
+     * @param startX 屏幕左上角x，
+     * @param startY 屏幕左上角y
+     * @param endX   屏幕右下角x
+     * @param endY   屏幕右下角y
+     */
+    Q_INVOKABLE void podTrack(bool start, const int startX, const int startY, const int endX, const int endY);
 
     QString cameraName()  {return _cameraName;}
     bool    visualLight() {return _visualLight;}
+    double  roll()        {return _roll;}
     double  pitch()       {return _pitch;}
     double  yaw()         {return _yaw;}
     double  zoom()        {return _zoom;}
@@ -221,17 +286,22 @@ public:
     int     port()        {return _port;}
     bool    connected()   {return _connected;}
     bool    recording()   {return _recording;}
+    int     podMode()     {return (int)_podMode;}
+    bool    fillLight()   {return _fillLight;}
+    bool    nightVision()   {return _nightVision;}
     //相机设置
     void setIp(const QString ip);
     void setPort(const int port);
+    void setPodMode(const int mode);
+    void setFillLight(const bool turnOn);
+    void setNightVision(const bool nightVision);
 
     /**
      * @brief Encode 消息打包
      * @param msg    要打包的消息
-     * @param buf    打包后的缓冲区
-     * @return       打包后的长度
+     * @return       发送结果， -1:发送失败，消息长度：发送成功
      */
-    uint16_t encode(MessageSend msg, uint8_t* buf, uint8_t* commandParam, uint8_t commandLength);
+    int sendMsg(GcuMessageSend msg, uint8_t* commandParam, uint8_t commandLength);
     /**
      * @brief Decode
      * @param buf    缓存
@@ -243,11 +313,10 @@ public:
 
     uint16_t CaculateCrc16(uint8_t *ptr, uint8_t len);
 
-
-
 signals:
     void cameraNameChanged();
     void visualLightChanged();
+    void rollChanged();
     void pitchChanged();
     void yawChanged();
     void zoomChanged();
@@ -255,33 +324,60 @@ signals:
     void ipChanged();
     void portChanged();
     void recordingChanged();
+    void podModeChanged();
+    void fillLightChanged();
+    void nightVisionChanged();
+    void calibrateStateChanged(int status);
 public slots:
 
-    void    _mavlinkMessageReceived (const mavlink_message_t& message);
+    // void    _mavlinkMessageReceived (const mavlink_message_t& message);
     void    bytesReceivedFromTcp();
     void    sendEmptyCommand();
+    /**
+     * @brief receiveVehicleMessage 接收无人机导航数据
+     * @param msg
+     */
+    void    receiveVehicleMessage(const GcuMessageSend& msg);
 private:
     QTimer timerSendEmptyCommand;
     QTimer timerResendEmptyCommand;  // 如果长时间接收不到gcu的数据，重新发送空命令
     uint8_t bufferSend[MAXBUFFERLENGTH] = {};
     uint8_t bufferRsv[MAXBUFFERLENGTH]  = {};
     // uint16_t lengthInBuffer = MAXBUFFERLENGTH;// 剩余空间长度
-    uint16_t bytesCountInBuffer = 0;// 已占用缓存长度
+    uint16_t bytesCountInRsvBuffer = 0;// 已占用缓存长度
+    uint16_t bytesCountInSendBuffer = 0;          // 需要发送的命令缓存长度
+    bool _needResendLastCommand = false;
     QTcpSocket tcpSocket;
     VideoSettings * _videoSettings;
     // 相机信息
     QString _cameraName;
     bool    _visualLight = true;
+    double  _roll = 0.0;
     double  _pitch = 0.0;
     double  _yaw   = 0.0;
     double  _zoom  = 1.0;
+    int16_t _yawRateTarget = 0;
+    int16_t _pitchRateTarget = 0;
+    int16_t _yawAngleTarget = 0;
+    int16_t _pitchAngleTarget = 0;
+    int16_t _rollAngleTarget = 0;
+    uint8_t _upRight = 0;  // 0：正置上电，1：倒置上电
+    uint16_t _podStatus;   // 吊舱状态MessageRsv.status
+    bool    _fillLight = false;    // 补光灯
+    bool    _nightVision = false;  // 夜视
+
+    GcuMessageSend msgFromVehicle = {};
+
     bool    _recording = false;
     CameraCommand _lastCommandSent; // 最后一次发送的命令，用于检查应答
-
-    const Vehicle* vehicle_;
+    CameraCommand _lastCommandSentNonEmpty; // 最后一次发送的非空命令
+    CameraCommand _podMode = YAWFOLLOW; // 吊舱的控制模式，如：跟随，锁定，角度控制等
+    QTimer* timerConnectToGcu;
     QString _ip;
     int     _port;
     bool    _connected  = false;   //是否连接相机
+    bool    _autoConnect = false;
+    bool    _imuValid = false;
     const QMap<uint8_t, QString> _podCodeNames = {{0, "Z-6A"}, {2, "Z-6C"},{25, "Z-8RB"},{26,"Z-8RC"},
                                                  {31,"Z-9B_V3"},{40,"D-80AI"},{41,"D-90AI"},{44,"D-80Pro"},
                                                  {45,"D-90Pro(TA)"},{49,"Z-1Pro"},{50,"Z-1Mini"},{52,"Z-2Mini"},

@@ -82,6 +82,8 @@ public:
     QString logSavePath           ();
     QString videoSavePath         ();
     QString photoSavePath         ();
+    QString mediaSavePath         (); // 保存无人机的视频和图片
+    QString mediaCachePath        (); // 保存无人机的视频和图片的缓存文件路径
     QString crashSavePath         ();
     QString mavlinkActionsSavePath ();
 
@@ -110,6 +112,8 @@ public:
     static constexpr const char* logDirectory =             QT_TRANSLATE_NOOP("AppSettings", "Logs");
     static constexpr const char* videoDirectory =           QT_TRANSLATE_NOOP("AppSettings", "Video");
     static constexpr const char* photoDirectory =           QT_TRANSLATE_NOOP("AppSettings", "Photo");
+    static constexpr const char* mediaDirectory =           QT_TRANSLATE_NOOP("AppSettings", "Media");
+    static constexpr const char* mediaCacheDirectory =      QT_TRANSLATE_NOOP("AppSettings", "Cache");
     static constexpr const char* crashDirectory =           QT_TRANSLATE_NOOP("AppSettings", "CrashLogs");
     static constexpr const char* mavlinkActionsDirectory =  QT_TRANSLATE_NOOP("AppSettings", "MavlinkActions");
 

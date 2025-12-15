@@ -304,7 +304,13 @@ ApplicationWindow {
         }
 
         ParameterEditor {
-            id:                     parameterEdito
+            id:                     parameterEditor
+            Layout.fillWidth:       true
+            Layout.fillHeight:      true
+        }
+
+        MediaExplorer {
+            id:                     mediaExplorer
             Layout.fillWidth:       true
             Layout.fillHeight:      true
         }

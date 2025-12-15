@@ -26,7 +26,8 @@
 #endif
 #include "QtMultimediaReceiver.h"
 #include "UVCReceiver.h"
-
+#include "MediaDownload.h"
+#include "MediaFileModel.h"
 #include <QtCore/qapplicationstatic.h>
 #include <QtCore/QDir>
 #include <QtQml/QQmlEngine>
@@ -74,6 +75,8 @@ void VideoManager::registerQmlTypes()
 {
     (void) qmlRegisterUncreatableType<VideoManager>("QGroundControl.VideoManager", 1, 0, "VideoManager", "Reference only");
     (void) qmlRegisterUncreatableType<VideoReceiver>("QGroundControl", 1, 0, "VideoReceiver","Reference only");
+    qmlRegisterType<MediaDownload>("QGroundControl.FileItemModel", 1, 0, "PodFileModel");
+    qmlRegisterType<MediaFileModel>("QGroundControl.FileItemModel", 1, 0, "FileItemModel");
 #ifndef QGC_GST_STREAMING
     (void) qmlRegisterType<VideoItemStub>("org.freedesktop.gstreamer.Qt6GLVideoItem", 1, 0, "GstGLQt6VideoItem");
 #endif

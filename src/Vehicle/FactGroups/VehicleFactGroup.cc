@@ -76,6 +76,21 @@ void VehicleFactGroup::handleMessage(Vehicle *vehicle, const mavlink_message_t &
         _handleRangefinder(message);
         break;
 #endif
+    case MAVLINK_MSG_ID_SCALED_IMU:
+        mavlink_scaled_imu_t scaledImu;
+        mavlink_msg_scaled_imu_decode(&message, &scaledImu);
+        accBody.setX(scaledImu.xacc *(GRAVITY / 1000.0f));
+        accBody.setY(scaledImu.yacc *(GRAVITY / 1000.0f));
+        accBody.setZ(scaledImu.zacc *(GRAVITY / 1000.0f));
+        if (!attQuaternion.isNull()) {
+            QVector3D accNed =  attQuaternion.rotatedVector(accBody);
+            accNed += QVector3D(0, 0, GRAVITY);
+            gcuMsg.vehicleAccNorth = accNed.x() * 100;
+            gcuMsg.vehicleAccEast  = accNed.y() * 100;
+            gcuMsg.vehicleAccUp    = accNed.z() * -100;
+            // qDebug() << "MAVLINK_MSG_ID_SCALED_IMU zacc:" << scaledImu.zacc << accNed;
+        }
+        break;
     default:
         break;
     }
@@ -96,7 +111,6 @@ void VehicleFactGroup::_handleAttitudeWorker(double rollRadians, double pitchRad
     }
     // truncate to integer so widget never displays 360
     yawDegrees = trunc(yawDegrees);
-
     roll()->setRawValue(rollDegrees);
     pitch()->setRawValue(pitchDegrees);
     heading()->setRawValue(yawDegrees);
@@ -146,6 +160,7 @@ void VehicleFactGroup::_handleAttitudeQuaternion(Vehicle *vehicle, const mavlink
     mavlink_msg_attitude_quaternion_decode(&message, &attitudeQuaternion);
 
     QQuaternion quat(attitudeQuaternion.q1, attitudeQuaternion.q2, attitudeQuaternion.q3, attitudeQuaternion.q4);
+    attQuaternion = quat;
     QVector3D rates(attitudeQuaternion.rollspeed, attitudeQuaternion.pitchspeed, attitudeQuaternion.yawspeed);
     QQuaternion repr_offset(attitudeQuaternion.repr_offset_q[0], attitudeQuaternion.repr_offset_q[1], attitudeQuaternion.repr_offset_q[2], attitudeQuaternion.repr_offset_q[3]);
 
@@ -161,6 +176,10 @@ void VehicleFactGroup::_handleAttitudeQuaternion(Vehicle *vehicle, const mavlink
 
     _handleAttitudeWorker(attRoll, attPitch, attYaw);
 
+    gcuMsg.roll =  qRadiansToDegrees(attRoll) * 100;
+    gcuMsg.pitch = qRadiansToDegrees(attPitch) * 100;
+    gcuMsg.yaw = qRadiansToDegrees(attYaw) * 100;
+    emit gcuRequiredDataChanged(gcuMsg);
     rollRate()->setRawValue(qRadiansToDegrees(rates[0]));
     pitchRate()->setRawValue(qRadiansToDegrees(rates[1]));
     yawRate()->setRawValue(qRadiansToDegrees(rates[2]));
@@ -179,6 +198,11 @@ void VehicleFactGroup::_handleNavControllerOutput(const mavlink_message_t &messa
     distanceToNextWP()->setRawValue(navControllerOutput.wp_dist);
 
     _setTelemetryAvailable(true);
+}
+
+void VehicleFactGroup::_handleScaledImu(const mavlink_message_t &message)
+{
+
 }
 
 void VehicleFactGroup::_handleVfrHud(const mavlink_message_t &message)
@@ -207,7 +231,26 @@ void VehicleFactGroup::_handleRawImuTemp(const mavlink_message_t &message)
     mavlink_msg_raw_imu_decode(&message, &imuRaw);
 
     imuTemp()->setRawValue((imuRaw.temperature == 0) ? 0 : (imuRaw.temperature * 0.01));
-
+// typedef struct __mavlink_raw_imu_t {
+//  uint64_t time_usec; /*< [us] Timestamp (UNIX Epoch time or time since system boot). The receiving end can infer timestamp format (since 1.1.1970 or since system boot) by checking for the magnitude of the number.*/
+//  int16_t xacc; /*<  X acceleration (raw)*/
+//  int16_t yacc; /*<  Y acceleration (raw)*/
+//  int16_t zacc; /*<  Z acceleration (raw)*/
+//  int16_t xgyro; /*<  Angular speed around X axis (raw)*/
+//  int16_t ygyro; /*<  Angular speed around Y axis (raw)*/
+//  int16_t zgyro; /*<  Angular speed around Z axis (raw)*/
+//  int16_t xmag; /*<  X Magnetic field (raw)*/
+//  int16_t ymag; /*<  Y Magnetic field (raw)*/
+//  int16_t zmag; /*<  Z Magnetic field (raw)*/
+//  uint8_t id; /*<  Id. Ids are numbered from 0 and map to IMUs numbered from 1 (e.g. IMU1 will have a message with id=0)*/
+//  int16_t temperature; /*< [cdegC] Temperature, 0: IMU does not provide temperature values. If the IMU is at 0C it must send 1 (0.01C).*/
+// }) mavlink_raw_imu_t;
+    if (!attQuaternion.isNull()) {
+        QVector3D nedAcc  = attQuaternion.rotatedVector(QVector3D(imuRaw.xacc, imuRaw.yacc, imuRaw.zacc));
+        gcuMsg.vehicleAccNorth = nedAcc.x();
+        gcuMsg.vehicleAccEast  = nedAcc.y();
+        gcuMsg.vehicleAccUp    = -nedAcc.z();
+    }
     _setTelemetryAvailable(true);
 }
 

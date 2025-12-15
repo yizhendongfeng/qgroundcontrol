@@ -41,7 +41,7 @@ class VideoManager : public QObject
     Q_PROPERTY(bool     hasVideo                READ hasVideo                                   NOTIFY hasVideoChanged)
     Q_PROPERTY(bool     isStreamSource          READ isStreamSource                             NOTIFY isStreamSourceChanged)
     Q_PROPERTY(bool     isUvc                   READ isUvc                                      NOTIFY isUvcChanged)
-    Q_PROPERTY(bool     isUvc2                   READ isUvc2                                      NOTIFY isUvc2Changed)
+    // Q_PROPERTY(bool     isUvc2                   READ isUvc2                                      NOTIFY isUvc2Changed)
     Q_PROPERTY(bool     recording               READ recording                                  NOTIFY recordingChanged)
     Q_PROPERTY(bool     streaming               READ streaming                                  NOTIFY streamingChanged)
     Q_PROPERTY(double   aspectRatio             READ aspectRatio                                NOTIFY aspectRatioChanged)
@@ -78,7 +78,7 @@ public:
     bool hasVideo2() const;
     bool isStreamSource() const;
     bool isUvc() const;
-    bool isUvc2() const;
+    // bool isUvc2() const;
     bool recording() const { return _recording; }
     bool streaming() const { return _streaming; }
     double aspectRatio() const;

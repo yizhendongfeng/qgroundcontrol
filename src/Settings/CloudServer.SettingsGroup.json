@@ -1,0 +1,129 @@
+{
+    "version":      1,
+    "fileType":  "FactMetaData",
+    "QGC.MetaData.Facts":
+[
+{
+    "name":             "mqttHost",
+    "shortDesc": "Mqtt Host name",
+    "longDesc":  "Host name to mqtt server. i.e: localhost:1883",
+    "type":             "string",
+    "default":     "localhost:1883",
+    "qgcRebootRequired":    false
+},
+{
+    "name":             "mqttUserName",
+    "shortDesc": "Mqtt user name",
+    "longDesc":  "Mqtt user name",
+    "type":             "string",
+    "default":     "pilot",
+    "qgcRebootRequired":    false
+},
+{
+    "name":             "mqttUserPassword",
+    "shortDesc": "Mqtt user password",
+    "longDesc":  "Mqtt user password",
+    "type":             "string",
+    "default":     "pilot123",
+    "qgcRebootRequired":    false
+},
+{
+    "name":             "serverToken",
+    "shortDesc": "Access token to server",
+    "longDesc":  "Your personal access token for server",
+    "type":             "string",
+    "default":     ""
+},
+{
+    "name":             "appId",
+    "shortDesc": "Cloud App id",
+    "longDesc":  "App created in dji. Used in server",
+    "type":             "string",
+    "default":     "170197"
+},
+{
+    "name":             "appKey",
+    "shortDesc": "Cloud Api key",
+    "longDesc":  "App created in dji. Used in server",
+    "type":             "string",
+    "default":     "b57e1cf4280d33873964d4c066c216b"
+},
+{
+    "name":             "appLicense",
+    "shortDesc": "Cloud Api license",
+    "longDesc":  "App created in dji. Used in server",
+    "type":             "string",
+    "default":     "iCRjpkb4NBmDzdJYGP81MapZxSOlBePG9i63f0VNfkW8J8HY2kznzgo9FAHypSUvonyAKUavs1tAlHbFGJ1sO8BxkcXwj6k6cvioS1wgewMCUhCKjfL8HXtit4kWPJ2r4v2eUu4FizY4M844m9IzdhOmAiyMyhGXjwhbXOUmvk0="
+},
+{
+    "name":             "serverUrl",
+    "shortDesc": "server url, must end with '/'",
+    "longDesc":  "",
+    "type":             "string",
+    "default":     "http://192.168.31.208:8080/pilot-login"
+},
+{
+    "name":             "websocketUrl",
+    "shortDesc": "webSocket access address",
+    "longDesc":  "",
+    "type":             "string",
+    "default":     "ws://192.168.31.208:6789/api/v1/ws"
+},
+{
+    "name":             "rtmURL",
+    "shortDesc": "streaming server.",
+    "longDesc":  "",
+    "type":             "string",
+    "default":     "ws://192.168.31.208:6789/api/v1/ws"
+},
+{
+    "name":             "userName",
+    "shortDesc": "Login user name.",
+    "longDesc":  "",
+    "type":             "string",
+    "default":     "adminPC"
+},
+{
+    "name":             "userPassword",
+    "shortDesc": "Login user password.",
+    "longDesc":  "",
+    "type":             "string",
+    "default":     "adminPC"
+},
+{
+    "name":             "userId",
+    "shortDesc": "userId",
+    "longDesc":  "userId",
+    "type":             "string",
+    "default":     "be7c6c3d-afe9-4be4-b9eb-c55066c0914e"
+},
+{
+    "name":             "gcsSn",
+    "shortDesc": "remote controller sn code",
+    "longDesc":  "",
+    "type":             "string",
+    "default":     "dgcs001"
+},
+{
+    "name":             "droneSn",
+    "shortDesc": "drone sn code",
+    "longDesc":  "",
+    "type":             "string",
+    "default":     "drone001"
+},
+{
+    "name":             "workSpaceId",
+    "shortDesc": "workSpaceId",
+    "longDesc":  "workSpaceId",
+    "type":             "string",
+    "default":     "e3dea0f5-37f2-4d79-ae58-490af3228069"
+},
+{
+    "name":             "workSpaceDesc",
+    "shortDesc": "workSpaceDesc",
+    "longDesc":  "workSpaceDesc",
+    "type":             "string",
+    "default":     "高速公路巡检"
+}
+]
+}

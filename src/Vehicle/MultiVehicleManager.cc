@@ -8,16 +8,20 @@
  ****************************************************************************/
 
 #include "MultiVehicleManager.h"
+#include "GPSManager.h"
+#include "GPSRtk.h"
 #include "MAVLinkProtocol.h"
 #include "QGCApplication.h"
 #include "ParameterManager.h"
 #include "SettingsManager.h"
 #include "MavlinkSettings.h"
 #include "FirmwareUpgradeSettings.h"
+#include "CloudServerSettings.h"
 #include "QGCCorePlugin.h"
 #include "QGCOptions.h"
 #include "LinkManager.h"
 #include "Vehicle.h"
+#include "VehicleBatteryFactGroup.h"
 #include "VehicleLinkManager.h"
 #include "Autotune.h"
 #include "LinkInterface.h"
@@ -25,6 +29,8 @@
 #include "VehicleObjectAvoidance.h"
 #include "TrajectoryPoints.h"
 #include "QmlObjectListModel.h"
+#include "VideoManager.h"
+
 #ifdef Q_OS_IOS
 #include "MobileScreenMgr.h"
 #elif defined(Q_OS_ANDROID)
@@ -35,6 +41,9 @@
 #include <QtCore/qapplicationstatic.h>
 #include <QtCore/QTimer>
 #include <QtQml/QQmlEngine>
+#include <QtMqtt/QMqttClient>
+#include <QUuid>
+#include <QDebug>
 
 QGC_LOGGING_CATEGORY(MultiVehicleManagerLog, "qgc.vehicle.multivehiclemanager")
 
@@ -45,6 +54,8 @@ MultiVehicleManager::MultiVehicleManager(QObject *parent)
     , _gcsHeartbeatTimer(new QTimer(this))
     , _vehicles(new QmlObjectListModel(this))
     , _selectedVehicles(new QmlObjectListModel(this))
+    , _mqttClient(new QMqttClient(this))
+    , _timerSendOsd(new QTimer(this))
 {
     // qCDebug(MultiVehicleManagerLog) << Q_FUNC_INFO << this;
 }
@@ -86,7 +97,68 @@ void MultiVehicleManager::init()
     (void) connect(_gcsHeartbeatTimer, &QTimer::timeout, this, &MultiVehicleManager::_sendGCSHeartbeat);
     _gcsHeartbeatTimer->start();
 
+    connect(_mqttClient, &QMqttClient::stateChanged, this, [&](QMqttClient::ClientState state){
+        _mqttConnected = state == QMqttClient::Connected;
+        qDebug() << "_mqttClient state:" << state;
+        switch (state) {
+            case QMqttClient::Connected:
+                // 发送更新拓扑信息：地面站→无人机
+                updateDevicesInCloudServer();
+
+            case QMqttClient::Connecting:
+                break;
+            case QMqttClient::Disconnected:
+                // connectToMqttHost(); // 重新继续连接
+                break;
+            default:
+                break;
+        }
+        emit mqttConnectedChanged(_mqttConnected);
+    });
+    connect(_mqttClient, &QMqttClient::messageReceived, this, &MultiVehicleManager::_receiveMqttFromServer);
+
+    _timerSendOsd->setInterval(500);
+    connect(_timerSendOsd, &QTimer::timeout, this, &MultiVehicleManager::_sendOsdToServer);
     _initialized = true;
+}
+
+void MultiVehicleManager::updateDevicesInCloudServer()
+{
+    if (!_mqttConnected) {
+        _timerSendOsd->stop();
+        return;
+    }
+    QJsonObject jsonDevices;
+    jsonDevices["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    jsonDevices["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    jsonDevices["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+    jsonDevices["method"] = "update_topo";
+    // jsonDevices["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
+    QJsonObject jsonData;
+    jsonData["domain"] = 2;
+    jsonData["type"] = 144;
+    jsonData["sub_type"] = 0;
+    jsonData["device_secret"] = "device_secret";
+    jsonData["nonce"] = "nonce";
+    jsonData["version"] = 1;
+    QJsonArray jsonArraySubDevices;
+    QJsonObject jsonObjSubDevice;
+    jsonObjSubDevice["sn"] = SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString();
+    jsonObjSubDevice["domain"] = 0;
+    jsonObjSubDevice["type"] = 77;
+    jsonObjSubDevice["sub_type"] = 0;
+    jsonObjSubDevice["index"] = "A";
+    jsonObjSubDevice["device_secret"] = "secret";
+    jsonData["nonce"] = "nonce";
+    jsonData["version"] = 1;
+    jsonArraySubDevices.append(jsonObjSubDevice);
+    jsonData["sub_devices"] = jsonArraySubDevices;
+    jsonDevices["data"] = jsonData;
+    QJsonDocument jsonDoc{jsonDevices};
+    QString topic = "sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status";
+    _mqttClient->subscribe("sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status_reply");
+    qint32 result = _mqttClient->publish(QMqttTopicName(topic), jsonDoc.toJson(QJsonDocument::Compact));
+    // qDebug() << "updateDevicesInCloudServer() topic:" << topic << ", json:" << jsonDoc.toJson(QJsonDocument::Compact);
 }
 
 void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType)
@@ -193,6 +265,145 @@ void MultiVehicleManager::_requestProtocolVersion(unsigned version) const
     }
 }
 
+void MultiVehicleManager::_sendOsdToServer()
+{
+    if(!_mqttConnected)
+        return;
+    // 发送地面站状态信息
+    QJsonObject jsonGcs;
+    jsonGcs["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    jsonGcs["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    jsonGcs["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+    jsonGcs["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
+    QJsonObject jsonObjGcsData;
+    jsonObjGcsData["capacity_percent"] = 100;
+
+    // 发送无人机状态信息
+    qDebug() << "vehicles->count:" << _vehicles->count();
+    for(int i = 0; i < _vehicles->count(); i++) {
+        QObject* obj = _vehicles->get(i);
+        if (obj) {
+            Vehicle* vehicle = qobject_cast<Vehicle*>(obj);
+            QJsonObject jsonDrone;
+            jsonDrone["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+            jsonDrone["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+            jsonDrone["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+            jsonDrone["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
+            QJsonObject jsonObjDroneData;
+            if (!vehicle->flying()) {
+                // {"0":"待机","1":"起飞准备","2":"起飞准备完毕","3":"手动飞行","4":"自动起飞","5":"航线飞行","6":"全景拍照","7":"智能跟随","8":"ADS-B 躲避","9":"自动返航","10":"自动降落","11":"强制降落","12":"三桨叶降落","13":"升级中","14":"未连接","15":"APAS","16":"虚拟摇杆状态","17":"指令飞行","18":"空中 RTK 收敛模式"}
+                jsonObjDroneData["mode_code"] = 0;
+
+            } else {
+                if (vehicle->flightMode() == "Ready") {
+                    jsonObjDroneData["mode_code"] = 2;
+                } else if (vehicle->flightMode() == "Takeoff") {
+                    jsonObjDroneData["mode_code"] = 3;
+                } else if (vehicle->flightMode() == "Position") {
+                    jsonObjDroneData["mode_code"] = 4;
+                } else if (vehicle->flightMode() == "Mission") {
+                    jsonObjDroneData["mode_code"] = 5;
+                } else if (vehicle->flightMode() == "Return") {
+                    jsonObjDroneData["mode_code"] = 9;
+                } else if (vehicle->flightMode() == "Land") {
+                    jsonObjDroneData["mode_code"] = 10;
+                } else {
+                    jsonObjDroneData["mode_code"] = 0;
+                }
+            }
+            QJsonObject jsonPositionState;
+            switch (vehicle->gpsFactGroup()->getFact("lock")->enumIndex()) {
+                //"None,None,2D Lock,3D Lock,3D DGPS Lock,3D RTK GPS Lock (float),3D RTK GPS Lock (fixed),Static (fixed)",
+                case 0:
+                case 1:
+                    jsonPositionState["is_fixed"] = 0;
+                    break;
+                case 2:
+                    jsonPositionState["is_fixed"] = 1;
+                    break;
+                case 3:
+                case 4:
+                case 5:
+                    jsonPositionState["is_fixed"] = 2;
+                    break;
+            }
+            jsonPositionState["gps_number"] = vehicle->gpsFactGroup()->getFact("count")->rawValue().toInt();
+            GPSRtk * gpsRtk = GPSManager::instance()->gpsRtk();
+            jsonPositionState["rtk_number"] = gpsRtk->connected() ? gpsRtk->gpsRtkFactGroup()->getFact("numSatellites")->rawValue().toInt() : 0;
+            jsonObjDroneData["position_state"] = jsonPositionState;
+            QJsonObject jsonObjBattery;
+            VehicleBatteryFactGroup *batteryFactGroup;
+            if (vehicle->batteries()->count() > 0) { // 获取第一个电池组
+                batteryFactGroup = qobject_cast<VehicleBatteryFactGroup *>(vehicle->batteries()->get(0));
+                jsonObjBattery["capacity_percent"] = batteryFactGroup->percentRemaining()->rawValue().toDouble();
+                jsonObjBattery["remain_flight_time"] = batteryFactGroup->timeRemaining()->rawValue().toDouble();
+            }
+            jsonObjDroneData["battery"] = jsonObjBattery;
+            jsonObjDroneData["home_distance"] = vehicle->distanceToHome()->rawValue().toDouble();
+            jsonObjDroneData["home_latitude"] = vehicle->homePosition().latitude();
+            jsonObjDroneData["home_longitude"] = vehicle->homePosition().longitude();
+            jsonObjDroneData["attitude_head"] = vehicle->heading()->rawValue().toInt();
+            jsonObjDroneData["attitude_roll"] = vehicle->roll()->rawValue().toDouble();
+            jsonObjDroneData["attitude_pitch"] = vehicle->pitch()->rawValue().toDouble();
+            jsonObjDroneData["elevation"] = vehicle->altitudeRelative()->rawValue().toDouble();
+            jsonObjDroneData["height"] = vehicle->altitudeAMSL()->rawValue().toDouble();
+            jsonObjDroneData["latitude"] = vehicle->latitude();
+            jsonObjDroneData["longitude"] = vehicle->longitude();
+            jsonObjDroneData["vertical_speed"] = vehicle->climbRate()->rawValue().toDouble();
+            jsonObjDroneData["horizontal_speed"] = vehicle->groundSpeed()->rawValue().toDouble();
+            jsonObjDroneData["firmware_version"] = QString::number(vehicle->firmwareMajorVersion()) + "." +
+                QString::number(vehicle->firmwareMinorVersion()) + "." +
+                QString::number(vehicle->firmwarePatchVersion()) + ".";
+            jsonObjDroneData["wind_direction"] = vehicle->windFactGroup()->getFact("direction")->rawValue().toDouble();
+            jsonObjDroneData["wind_speed"] = vehicle->windFactGroup()->getFact("speed")->rawValue().toDouble();
+            jsonObjGcsData["latitude"] = vehicle->homePosition().latitude();
+            jsonObjGcsData["longitude"] = vehicle->homePosition().longitude();
+
+            jsonDrone["data"] = jsonObjDroneData;
+            QJsonDocument jsonDocDrone{jsonDrone};
+            QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString() + "/osd";
+            int result = _mqttClient->publish(QMqttTopicName(topic),
+                // R"(
+                //     {
+                //         "bid": "df43a2cf-cc8c-4634-a958-ee808c260f23",
+                //         "data": {
+                //             "battery": {
+                //                 "capacity_percent": 1
+                //             },
+                //             "mode_code": 0,
+                //             "position_state": {
+                //                 "gps_number": 8,
+                //                 "is_fixed": 2
+                //             }
+                //         },
+                //         "gateway": "dgcs001",
+                //         "tid": "b5382804-e04f-4c7c-8517-62b381301080",
+                //         "timestamp": 1762187092880
+                //     }
+                // )"); //
+                jsonDocDrone.toJson(QJsonDocument::Compact));
+            qDebug() << "drone publish result: " << result << "topic:" << topic << jsonDocDrone.toJson();
+        }
+    }
+
+    jsonGcs["data"] = jsonObjGcsData;
+    QJsonDocument jsonDocGcs{jsonGcs};
+    QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/osd";
+    _mqttClient->publish(QMqttTopicName(topic), jsonDocGcs.toJson());
+    // qDebug() << "dgcs: " << topic << jsonDocGcs.toJson();
+}
+
+void MultiVehicleManager::_receiveMqttFromServer(const QByteArray &message, const QMqttTopicName &topic)
+{
+    QJsonDocument jsonDocMsg = QJsonDocument::fromJson(message);
+    qDebug() << "_receiveMqttFromServer: " << message << "topic:" << topic;
+    if (topic == "sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status_reply") {
+        // 收到拓扑更新成功信息
+        _timerSendOsd->start();
+    }
+
+}
+
 void MultiVehicleManager::_deleteVehiclePhase1(Vehicle *vehicle)
 {
     qCDebug(MultiVehicleManagerLog) << Q_FUNC_INFO << vehicle;
@@ -276,6 +487,7 @@ void MultiVehicleManager::setActiveVehicle(Vehicle *vehicle)
             // any existing ui from the currently active vehicle.
             _setActiveVehicleAvailable(false);
             _setParameterReadyVehicleAvailable(false);
+            disconnect(_activeVehicle, &Vehicle::gcuRequiredDataChanged, VideoManager::instance()->gcu(), &GCU::receiveVehicleMessage);
         }
 
         QTimer::singleShot(20, this, [this, vehicle]() {
@@ -372,6 +584,48 @@ void MultiVehicleManager::deselectAllVehicles()
     _selectedVehicles->clear();
 }
 
+void MultiVehicleManager::connectToMqttHost()
+{
+    const QString hostNamePortTemp = SettingsManager::instance()->cloudServerSettings()->mqttHost()->rawValue().toString();
+    const QString mqttUserNameTemp = SettingsManager::instance()->cloudServerSettings()->mqttUserName()->rawValueString();
+    const QString mqttUserPassowrdTemp = SettingsManager::instance()->cloudServerSettings()->mqttUserPassword()->rawValueString();
+    if (_mqttClient) {
+        if (!hostNamePortTemp.contains(_mqttClient->hostname() + ":" + QString::number(_mqttClient->port()))
+            || mqttUserNameTemp != _mqttClient->username()
+            || mqttUserPassowrdTemp != _mqttClient->password()
+            ) {
+            if (_mqttConnected) {
+                // _mqttClient->hostname();
+                // _mqttClient->port();
+                // _mqttClient->username();
+                // _mqttClient->password();
+                _mqttClient->disconnectFromHost();
+                _timerSendOsd->stop();
+            } else {
+                int prefixEndIndex = hostNamePortTemp.indexOf("://") + 3; // "://" 长度为 3，加 3 得到前缀结束索引
+                if (prefixEndIndex > 2) { // 确保找到 "://"
+                    QString result = hostNamePortTemp.mid(prefixEndIndex);
+                    qDebug() << "hostNamePortTemp.mid(prefixEndIndex):" << result; // 输出："192.168.0.1:5000"
+
+                    QStringList strList = result.split(':');
+                    if (strList.count() < 2)
+                        return;
+                    _mqttClient->setUsername(mqttUserNameTemp);
+                    _mqttClient->setPassword(mqttUserPassowrdTemp);
+                    _mqttClient->setHostname(strList[0]);
+                    _mqttClient->setPort(strList[1].toInt());
+                    qDebug() <<"hostNamePort:" <<  strList << _mqttClient->hostname() << _mqttClient->port();
+                    _mqttClient->connectToHost();
+                }
+            }
+        } else {
+            qDebug() << "MultiVehicleManager::connectToMqttHost(): same host already connected!";
+        }
+
+
+    }
+}
+
 bool MultiVehicleManager::_vehicleSelected(int vehicleId)
 {
     for (int i = 0; i < _selectedVehicles->count(); i++) {
@@ -397,9 +651,14 @@ Vehicle *MultiVehicleManager::getVehicleById(int vehicleId) const
 
 void MultiVehicleManager::_setActiveVehicle(Vehicle *vehicle)
 {
+    // 连接新无人机的惯导数据到吊舱
+    if (_activeVehicle) {
+        // disconnect(_activeVehicle, )
+    }
     if (vehicle != _activeVehicle) {
         _activeVehicle = vehicle;
         emit activeVehicleChanged(vehicle);
+        connect(vehicle, &Vehicle::gcuRequiredDataChanged, VideoManager::instance()->gcu(), &GCU::receiveVehicleMessage);
     }
 }
 

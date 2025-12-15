@@ -9,7 +9,9 @@
 
 #pragma once
 
+#include <qquaternion.h>
 #include "FactGroup.h"
+#include "GCU.h"
 
 class VehicleFactGroup : public FactGroup
 {
@@ -76,7 +78,8 @@ public:
     Fact *imuTemp() { return &_imuTempFact; }
 
     void handleMessage(Vehicle *vehicle, const mavlink_message_t &message) override;
-
+signals:
+    void gcuRequiredDataChanged         (const GcuMessageSend& msg);
 protected:
     void _handleAttitude(Vehicle *vehicle, const mavlink_message_t &message);
     void _handleAttitudeQuaternion(Vehicle *vehicle, const mavlink_message_t &message);
@@ -84,6 +87,7 @@ protected:
     void _handleVfrHud(const mavlink_message_t &message);
     void _handleRawImuTemp(const mavlink_message_t &message);
     void _handleNavControllerOutput(const mavlink_message_t &message);
+    void _handleScaledImu(const mavlink_message_t &message);
 #ifndef QGC_NO_ARDUPILOT_DIALECT
     void _handleRangefinder(const mavlink_message_t &message);
 #endif
@@ -119,10 +123,13 @@ protected:
     Fact _imuTempFact = Fact(0, QStringLiteral("imuTemp"), FactMetaData::valueTypeInt16);
 
     float _altitudeTuningOffset = qQNaN();
+    GcuMessageSend gcuMsg;
+    QQuaternion attQuaternion;
+    const float GRAVITY = 9.80665f;  // 标准重力加速度
+    QVector3D accBody;
 
 protected:
     bool _altitudeMessageAvailable = false;
-
 private:
     void _handleAttitudeWorker(double rollRadians, double pitchRadians, double yawRadians);
 

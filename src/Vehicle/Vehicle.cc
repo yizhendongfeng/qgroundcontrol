@@ -749,6 +749,7 @@ void Vehicle::_handleGpsRawInt(mavlink_message_t& message)
             }
         }
     }
+    gcuMsg.satelliteNum = gpsRawInt.satellites_visible;
 }
 
 // TODO: VehicleFactGroup
@@ -774,6 +775,15 @@ void Vehicle::_handleGlobalPositionInt(mavlink_message_t& message)
         _coordinate = newPosition;
         emit coordinateChanged(_coordinate);
     }
+
+    gcuMsg.vehicleVelNorth = globalPositionInt.vx;
+    gcuMsg.vehicleVelEast  = globalPositionInt.vy;
+    gcuMsg.vehicleVelUp    = -globalPositionInt.vz;
+    gcuMsg.vehicleLon      = globalPositionInt.lon;
+    gcuMsg.vehicleLat      = globalPositionInt.lat;
+    gcuMsg.vehicleAlt      = globalPositionInt.alt;
+    gcuMsg.relativeAlt     = globalPositionInt.relative_alt;
+
 }
 
 // TODO: VehicleFactGroup

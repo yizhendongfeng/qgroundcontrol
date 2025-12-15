@@ -15,13 +15,17 @@ import QtQuick.Layouts
 import QGroundControl
 import QGroundControl.Palette
 import QGroundControl.Controls
+import QGroundControl.FactControls
 import QGroundControl.ScreenTools
-
+import QtWebEngine 1.15
+import QtWebChannel 1.15
+// import QtWebEngine.Core 1.15  // 子模块（包含 WebEnginePage，关键！）
 Rectangle {
     id:     settingsView
     color:  qgcPal.window
     z:      QGroundControl.zOrderTopMost
     anchors.fill: parent
+    property var  _cloudServerSettings:         QGroundControl.settingsManager.cloudServerSettings
     readonly property real _defaultTextHeight:  ScreenTools.defaultFontPixelHeight
     readonly property real _defaultTextWidth:   ScreenTools.defaultFontPixelWidth
     readonly property real _horizontalMargin:   _defaultTextWidth / 2
@@ -30,258 +34,426 @@ Rectangle {
     readonly property real _largeFontSize:      ScreenTools.defaultFontPointSize * 2
     readonly property real _smallFontSize:      ScreenTools.defaultFontPointSize * 1.2
     readonly property real _buttonHeight:       ScreenTools.isTinyScreen ? ScreenTools.defaultFontPixelHeight * 3 : ScreenTools.defaultFontPixelHeight * 2
+    readonly property real _defaultQGCIconButtonWidth: ScreenTools.implicitIconButtonHeight * 1.2
+    property string customStoragePath: StandardPaths.writableLocation(StandardPaths.AppDataLocation) + "/webengine_data"
+    Component.onCompleted: {
+                            _cloudServerSettings.WebChannel.id = "qmlReceiver"
+                            console.log("QML: WebChannel id：", _cloudServerSettings.WebChannel.id);
+    }
     StackLayout {
         id:           mainLayout
         anchors.fill: parent
         currentIndex: 0
         /******************** 用户登录 ********************/
-        Rectangle {
-            color: "transparent"
-            border.width:  1
-            border.color:  qgcPal.groupBorder
-            implicitWidth:         400
-            implicitHeight:        400
-            radius:                30
-            anchors.centerIn:  parent
-            Layout.fillHeight: false
-            Layout.fillWidth:  false
+        Item {
+            Layout.fillWidth:  true
+            Layout.fillHeight: true
+            Layout.topMargin: 20
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 20
-                spacing: 20
-                QGCLabel {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: 20
-                    text:     qsTr("用户登录")
-                    font.pointSize: ScreenTools.defaultFontPointSize * 2
-                    font.bold:      true
-                }
-                Rectangle {
-                    Layout.fillWidth: true
-                    height:           1
-                    color:            qgcPal.text
-                }
                 RowLayout {
-                    spacing: 20
-                    Layout.fillWidth: true
-                    QGCLabel {
-                        text: qsTr("账号:")
-                        font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                        Layout.fillWidth: false
+                    Layout.alignment: Qt.AlignRight
+                    Layout.preferredHeight: 50
+                    spacing: 5
+                    QGCIconButton {
+                        iconSource: "/InstrumentValueIcons/arrow-simple-left.svg"
+                        highlighted: hovered
+                        Layout.preferredWidth: _defaultQGCIconButtonWidth
+                        Layout.preferredHeight: Layout.preferredWidth
+                        enabled:  webEngine.canGoBack
+                        hoverEnabled: enabled
+                        onClicked: {
+                            console.log("webpage go back")
+                            webEngine.goBack()
+                        }
                     }
-                    QGCTextField {
-                        width: 300
-                        placeholderText : qsTr("手机号")
+                    QGCIconButton {
+                        iconSource: "/InstrumentValueIcons/arrow-simple-right.svg"
+                        highlighted: hovered
+                        Layout.preferredWidth: _defaultQGCIconButtonWidth
+                        Layout.preferredHeight: Layout.preferredWidth
+                        enabled: webEngine.canGoForward
+                        hoverEnabled: enabled
+                        onClicked: {
+                            console.log("webpage go forward")
+                            webEngine.goForward()
+                        }
+                    }
+                    Item {// 占位
                         Layout.fillWidth: true
-                        text:             "15138986689"
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "green"
+                        }
                     }
-                }
-                RowLayout {
-                    spacing: 20
-                    Layout.fillWidth: true
+
                     QGCLabel {
-                        text: qsTr("密码:")
-                        font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+                        text:               "URL: "
                     }
-                    QGCTextField {
-                        width: 300
-                        placeholderText : qsTr("6位以上")
-                        Layout.fillWidth: true
-                        echoMode: TextInput.Password
-                        text:     "123456789"
+                    FactTextField {
+                        Layout.alignment:           Qt.AlignCenter
+                        Layout.preferredWidth:      ScreenTools.defaultFontPixelWidth * 30
+                        fact:                       _cloudServerSettings.serverUrl
+
+                    }
+                    QGCIconButton {
+                        iconSource: "/InstrumentValueIcons/refresh.svg"
+                        highlighted: hovered
+                        Layout.preferredWidth: _defaultQGCIconButtonWidth
+                        Layout.preferredHeight: Layout.preferredWidth
+                        onClicked: {
+                            console.log("refresh web page")
+                            webEngine.url = _cloudServerSettings.serverUrl.value
+                        }
+                    }
+                    QGCIconButton {
+                        iconSource: "/InstrumentValueIcons/close.svg"
+                        Layout.preferredWidth: _defaultQGCIconButtonWidth
+                        Layout.preferredHeight: Layout.preferredWidth
+                        Layout.rightMargin: 5
+                        highlighted:  hovered
+                        onClicked:   mainLayout.currentIndex = 1
                     }
                 }
 
-                RowLayout {
-                    spacing: 20
-                    height: 40
-                    Layout.fillWidth: true
-                    QGCLabel {
-                        text: qsTr("验证码:")
-                        font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+                WebEngineView {
+                    id: webEngine
+                    Layout.fillHeight: true
+                    Layout.fillWidth:  true
+                    url:               _cloudServerSettings.serverUrl.value
+                    webChannel:        webChannel
+                    profile:            WebEngineProfile {
+                        storageName: "PrivateProfile"
+                        persistentStoragePath: Qt.application.name + "/webengine_data"
+                        persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
                     }
-                    QGCTextField {
-                        id:                     vrCodeTextEdit
-                        width: 300
-                        placeholderText : qsTr("请输入手机验证码")
-                        Layout.fillWidth: true
+                    // 1. 配置安全策略（解决 Agora 安全限制的关键）
+                    settings {
+                        // 禁用 web 安全（放行同源策略、CORS，Agora SDK 核心需求）
+                        // disableWebSecurity: true
+                        // 允许加载不安全内容（http 资源在非 https 环境下运行）
+                        allowRunningInsecureContent: true
+                        // 允许本地文件（file:// 协议）访问远程网络资源（Agora SDK 需联网）
+                        localContentCanAccessRemoteUrls: true
+                        // 允许本地文件访问其他本地文件（可选，若 Vue 需加载本地资源）
+                        localContentCanAccessFileUrls: true
+                        // 启用 JavaScript（Vue 应用必需）
+                        javascriptEnabled: true
                     }
-                    Rectangle {
-                        width:     80
-                        height:    vrCodeTextEdit.height
-                        color:     qgcPal.toolbarBackground
-                        QGCLabel {
-                            id:            vrCode
-                            anchors.centerIn:   parent
-                            text:    Math.floor(Math.random() * 10000)
-                            font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                vrCode.text = Math.floor(Math.random() * 10000)
+
+                }
+
+
+
+                // 1. 定义接收前端数据的对象（核心：暴露给前端的接口）
+                QtObject {
+                    id: loginReceiver
+                    WebChannel.id: "qmlReceiver"
+                    objectName: "qmlReceiver"
+                    // 前端将调用此方法传递JSON字符串
+                    function setLoginResult(jsonStr) {
+                        console.log("QML接收登录结果：", jsonStr);
+                        try {
+                            // 解析JSON字符串为对象
+                            const result = JSON.parse(jsonStr);
+                            // 提取所需字段（字段名与Vue返回一致，大小写敏感）
+                            const accessToken = result.access_token || "";
+                            const workspaceId = result.workspace_id || "";
+                            const mqttAddr = result.mqtt_addr || "";
+                            const mqttUsername = result.mqtt_username || "";
+                            const mqttPassword = result.mqtt_password || "";
+                            const userId = result.user_id || "";
+                            const userName = result.user_name || "";
+
+                            // 校验必要字段
+                            if (!accessToken || !workspaceId || !mqttAddr) {
+                                console.error("JSON缺少必要字段");
+                                return;
                             }
+
+                            // 后续处理：保存Token、连接MQTT等
+                            console.log("登录成功！access_token:", accessToken);
+                            console.log("MQTT地址:", mqttAddr);
+                            // MQTT连接示例（需导入QtMqtt）
+                            // connectMqtt(mqttAddr, mqttUsername, mqttPassword);
+                        } catch (e) {
+                            console.error("JSON解析失败：", e);
                         }
                     }
-                }
-                RowLayout {
-                    Layout.alignment:  Qt.AlignHCenter
-                    QGCCheckBox {
-                        Layout.alignment: Qt.AlignRight
-                        text:     qsTr("记住我")
-                        checked:  true
-                        textFontPointSize: ScreenTools.defaultFontPointSize
-                    }
-                    QGCLabel {
-                        text: qsTr("没有账号？")
-                        Layout.leftMargin: 20
-                        font.pointSize: ScreenTools.defaultFontPointSize
-                    }
-                    QGCLabel {
-                        text: qsTr("点击注册")
-                        color: qgcPal.colorBlue
-                        font.pointSize: ScreenTools.defaultFontPointSize
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                mainLayout.currentIndex = 1
-                                console.log("clicked")
-                            }
-                        }
+                    // 可选：添加一个测试方法用于调试
+                    function testConnection() {
+                        console.log("QML: 测试连接成功！");
+                        return "QML连接测试成功";
                     }
                 }
-                QGCButton {
-                    // width:  300
-                    text:   qsTr("登录")
-                    // Layout.alignment: Qt.AlignHCenter
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 50
-                    Layout.rightMargin: 50
-                    font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                    onClicked: {
-                        mainLayout.currentIndex = 2
+
+
+                WebChannel {
+                    id: webChannel
+                    registeredObjects: []
+                    // registeredObjects: [loginReceiver]
+                    Component.onCompleted: {
+                        _cloudServerSettings.WebChannel.id = "qmlReceiver"
+                        console.log("Item QML: WebChannel id：", _cloudServerSettings.WebChannel.id)
+                        registeredObjects = [_cloudServerSettings]
                     }
+
                 }
+
             }
-        }
-        /******************** 用户注册 ********************/
-        Rectangle {
-            color: "transparent"
-            border.width:  1
-            border.color:  qgcPal.groupBorder
-            implicitWidth:         400
-            implicitHeight:        400
-            radius:                30
-            anchors.centerIn:  parent
-            Layout.fillHeight: false
-            Layout.fillWidth:  false
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 20
-                spacing: 20
-                QGCLabel {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: 20
-                    text:     qsTr("用户注册")
-                    font.pointSize: ScreenTools.defaultFontPointSize * 2
-                    font.bold:      true
-                }
-                Rectangle {
-                    Layout.fillWidth: true
-                    height:           1
-                    color:            qgcPal.text
-                }
-                RowLayout {
-                    spacing: 20
-                    Layout.fillWidth: true
-                    QGCLabel {
-                        text: qsTr("账号:")
-                        font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                        Layout.fillWidth: false
-                    }
-                    QGCTextField {
-                        width: 300
-                        placeholderText : qsTr("手机号")
-                        Layout.fillWidth: true
-                    }
-                }
-                RowLayout {
-                    spacing: 20
-                    Layout.fillWidth: true
-                    QGCLabel {
-                        text: qsTr("密码:")
-                        font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                    }
-                    QGCTextField {
-                        width: 300
-                        placeholderText : qsTr("6位以上")
-                        Layout.fillWidth: true
-                    }
-                }
-                RowLayout {
-                    spacing: 20
-                    Layout.fillWidth: true
-                    QGCLabel {
-                        text: qsTr("再次输入密码:")
-                        font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                    }
-                    QGCTextField {
-                        width: 300
-                        placeholderText : qsTr("6位以上")
-                        Layout.fillWidth: true
-                    }
-                }
 
-                RowLayout {
-                    spacing: 20
-                    height: 40
-                    Layout.fillWidth: true
-                    QGCLabel {
-                        text: qsTr("验证码:")
-                        font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                    }
-                    QGCTextField {
-                        id:                     vrCodeTextEditRegister
-                        width: 300
-                        placeholderText : qsTr("请输入手机验证码")
-                        Layout.fillWidth: true
-                    }
-                    Rectangle {
-                        width:     80
-                        height:    vrCodeTextEditRegister.height
-                        color:     qgcPal.toolbarBackground
-                        QGCLabel {
-                            id:            vrCodeRegister
-                            anchors.centerIn:   parent
-                            text:    Math.floor(Math.random() * 10000)
-                            font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                vrCodeRegister.text = Math.floor(Math.random() * 10000)
-                            }
-                        }
-                    }
-                }
-
-                QGCButton {
-                    // width:  300
-                    text:   qsTr("注册")
-                    // Layout.alignment: Qt.AlignHCenter
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 50
-                    Layout.rightMargin: 50
-                    font.pointSize: ScreenTools.defaultFontPointSize * 1.5
-                    onClicked: {
-                        mainLayout.currentIndex = 0
-                    }
-                }
-            }
         }
+
+//         Rectangle {
+//             color: "transparent"
+//             border.width:  1
+//             border.color:  qgcPal.groupBorder
+//             implicitWidth:         400
+//             implicitHeight:        400
+//             radius:                30
+//             anchors.centerIn:  parent
+//             Layout.fillHeight: false
+//             Layout.fillWidth:  false
+//             ColumnLayout {
+//                 anchors.fill: parent
+//                 anchors.margins: 20
+//                 spacing: 20
+//                 QGCLabel {
+//                     Layout.alignment: Qt.AlignHCenter
+//                     Layout.topMargin: 20
+//                     text:     qsTr("用户登录")
+//                     font.pointSize: ScreenTools.defaultFontPointSize * 2
+//                     font.bold:      true
+//                 }
+//                 Rectangle {
+//                     Layout.fillWidth: true
+//                     height:           1
+//                     color:            qgcPal.text
+//                 }
+//                 RowLayout {
+//                     spacing: 20
+//                     Layout.fillWidth: true
+//                     QGCLabel {
+//                         text: qsTr("账号:")
+//                         font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+//                         Layout.fillWidth: false
+//                     }
+//                     QGCTextField {
+//                         width: 300
+//                         placeholderText : qsTr("手机号")
+//                         Layout.fillWidth: true
+//                         text:             "15138986689"
+//                     }
+//                 }
+//                 RowLayout {
+//                     spacing: 20
+//                     Layout.fillWidth: true
+//                     QGCLabel {
+//                         text: qsTr("密码:")
+//                         font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+//                     }
+//                     QGCTextField {
+//                         width: 300
+//                         placeholderText : qsTr("6位以上")
+//                         Layout.fillWidth: true
+//                         echoMode: TextInput.Password
+//                         text:     "123456789"
+//                     }
+//                 }
+
+//                 RowLayout {
+//                     spacing: 20
+//                     height: 40
+//                     Layout.fillWidth: true
+//                     QGCLabel {
+//                         text: qsTr("验证码:")
+//                         font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+//                     }
+//                     QGCTextField {
+//                         id:                     vrCodeTextEdit
+//                         width: 300
+//                         placeholderText : qsTr("请输入手机验证码")
+//                         Layout.fillWidth: true
+//                     }
+//                     Rectangle {
+//                         width:     80
+//                         height:    vrCodeTextEdit.height
+//                         color:     qgcPal.toolbarBackground
+//                         QGCLabel {
+//                             id:            vrCode
+//                             anchors.centerIn:   parent
+//                             text:    Math.floor(Math.random() * 10000)
+//                             font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+//                         }
+//                         MouseArea {
+//                             anchors.fill: parent
+//                             onClicked: {
+//                                 vrCode.text = Math.floor(Math.random() * 10000)
+//                             }
+//                         }
+//                     }
+//                 }
+//                 RowLayout {
+//                     Layout.alignment:  Qt.AlignHCenter
+//                     QGCCheckBox {
+//                         Layout.alignment: Qt.AlignRight
+//                         text:     qsTr("记住我")
+//                         checked:  true
+//                         textFontPointSize: ScreenTools.defaultFontPointSize
+//                     }
+//                     QGCLabel {
+//                         text: qsTr("没有账号？")
+//                         Layout.leftMargin: 20
+//                         font.pointSize: ScreenTools.defaultFontPointSize
+//                     }
+//                     QGCLabel {
+//                         text: qsTr("点击注册")
+//                         color: qgcPal.colorBlue
+//                         font.pointSize: ScreenTools.defaultFontPointSize
+//                         MouseArea {
+//                             anchors.fill: parent
+//                             onClicked: {
+//                                 mainLayout.currentIndex = 1
+//                                 console.log("clicked")
+//                             }
+//                         }
+//                     }
+//                 }
+//                 QGCButton {
+//                     // width:  300
+//                     text:   qsTr("登录")
+//                     // Layout.alignment: Qt.AlignHCenter
+//                     Layout.fillWidth: true
+//                     Layout.leftMargin: 50
+//                     Layout.rightMargin: 50
+//                     font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+//                     onClicked: {
+//                         mainLayout.currentIndex = 2
+//                     }
+//                 }
+//             }
+//         }
+//
+        // /******************** 用户注册 ********************/
+        // Rectangle {
+        //     color: "transparent"
+        //     border.width:  1
+        //     border.color:  qgcPal.groupBorder
+        //     implicitWidth:         400
+        //     implicitHeight:        400
+        //     radius:                30
+        //     anchors.centerIn:  parent
+        //     Layout.fillHeight: false
+        //     Layout.fillWidth:  false
+        //     ColumnLayout {
+        //         anchors.fill: parent
+        //         anchors.margins: 20
+        //         spacing: 20
+        //         QGCLabel {
+        //             Layout.alignment: Qt.AlignHCenter
+        //             Layout.topMargin: 20
+        //             text:     qsTr("用户注册")
+        //             font.pointSize: ScreenTools.defaultFontPointSize * 2
+        //             font.bold:      true
+        //         }
+        //         Rectangle {
+        //             Layout.fillWidth: true
+        //             height:           1
+        //             color:            qgcPal.text
+        //         }
+        //         RowLayout {
+        //             spacing: 20
+        //             Layout.fillWidth: true
+        //             QGCLabel {
+        //                 text: qsTr("账号:")
+        //                 font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+        //                 Layout.fillWidth: false
+        //             }
+        //             QGCTextField {
+        //                 width: 300
+        //                 placeholderText : qsTr("手机号")
+        //                 Layout.fillWidth: true
+        //             }
+        //         }
+        //         RowLayout {
+        //             spacing: 20
+        //             Layout.fillWidth: true
+        //             QGCLabel {
+        //                 text: qsTr("密码:")
+        //                 font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+        //             }
+        //             QGCTextField {
+        //                 width: 300
+        //                 placeholderText : qsTr("6位以上")
+        //                 Layout.fillWidth: true
+        //             }
+        //         }
+        //         RowLayout {
+        //             spacing: 20
+        //             Layout.fillWidth: true
+        //             QGCLabel {
+        //                 text: qsTr("再次输入密码:")
+        //                 font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+        //             }
+        //             QGCTextField {
+        //                 width: 300
+        //                 placeholderText : qsTr("6位以上")
+        //                 Layout.fillWidth: true
+        //             }
+        //         }
+
+        //         RowLayout {
+        //             spacing: 20
+        //             height: 40
+        //             Layout.fillWidth: true
+        //             QGCLabel {
+        //                 text: qsTr("验证码:")
+        //                 font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+        //             }
+        //             QGCTextField {
+        //                 id:                     vrCodeTextEditRegister
+        //                 width: 300
+        //                 placeholderText : qsTr("请输入手机验证码")
+        //                 Layout.fillWidth: true
+        //             }
+        //             Rectangle {
+        //                 width:     80
+        //                 height:    vrCodeTextEditRegister.height
+        //                 color:     qgcPal.toolbarBackground
+        //                 QGCLabel {
+        //                     id:            vrCodeRegister
+        //                     anchors.centerIn:   parent
+        //                     text:    Math.floor(Math.random() * 10000)
+        //                     font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+        //                 }
+        //                 MouseArea {
+        //                     anchors.fill: parent
+        //                     onClicked: {
+        //                         vrCodeRegister.text = Math.floor(Math.random() * 10000)
+        //                     }
+        //                 }
+        //             }
+        //         }
+
+        //         QGCButton {
+        //             // width:  300
+        //             text:   qsTr("注册")
+        //             // Layout.alignment: Qt.AlignHCenter
+        //             Layout.fillWidth: true
+        //             Layout.leftMargin: 50
+        //             Layout.rightMargin: 50
+        //             font.pointSize: ScreenTools.defaultFontPointSize * 1.5
+        //             onClicked: {
+        //                 mainLayout.currentIndex = 0
+        //             }
+        //         }
+        //     }
+        // }
 
         /******************** 用户界面 ********************/
         Item {
+            // Layout.fillHeight: true
+            // Layout.fillWidth:  true
             anchors.fill: parent
             Rectangle {
                 id:       leftPanel
@@ -587,15 +759,28 @@ Rectangle {
 
                 ColumnLayout {
                     anchors.fill: parent
-                    QGCLabel {
-                        text: qsTr("任务详情")
-                        font.pointSize: _largeFontSize
-                        font.bold:      true
-                        Layout.alignment: Qt.AlignCenter
-                        Layout.preferredHeight: _largeMargin * 5
-                        // Layout.fillWidth:       true
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment:   Text.AlignVCenter
+                    RowLayout {
+                        Layout.fillWidth: true
+                        QGCLabel {
+                            Layout.fillWidth: true
+                            text: qsTr("任务详情")
+                            font.pointSize: _largeFontSize
+                            font.bold:      true
+                            Layout.alignment: Qt.AlignCenter
+                            Layout.preferredHeight: _largeMargin * 5
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment:   Text.AlignVCenter
+                        }
+                        QGCIconButton {
+                            Layout.alignment:         Qt.AlignRight
+                            Layout.rightMargin:       Layout.preferredWidth
+                            iconSource:               "/InstrumentValueIcons/CloudServer.svg"
+                            highlighted:              hovered
+                            Layout.preferredWidth:    _defaultQGCIconButtonWidth
+                            Layout.preferredHeight:   Layout.preferredWidth
+                            onClicked:                mainLayout.currentIndex = 0
+                            // background: Rectangle { color: "red"}
+                        }
                     }
                     Rectangle {
                         height:          1
@@ -698,7 +883,8 @@ Rectangle {
                         Repeater {
                             model: mediaList
                             delegate: Item {
-                                width: parent.width / tileLayout.columns - tileLayout.columnSpacing
+                                // width: parent.width / tileLayout.columns - tileLayout.columnSpacing
+                                Layout.preferredWidth: (tileLayout.availableWidth - (tileLayout.columns - 1) * tileLayout.columnSpacing) / tileLayout.columns
                                 height: width
                                 Image {
                                     visible: modelData.endsWith(".jpg") || modelData.endsWith(".png")

@@ -49,6 +49,13 @@ ListModel {
     }
 
     ListElement {
+        name: qsTr("CloudServer")
+        url: "/qml/CloudServer.qml"
+        iconUrl: "qrc:/InstrumentValueIcons/CloudServer.svg"
+        pageVisible: function() { return true }
+    }
+
+    ListElement {
         name: qsTr("ADSB Server")
         url: "/qml/ADSBServerSettings.qml"
         iconUrl: "qrc:/InstrumentValueIcons/airplane.svg"

@@ -15,12 +15,14 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QLoggingCategory>
-
+#include <QJsonObject>
+#include <QtMqtt/QMqttTopicName>
 class LinkInterface;
 class Vehicle;
 class QmlObjectListModel;
 class QTimer;
-
+class QMqttClient;
+class GCU;
 Q_DECLARE_LOGGING_CATEGORY(MultiVehicleManagerLog)
 
 class MultiVehicleManager : public QObject
@@ -35,6 +37,7 @@ class MultiVehicleManager : public QObject
     Q_PROPERTY(QmlObjectListModel   *vehicles                       READ vehicles                                                           CONSTANT)
     Q_PROPERTY(QmlObjectListModel   *selectedVehicles               READ selectedVehicles                                                   CONSTANT)
     Q_PROPERTY(Vehicle              *offlineEditingVehicle          READ offlineEditingVehicle                                              CONSTANT)
+    Q_PROPERTY(bool                 mqttConnected                   READ mqttConnected                                            CONSTANT NOTIFY mqttConnectedChanged)
 
 public:
     explicit MultiVehicleManager(QObject *parent = nullptr);
@@ -44,13 +47,17 @@ public:
     static void registerQmlTypes();
 
     void init();
+    void updateDevicesInCloudServer();
+
     Q_INVOKABLE Vehicle *getVehicleById(int vehicleId) const;
     Q_INVOKABLE void      selectVehicle(int vehicleId);
     Q_INVOKABLE void    deselectVehicle(int vehicleId);
     Q_INVOKABLE void    deselectAllVehicles();
+    Q_INVOKABLE void    connectToMqttHost();
     QmlObjectListModel *vehicles() const { return _vehicles; }
     QmlObjectListModel *selectedVehicles() const { return _selectedVehicles; }
     Vehicle *offlineEditingVehicle() const { return _offlineEditingVehicle; }
+    bool mqttConnected() const { return _mqttConnected; }
     Vehicle *activeVehicle() const { return _activeVehicle; }
     void setActiveVehicle(Vehicle *vehicle);
 
@@ -60,6 +67,7 @@ signals:
     void activeVehicleAvailableChanged(bool activeVehicleAvailable);
     void parameterReadyVehicleAvailableChanged(bool parameterReadyVehicleAvailable);
     void activeVehicleChanged(Vehicle *activeVehicle);
+    void mqttConnectedChanged(bool mqttConnected);
 
 private slots:
     void _deleteVehiclePhase1(Vehicle *vehicle); /// This slot is connected to the Vehicle::allLinksDestroyed signal such that the Vehicle is deleted and all other right things happen when the Vehicle goes away.
@@ -69,7 +77,8 @@ private slots:
     void _sendGCSHeartbeat();
     void _vehicleHeartbeatInfo(LinkInterface *link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType);
     void _requestProtocolVersion(unsigned version) const; /// This slot is connected to the Vehicle::requestProtocolVersion signal such that the vehicle manager tries to switch MAVLink to v2 if all vehicles support it
-
+    void _sendOsdToServer();
+    void _receiveMqttFromServer(const QByteArray &message, const QMqttTopicName &topic = QMqttTopicName());
 private:
     bool _vehicleExists(int vehicleId);
     bool _vehicleSelected(int vehicleId);
@@ -83,6 +92,7 @@ private:
     QmlObjectListModel *_vehicles = nullptr;
     QmlObjectListModel *_selectedVehicles = nullptr;
     Vehicle *_offlineEditingVehicle = nullptr;      ///< Disconnected vechicle used for offline editing
+    bool _mqttConnected = false;
     bool _activeVehicleAvailable = false;           ///< true: An active vehicle is available
     bool _parameterReadyVehicleAvailable = false;   ///< true: An active vehicle with ready parameters is available
     Vehicle *_activeVehicle = nullptr;              ///< Currently active vehicle from a ui perspective
@@ -90,4 +100,12 @@ private:
     bool _initialized = false;
 
     static constexpr int kGCSHeartbeatRateMSecs = 1000;  ///< Heartbeat rate
+
+    /**********  Mqtt  **********/
+    QMqttClient *_mqttClient = nullptr;
+    QTimer * _timerSendOsd = nullptr;               // 发送信息到服务器
+    // QJsonObject jsonDevices;                        // 设备信息
+    // QJsonObject jsonGcs;                            // 地面站信息
+    // QJsonObject jsonDrone;                          // 无人机信息
+
 };

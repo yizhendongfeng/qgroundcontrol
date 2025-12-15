@@ -199,16 +199,20 @@ find_package(Qt6
         TextToSpeech
         Widgets
         Xml
+        Mqtt
     OPTIONAL_COMPONENTS
         Bluetooth
         MultimediaQuickPrivate
         Quick3D
         SerialPort
         Test
+        WebEngineQuick
+        WebEngineCore
 )
 
 if(LINUX)
     find_package(Qt6 COMPONENTS WaylandClient)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 endif()
 
 # Set extra standard project setup options for Qt 6.7.0 and above
@@ -301,6 +305,8 @@ qt_add_executable(${CMAKE_PROJECT_NAME}
     ${QGC_RESOURCES}
 )
 
+
+target_link_libraries(DGCS PRIVATE Qt6::Core)
 if(WIN32)
     # CPMAddPackage(
     #     NAME windows_drivers
@@ -500,7 +506,7 @@ endif()
 
 if(QGC_CUSTOM_BUILD)
     target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CUSTOM_SOURCES})
-    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${CUSTOM_LIBRARIES})
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${CUSTOM_LIBRARIES} Qt::Mqtt)
     target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CUSTOM_DIRECTORIES})
 endif()
 

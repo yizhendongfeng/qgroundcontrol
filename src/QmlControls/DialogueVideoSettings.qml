@@ -106,15 +106,26 @@ QGCPopupDialog {
                     visible:            true
                 }
 
-                QGCButton {
+                RowLayout {
                     Layout.fillWidth:  true
-                    Layout.leftMargin:  parent.width * 0.2
-                    Layout.rightMargin: parent.width * 0.2
+                    // Layout.leftMargin:  parent.width * 0.2
+                    // Layout.rightMargin: parent.width * 0.2
+                    spacing: 30
+                    QGCButton {
+                        Layout.alignment: Qt.AlignLeft
+                        Layout.fillWidth: true
+                        text:               _gcu.connected ? qsTr("断开") : qsTr("连接")
+                        onClicked: {
+                            console.log("连接吊舱控制端口！")
+                            _gcu.connectToGcu(!_gcu.connected);
+                        }
+                    }
 
-                    text:               _gcu.connected ? qsTr("断开") : qsTr("连接")
-                    onClicked: {
-                        console.log("连接吊舱控制端口！")
-                        _gcu.connectToGcu(!_gcu.connected);
+
+                    FactCheckBoxSlider {
+                        Layout.alignment:  Qt.AlignRight
+                        text: qsTr("自动连接")
+                        fact: _videoSettings.autoConnectToPod
                     }
                 }
             }

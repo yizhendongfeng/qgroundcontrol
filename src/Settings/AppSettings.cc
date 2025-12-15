@@ -241,6 +241,8 @@ void AppSettings::_checkSavePathDirectories(void)
         savePathDir.mkdir(logDirectory);
         savePathDir.mkdir(videoDirectory);
         savePathDir.mkdir(photoDirectory);
+        savePathDir.mkdir(mediaDirectory);
+        savePathDir.mkdir(mediaCacheDirectory);
         savePathDir.mkdir(crashDirectory);
         savePathDir.mkdir(mavlinkActionsDirectory);
     }
@@ -307,6 +309,26 @@ QString AppSettings::photoSavePath(void)
     if (!path.isEmpty() && QDir(path).exists()) {
         QDir dir(path);
         return dir.filePath(photoDirectory);
+    }
+    return QString();
+}
+
+QString AppSettings::mediaSavePath()
+{
+    QString path = savePath()->rawValue().toString();
+    if (!path.isEmpty() && QDir(path).exists()) {
+        QDir dir(path);
+        return dir.filePath(mediaDirectory);
+    }
+    return QString();
+}
+
+QString AppSettings::mediaCachePath()
+{
+    QString path = savePath()->rawValue().toString();
+    if (!path.isEmpty() && QDir(path).exists()) {
+        QDir dir(path);
+        return dir.filePath(mediaCacheDirectory);
     }
     return QString();
 }

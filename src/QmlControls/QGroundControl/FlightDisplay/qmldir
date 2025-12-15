@@ -18,6 +18,7 @@ FlyViewToolStripActionList      1.0 FlyViewToolStripActionList.qml
 FlyViewTopRightColumnLayout     1.0 FlyViewTopRightColumnLayout.qml
 FlyViewTopRightPanel            1.0 FlyViewTopRightPanel.qml
 FlyViewVideo                    1.0 FlyViewVideo.qml
+PodControlView                  1.0 PodControlView.qml
 FlyViewWidgetLayer              1.0 FlyViewWidgetLayer.qml
 GripperMenu                     1.0 GripperMenu.qml
 FlyViewAdditionalActionsButton  1.0 FlyViewAdditionalActionsButton.qml

@@ -22,7 +22,9 @@ Item {
     property int    _track_rec_x:       0
     property int    _track_rec_y:       0
     property bool   useVideoSource2:    false
-
+    property var  leftTop       // 选中的左上角
+    property var  rightBotton   // 选中的右下角
+    property var  movePoint     // 指点平移目标
     PipState {
         id:         videoPipState
         pipView:    _root.pipView
@@ -113,7 +115,25 @@ Item {
         property var trackingROI:   null
         property var trackingStatus: trackingStatusComponent.createObject(flyViewVideoMouseArea, {})
 
-        onClicked:       onScreenGimbalController.clickControl()
+        onClicked: {
+            // if (itemPod.pointMoveEnabled) {
+                var xInVideo = mouseX
+                var yInVideo = mouseY - (height - videoStreaming.getHeight()) / 2
+                xInVideo = Math.max(0, Math.min(xInVideo, videoStreaming.getWidth()))
+                yInVideo = Math.max(0, Math.min(yInVideo, videoStreaming.getHeight()))
+                movePoint = Qt.point(xInVideo / videoStreaming.getWidth() * 10000, yInVideo / videoStreaming.getHeight() * 10000)
+                // movePoint = Qt.point(mouseX / videoStreaming.getWidth() * 10000, mouseY / videoStreaming.getHeight() * 10000)
+                // console.log("clicked in video mouse:", mouseX, xInVideo, mouseY, yInVideo, movePoint, videoStreaming.getWidth(), videoStreaming.getHeight() )
+                // _gcu.moveToPoint(10000, 10000)
+            console.log("clicked", _track_rec_x - mouse.x ,_track_rec_y - mouse.y)
+            if (Math.abs(_track_rec_x - mouse.x) < 10 && Math.abs(_track_rec_y - mouse.y) < 10) {
+                _gcu.moveToPoint(movePoint.x, movePoint.y)
+            }
+            _track_rec_x = 0
+            _track_rec_y = 0
+            // }
+            onScreenGimbalController.clickControl()
+        }
         onDoubleClicked: QGroundControl.videoManager.fullScreen = !QGroundControl.videoManager.fullScreen
 
         onPressed:(mouse) => {
@@ -123,14 +143,22 @@ Item {
             _track_rec_y = mouse.y
 
             //create a new rectangle at the wanted position
-            if(videoStreaming._camera) {
-                if (videoStreaming._camera.trackingEnabled) {
-                    trackingROI = trackingROIComponent.createObject(flyViewVideoMouseArea, {
-                        "x": mouse.x,
-                        "y": mouse.y
-                    });
-                }
-            }
+
+            // if(_gcu.podMode === 0x17) { // 跟踪模式
+                trackingROI = trackingROIComponent.createObject(flyViewVideoMouseArea, {
+                                                                    "x": mouse.x,
+                                                                    "y": mouse.y
+                                                                });
+            // }
+              // if(videoStreaming._camera) {
+              //     if (videoStreaming._camera.trackingEnabled) {
+              //         trackingROI = trackingROIComponent.createObject(flyViewVideoMouseArea, {
+              //                                                             "x": mouse.x,
+              //                                                             "y": mouse.y
+              //                                                         });
+              //     }
+              // }
+            // mapToItem(videoStreaming,)
         }
         onPositionChanged: (mouse) => {
             //on move, update the width of rectangle
@@ -157,50 +185,51 @@ Item {
                 trackingROI.destroy();
             }
 
-            if(videoStreaming._camera) {
-                if (videoStreaming._camera.trackingEnabled) {
-                    // order coordinates --> top/left and bottom/right
-                    x0 = Math.min(_track_rec_x, mouse.x)
-                    x1 = Math.max(_track_rec_x, mouse.x)
-                    y0 = Math.min(_track_rec_y, mouse.y)
-                    y1 = Math.max(_track_rec_y, mouse.y)
+            // if(_gcu.podMode === 0x17) {
+                // order coordinates --> top/left and bottom/right
+                x0 = Math.min(_track_rec_x, mouse.x)
+                x1 = Math.max(_track_rec_x, mouse.x)
+                y0 = Math.min(_track_rec_y, mouse.y)
+                y1 = Math.max(_track_rec_y, mouse.y)
 
-                    //calculate offset between video stream rect and background (black stripes)
-                    offset_x = (parent.width - videoStreaming.getWidth()) / 2
-                    offset_y = (parent.height - videoStreaming.getHeight()) / 2
+                //calculate offset between video stream rect and background (black stripes)
+                offset_x = (parent.width - videoStreaming.getWidth()) / 2
+                offset_y = (parent.height - videoStreaming.getHeight()) / 2
 
-                    //convert absolute coords in background to absolute video stream coords
-                    x0 = x0 - offset_x
-                    x1 = x1 - offset_x
-                    y0 = y0 - offset_y
-                    y1 = y1 - offset_y
+                //convert absolute coords in background to absolute video stream coords
+                x0 = x0 - offset_x
+                x1 = x1 - offset_x
+                y0 = y0 - offset_y
+                y1 = y1 - offset_y
 
-                    //convert absolute to relative coordinates and limit range to 0...1
-                    x0 = Math.max(Math.min(x0 / videoStreaming.getWidth(), 1.0), 0.0)
-                    x1 = Math.max(Math.min(x1 / videoStreaming.getWidth(), 1.0), 0.0)
-                    y0 = Math.max(Math.min(y0 / videoStreaming.getHeight(), 1.0), 0.0)
-                    y1 = Math.max(Math.min(y1 / videoStreaming.getHeight(), 1.0), 0.0)
-
-                    //use point message if rectangle is very small
-                    if (Math.abs(_track_rec_x - mouse.x) < 10 && Math.abs(_track_rec_y - mouse.y) < 10) {
-                        var pt  = Qt.point(x0, y0)
-                        videoStreaming._camera.startTracking(pt, radius / videoStreaming.getWidth())
-                    } else {
-                        var rec = Qt.rect(x0, y0, x1 - x0, y1 - y0)
-                        videoStreaming._camera.startTracking(rec)
-                    }
-                    _track_rec_x = 0
-                    _track_rec_y = 0
+                //convert absolute to relative coordinates and limit range to 0...1
+                x0 = Math.max(Math.min(x0 / videoStreaming.getWidth(), 1.0), 0.0)
+                x1 = Math.max(Math.min(x1 / videoStreaming.getWidth(), 1.0), 0.0)
+                y0 = Math.max(Math.min(y0 / videoStreaming.getHeight(), 1.0), 0.0)
+                y1 = Math.max(Math.min(y1 / videoStreaming.getHeight(), 1.0), 0.0)
+                //use point message if rectangle is very small
+                // if (Math.abs(_track_rec_x - mouse.x) < 10 && Math.abs(_track_rec_y - mouse.y) < 10) {
+                //     var pt  = Qt.point(x0, y0)
+                //     videoStreaming._camera.startTracking(pt, radius / videoStreaming.getWidth())
+                // } else {
+                //     var rec = Qt.rect(x0, y0, x1 - x0, y1 - y0)
+                //     videoStreaming._camera.startTracking(rec)
+                // }
+                console.log("_gcu.podTrack", x0 , y0  , x1 , y1)
+                if (Math.abs(_track_rec_x - mouse.x) > 10 && Math.abs(_track_rec_y - mouse.y) > 10) {
+                     _gcu.podTrack(true, x0 * 10000, y0 * 10000, x1 * 10000, y1 * 10000)
                 }
-            }
+
+            // }
+
         }
 
         Component {
             id: trackingROIComponent
 
             Rectangle {
-                color:              Qt.rgba(0.1,0.85,0.1,0.25)
-                border.color:       "green"
+                color:              "transparent"//Qt.rgba(0.1,0.85,0.1,0.25)
+                border.color:       "red"
                 border.width:       1
             }
         }

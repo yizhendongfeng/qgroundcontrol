@@ -61,6 +61,13 @@
     "default":     2332
 },
 {
+    "name":             "autoConnectToPod",
+    "shortDesc": "auto connect to pod",
+    "longDesc":  "auto connect to pod",
+    "type":             "bool",
+    "default":     false
+},
+{
     "name":             "videoSavePath",
     "shortDesc": "Video save directory",
     "longDesc":  "Directory to save videos to.",
@@ -89,7 +96,7 @@
     "type":             "uint32",
     "enumStrings":      "Fit Width,Fit Height,Fill,No Crop",
     "enumValues":       "0,1,2,3",
-    "default":     1
+    "default":     0
 },
 {
     "name":             "showRecControl",

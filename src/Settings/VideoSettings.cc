@@ -218,6 +218,15 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, podPort)
     return _podPortFact;
 }
 
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, autoConnectToPod)
+{
+    if (!_autoConnectToPodFact) {
+        _autoConnectToPodFact = _createSettingsFact(autoConnectToPodName);
+        connect(_autoConnectToPodFact, &Fact::valueChanged, this, &VideoSettings::_configChanged);
+    }
+    return _autoConnectToPodFact;
+}
+
 bool VideoSettings::streamConfigured(void)
 {
     //-- First, check if it's autoconfigured

@@ -364,6 +364,9 @@
         <file alias="DebugWindow.qml">src/UI/preferences/DebugWindow.qml</file>
         <file alias="MockLink.qml">src/UI/preferences/MockLink.qml</file>
         <file alias="MockLinkSettings.qml">src/UI/preferences/MockLinkSettings.qml</file>
+        <file alias="CloudServer.qml">src/UI/preferences/CloudServer.qml</file>
+        <file>MediaExplorer.qml</file>
+        <file alias="QGroundControl/FlightDisplay/PodControlView.qml">src/FlightDisplay/PodControlView.qml</file>
     </qresource>
     <qresource prefix="/FirstRunPromptDialogs">
         <file alias="UnitsFirstRunPrompt.qml">src/FirstRunPromptDialogs/UnitsFirstRunPrompt.qml</file>
@@ -436,6 +439,7 @@
         <file alias="Viewer3D.SettingsGroup.json">src/Settings/Viewer3D.SettingsGroup.json</file>
         <file alias="GimbalController.SettingsGroup.json">src/Settings/GimbalController.SettingsGroup.json</file>
         <file alias="CameraMetaData.json">src/Camera/CameraMetaData.json</file>
+        <file alias="CloudServer.SettingsGroup.json">src/Settings/CloudServer.SettingsGroup.json</file>
     </qresource>
     <qresource prefix="/MockLink">
         <file alias="APMArduSubMockLink.params">src/Comms/MockLink/APMArduSubMockLink.params</file>
@@ -452,4 +456,5 @@
     <qresource prefix="/ShaderFragment">
         <file alias="earthMaterial.frag">src/Viewer3D/Shaders/earthMaterial.frag</file>
     </qresource>
+    <qresource prefix="/"/>
 </RCC>

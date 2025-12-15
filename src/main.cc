@@ -9,6 +9,7 @@
 
 #include <QtQuick/QQuickWindow>
 #include <QtWidgets/QApplication>
+#include <QtWebEngineQuick/QtWebEngineQuick>
 
 #ifdef Q_OS_MACOS
     #include <QtCore/QProcessEnvironment>
@@ -45,7 +46,7 @@
 #include <crtdbg.h>
 #include <windows.h>
 #include <iostream>
-
+#include <QQuickWebEngineProfile>
 /// @brief CRT Report Hook installed using _CrtSetReportHook. We install this hook when
 /// we don't want asserts to pop a dialog on windows.
 int WindowsCrtReportHook(int reportType, char* message, int* returnValue)
@@ -180,6 +181,16 @@ int main(int argc, char *argv[])
     }
 #endif // Q_OS_WIN
 #endif // QT_DEBUG
+    QtWebEngineQuick::initialize();
+    // // 获取默认配置文件并进行配置
+    // QQuickWebEngineProfile* defaultProfile = QQuickWebEngineProfile::defaultProfile();
+    // defaultProfile->setStorageName("MyApp");
+    // defaultProfile->setPersistentStoragePath(
+    //     QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/webengine_data");
+    // defaultProfile->setCachePath(
+    //     QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/webengine_cache");
+    // defaultProfile->setPersistentCookiesPolicy(QQuickWebEngineProfile::ForcePersistentCookies);
+
 
     QGCApplication app(argc, argv, runUnitTests, simpleBootTest);
 
@@ -205,6 +216,9 @@ int main(int argc, char *argv[])
     }
 
     int exitCode = 0;
+    // 检查组件资源是否存在
+    bool exists = QFile::exists("qrc:/qml/QGroundControl/FlightDisplay/FlyViewVideo.qml");
+    qDebug() << "PodControlView.qml exists in qrc:" << exists; // 输出true才正确
 
 #ifdef QGC_UNITTEST_BUILD
     if (runUnitTests) {

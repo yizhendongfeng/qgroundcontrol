@@ -67,15 +67,28 @@ ToolStripColumn {
                 }
             },
             ToolStripAction {
+                id: toolStripMediaSettings
+                text: qsTr("Media")
+                visible: true //currentVehicleSetupComplete
+                checkable: true
+                iconSource: "/qmlimages/Media.svg"//"/qmlimages/Gears.svg"
+                onTriggered: {
+                    stackLayoutMain.currentIndex = 3
+                    // if (!mainWindow.preventViewSwitch()) {
+                        // mainWindow.showSettingsTool()
+                    // }
+                }
+            },
+            ToolStripAction {
                 id: toolStripActionSettings
                 text: qsTr("Settings")
                 visible: true //currentVehicleSetupComplete
                 checkable: true
                 iconSource: "/res/gear-white.svg"//"/qmlimages/Gears.svg"
                 onTriggered: {
-                    stackLayoutMain.currentIndex = 3
+                    stackLayoutMain.currentIndex = 4
                     // if (!mainWindow.preventViewSwitch()) {
-                        // mainWindow.showSettingsTool()
+                    // mainWindow.showSettingsTool()
                     // }
                 }
             },
@@ -86,7 +99,7 @@ ToolStripColumn {
                 checkable: true
                 iconSource: "/qmlimages/User.svg"//"/qmlimages/Gears.svg"
                 onTriggered: {
-                    stackLayoutMain.currentIndex = 4
+                    stackLayoutMain.currentIndex = 5
                     // if (!mainWindow.preventViewSwitch()) {
                         // mainWindow.showSettingsTool()
                     // }

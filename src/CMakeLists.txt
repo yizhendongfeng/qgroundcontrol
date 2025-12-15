@@ -45,6 +45,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         Qt6::TextToSpeech
         Qt6::Widgets
         Qt6::Xml
+        Qt6::Mqtt
+        Qt6::WebEngineQuick
+        Qt6::WebEngineCore
+        Qt6::Concurrent
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
