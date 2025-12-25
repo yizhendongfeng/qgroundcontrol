@@ -45,12 +45,16 @@ Button {
 
     onClicked: {
         if (mainWindow.allowViewSwitch()) {
-            dropPanel.close()   // dropPanel.hide()
+            if (dropPanel !== undefined) {
+                dropPanel.hide()       //dropPanel.close()
+            }
             if (!toolStripAction.dropPanelComponent) {
                 toolStripAction.triggered(this)
             } else if (checked) {
                 var panelEdgeTopPoint = mapToItem(_root, width, 0)
-                dropPanel.show(panelEdgeTopPoint, toolStripAction.dropPanelComponent, this)
+                if (dropPanel !== undefined) {
+                    dropPanel.show(panelEdgeTopPoint, toolStripAction.dropPanelComponent, this)
+                }
                 checked = true
                 control.dropped(index)
             }

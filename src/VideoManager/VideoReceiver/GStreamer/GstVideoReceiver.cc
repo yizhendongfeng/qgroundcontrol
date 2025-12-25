@@ -29,6 +29,7 @@
 
 QGC_LOGGING_CATEGORY(GstVideoReceiverLog, "qgc.videomanager.videoreceiver.gstreamer.gstvideoreceiver")
 
+
 GstVideoReceiver::GstVideoReceiver(QObject *parent)
     : VideoReceiver(parent)
     , _worker(new GstVideoWorker(this))
@@ -46,6 +47,103 @@ GstVideoReceiver::~GstVideoReceiver()
     _worker->shutdown();
 
     // qCDebug(GstVideoReceiverLog) << this;
+}
+
+void GstVideoReceiver::startStreaming(const QString &streamUrl, StreamType streamType)
+{
+
+    // 线程安全：确保在视频工作线程执行
+    if (_needDispatch()) {
+        const QString cachedUrl = streamUrl;
+        _worker->dispatch([this, cachedUrl, streamType]() { startStreaming(cachedUrl, streamType); });
+        return;
+    }
+
+    qCDebug(GstVideoReceiverLog) << "Starting streaming to" << streamUrl
+                                 << "type:" << (streamType == StreamTypeRTSP ? "RTSP" : "RTMP");
+
+    // 校验管道状态
+    if (!_pipeline) {
+        qCDebug(GstVideoReceiverLog) << "Streaming is not active!" << _uri;
+        _dispatchSignal([this](){ emit onStartStreamingComplete(STATUS_INVALID_STATE); });
+        return;
+    }
+    if (_streamingOut) {
+        qCDebug(GstVideoReceiverLog) << "Already streaming out!" << _uri;
+        _dispatchSignal([this]() { emit onStartStreamingComplete(STATUS_INVALID_STATE); });
+        return;
+    }
+
+    // 保存推流配置
+    _streamUrl = streamUrl;
+    _streamType = streamType;
+
+    // 创建推流元素链（编码器+封装器+发送端）
+    _streamerSink = _makeStreamSink(streamUrl, streamType);
+    if (!_streamerSink) {
+        qCCritical(GstVideoReceiverLog) << "_makeStreamSink() failed";
+        _dispatchSignal([this]() { emit onStartStreamingComplete(STATUS_FAIL); });
+        return;
+    }
+
+    // 将推流元素加入管道并链接
+    gst_object_ref(_streamerSink);
+    gst_bin_add(GST_BIN(_pipeline), _streamerSink);
+    if (!gst_element_link(_streamerValve, _streamerSink)) {
+        qCCritical(GstVideoReceiverLog) << "Failed to link streamer valve and sink";
+        gst_clear_object(&_streamerSink);
+        _dispatchSignal([this]() { emit onStartStreamingComplete(STATUS_FAIL); });
+        return;
+    }
+
+    // 同步推流元素状态到管道（PLAYING）
+    gst_element_sync_state_with_parent(_streamerSink);
+    // install probe to wait for keyframe (reuse _keyframeWatch)
+    GstPad *probepad = gst_element_get_static_pad(_streamerValve, "src");
+    if (!probepad) {
+        qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad() failed";
+        _dispatchSignal([this]() { emit onStartStreamingComplete(STATUS_FAIL); });
+        return;
+    }
+    (void) gst_pad_add_probe(probepad, GST_PAD_PROBE_TYPE_BUFFER, _keyframeWatch, this, nullptr);
+    gst_clear_object(&probepad);
+
+    // 打开阀，开始推流
+    g_object_set(_streamerValve, "drop", FALSE, nullptr);
+
+    _streamingOut = true;
+    _dispatchSignal([this]() {
+        emit onStartStreamingComplete(STATUS_OK);
+        emit streamingOutChanged(_streamingOut);
+    });
+
+}
+
+void GstVideoReceiver::stopStreaming()
+{
+    if (_needDispatch()) {
+        _worker->dispatch([this]() { stopStreaming(); });
+        return;
+    }
+
+    qCDebug(GstVideoReceiverLog) << "Stopping streaming out to" << _streamUrl;
+
+    if (!_pipeline || !_streamingOut) {
+        qCDebug(GstVideoReceiverLog) << "Not streaming out!" << _uri;
+        _dispatchSignal([this]() { emit onStopStreamingComplete(STATUS_INVALID_STATE); });
+        return;
+    }
+
+    // 关闭阀，停止数据流
+    g_object_set(_streamerValve, "drop", TRUE, nullptr);
+
+    // 解链并发送EOS（确保数据完整结束）
+    const bool ret = _unlinkBranch(_streamerValve);
+
+    // 清理推流分支资源
+    _shutdownStreamingBranch();
+
+    _dispatchSignal([this, ret]() { emit onStopStreamingComplete(ret ? STATUS_OK : STATUS_FAIL); });
 }
 
 void GstVideoReceiver::start(uint32_t timeout)
@@ -70,7 +168,7 @@ void GstVideoReceiver::start(uint32_t timeout)
     _timeout = timeout;
     _buffer = lowLatency() ? -1 : 0;
 
-    qCDebug(GstVideoReceiverLog) << "Starting" << _uri << ", buffer" << _buffer;
+    qCDebug(GstVideoReceiverLog) << "Starting" << _uri << ", lowLatency" << lowLatency() << ", timeout" << _timeout;
 
     _endOfStream = false;
 
@@ -79,6 +177,7 @@ void GstVideoReceiver::start(uint32_t timeout)
 
     GstElement *decoderQueue = nullptr;
     GstElement *recorderQueue = nullptr;
+    GstElement *streamerQueue = nullptr;
 
     do {
         _tee = gst_element_factory_make("tee", nullptr);
@@ -130,6 +229,22 @@ void GstVideoReceiver::start(uint32_t timeout)
                      "drop", TRUE,
                      nullptr);
 
+        // 初始化推流队列
+        streamerQueue = gst_element_factory_make("queue", nullptr);
+        if (!streamerQueue)  {
+            qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('queue') for streamer failed";
+            break;
+        }
+
+        // 初始化推流阀（默认关闭，避免无意义的数据流）
+        _streamerValve = gst_element_factory_make("valve", nullptr);
+        if (!_streamerValve)  {
+            qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('valve') for streamer failed";
+            break;
+        }
+        g_object_set(_streamerValve, "drop", TRUE, nullptr);
+
+
         _pipeline = gst_pipeline_new("receiver");
         if (!_pipeline) {
             qCCritical(GstVideoReceiverLog) << "gst_pipeline_new() failed";
@@ -145,8 +260,8 @@ void GstVideoReceiver::start(uint32_t timeout)
             qCCritical(GstVideoReceiverLog) << "_makeSource() failed";
             break;
         }
-
-        gst_bin_add_many(GST_BIN(_pipeline), _source, _tee, decoderQueue, _decoderValve, recorderQueue, _recorderValve, nullptr);
+        // ===== 修改 gst_bin_add_many，加入推流元素 =====
+        gst_bin_add_many(GST_BIN(_pipeline), _source, _tee, decoderQueue, _decoderValve, recorderQueue, _recorderValve, streamerQueue, _streamerValve,  nullptr);
 
         pipelineUp = true;
 
@@ -182,6 +297,12 @@ void GstVideoReceiver::start(uint32_t timeout)
 
         if (!gst_element_link_many(_tee, recorderQueue, _recorderValve, nullptr)) {
             qCCritical(GstVideoReceiverLog) << "Unable to link recorder queue";
+            break;
+        }
+
+        // ===== 链接 tee → streamerQueue → streamerValve =====
+        if (!gst_element_link_many(_tee, streamerQueue, _streamerValve, nullptr)) {
+            qCCritical(GstVideoReceiverLog) << "Unable to link streamer queue";
             break;
         }
 
@@ -242,7 +363,7 @@ void GstVideoReceiver::stop()
         GstPad *sinkpad = gst_element_get_static_pad(_tee, "sink");
         if (sinkpad) {
             gst_pad_remove_probe(sinkpad, _teeProbeId);
-            sinkpad = nullptr;
+            gst_clear_object(&sinkpad);
         }
         _teeProbeId = 0;
     }
@@ -294,6 +415,10 @@ void GstVideoReceiver::stop()
             _shutdownDecodingBranch();
         }
 
+        if (_streamerSink) {
+            _shutdownStreamingBranch();
+        }
+
         GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-stopped");
 
         gst_clear_object(&_pipeline);
@@ -301,6 +426,9 @@ void GstVideoReceiver::stop()
 
         _recorderValve = nullptr;
         _decoderValve = nullptr;
+        _streamerValve = nullptr;
+
+
         _tee = nullptr;
         _source = nullptr;
 
@@ -885,6 +1013,154 @@ GstElement *GstVideoReceiver::_makeFileSink(const QString &videoFile, FILE_FORMA
     return fileSink;
 }
 
+GstElement *GstVideoReceiver::_makeStreamSink(const QString &streamUrl, StreamType streamType)
+{
+    GstElement *bin = nullptr;
+    GstElement *parse = nullptr;
+    // GstElement *encoder = nullptr;  // H264编码器
+    GstElement *muxer = nullptr;    // 封装器（FLV/RTSP）
+    GstElement *sink = nullptr;     // 发送端（RTMP/RTSP）
+    bool releaseElements = true;
+    qCDebug(GstVideoReceiverLog) << "_makeStreamSink:" << streamUrl << streamType;
+    do {
+        // 创建容器封装推流元素链
+        bin = gst_bin_new("streamerbin");
+        if (!bin) {
+            qCCritical(GstVideoReceiverLog) << "gst_bin_new('streamerbin') failed";
+            break;
+        }
+
+        // // 1. 视频编码器：x264enc（低延迟配置）
+        // encoder = gst_element_factory_make("x264enc", nullptr);
+        // if (!encoder) {
+        //     qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('x264enc') failed";
+        //     break;
+        // }
+        // g_object_set(encoder,
+        //              "tune", 4,        // zerolatency（零延迟，适配实时推流）
+        //              "speed-preset", 0,// ultrafast（最快编码速度）
+        //              "bitrate", 1000,  // 比特率1Mbps（可根据需求调整）
+        //              "byte-stream", FALSE, // 关键：关闭字节流，输出AVC格式
+        //              // "profile", 1,     // baseline 配置（兼容多数RTSP服务器）
+        //              nullptr);
+
+        // 2. 按推流类型构建封装器+发送端
+        if (streamType == StreamTypeRTMP) {
+            // RTMP：FLV封装 + rtmpsink
+            // H.264 encoded input path: ensure stream-format=avc via h264parse,
+            // then mux with flvmux and push with rtmpsink
+            parse = gst_element_factory_make("h264parse", nullptr);
+            if (!parse) {
+                qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('h264parse') failed";
+                break;
+            }
+            muxer = gst_element_factory_make("flvmux", nullptr);
+            if (!muxer) { break; }
+            g_object_set(muxer, "streamable", TRUE, nullptr); // 流式输出
+
+            sink = gst_element_factory_make("rtmpsink", nullptr);
+            if (!sink) { break; }
+            g_object_set(sink, "location", streamUrl.toUtf8().constData(), nullptr);
+
+            // 加入容器并链接：encoder → flvmux → rtmpsink
+            gst_bin_add_many(GST_BIN(bin), parse, muxer, sink, nullptr);
+            if (!gst_element_link_many(parse, muxer, sink, nullptr)) {
+                qCCritical(GstVideoReceiverLog) << "Link RTMP elements failed";
+                break;
+            }
+            // expose single ghost pad "sink" that upstream (valve) will link to
+            GstPad *parseSinkPad = gst_element_get_static_pad(parse, "sink");
+            if (!parseSinkPad) {
+                qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad(parse, 'sink') failed";
+                break;
+            }
+            GstPad *ghost = gst_ghost_pad_new("sink", parseSinkPad);
+            gst_clear_object(&parseSinkPad);
+            if (!ghost) {
+                qCCritical(GstVideoReceiverLog) << "gst_ghost_pad_new() failed";
+                break;
+            }
+            if (!gst_element_add_pad(bin, ghost)) {
+                qCCritical(GstVideoReceiverLog) << "gst_element_add_pad() failed";
+                break;
+            }
+
+            releaseElements = false;
+            // gst_clear_object(&parse);
+            // gst_clear_object(&muxer);
+            // gst_clear_object(&sink);
+            // bin will keep refs
+
+        } else if (streamType == StreamTypeRTSP) {
+            // Try to create rtspclientsink if available – many distros don't ship it.
+            sink = gst_element_factory_make("rtspclientsink", nullptr);
+            if (!sink) {
+                qCCritical(GstVideoReceiverLog) << "rtspclientsink not available. RTSP push requires gst-rtsp-server or rtspclientsink plugin.";
+                break;
+            }
+
+            // rtspclientsink usually expects "location" like rtsp://user:pass@host:port/stream
+            g_object_set(sink, "location", streamUrl.toUtf8().constData(), nullptr);
+
+            // Here we assume data we provide is H264 (avc) so we may need h264parse in front
+            parse = gst_element_factory_make("h264parse", nullptr);
+            if (!parse) {
+                qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('h264parse') failed";
+                break;
+            }
+
+            gst_bin_add_many(GST_BIN(bin), parse, sink, nullptr);
+            if (!gst_element_link(parse, sink)) {
+                qCCritical(GstVideoReceiverLog) << "Failed to link parse -> rtspclientsink";
+                break;
+            }
+
+            GstPad *parseSinkPad = gst_element_get_static_pad(parse, "sink");
+            if (!parseSinkPad) {
+                qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad(parse, 'sink') failed";
+                break;
+            }
+            GstPad *ghost = gst_ghost_pad_new("sink", parseSinkPad);
+            gst_clear_object(&parseSinkPad);
+            if (!ghost) {
+                qCCritical(GstVideoReceiverLog) << "gst_ghost_pad_new() failed";
+                break;
+            }
+            if (!gst_element_add_pad(bin, ghost)) {
+                qCCritical(GstVideoReceiverLog) << "gst_element_add_pad() failed";
+                break;
+            }
+
+            releaseElements = false;
+            // gst_clear_object(&parse);
+            // gst_clear_object(&sink);
+        } else {
+            qCCritical(GstVideoReceiverLog) << "Unsupported stream type";
+            break;
+        }
+
+        // 为容器创建Ghost Pad（对外暴露sink接口，方便链接valve）
+        // GstPad *encoderSinkPad = gst_element_get_static_pad(encoder, "sink");
+        // if (!encoderSinkPad) { break; }
+        // GstPad *ghostPad = gst_ghost_pad_new("sink", encoderSinkPad);
+        // gst_element_add_pad(bin, ghostPad);
+        // gst_clear_object(&encoderSinkPad);
+
+        releaseElements = false; // 创建成功，无需释放
+    } while (0);
+
+    // 失败时清理资源
+    if (releaseElements) {
+        gst_clear_object(&sink);
+        gst_clear_object(&muxer);
+        // gst_clear_object(&encoder);
+        gst_clear_object(&bin);
+        bin = nullptr;
+    }
+
+    return bin;
+}
+
 void GstVideoReceiver::_onNewSourcePad(GstPad *pad)
 {
     // FIXME: check for caps - if this is not video stream (and preferably - one of these which we have to support) then simply skip it
@@ -1157,6 +1433,24 @@ void GstVideoReceiver::_shutdownRecordingBranch()
     GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-recording-stopped");
 }
 
+void GstVideoReceiver::_shutdownStreamingBranch()
+{
+    if (_streamerSink) {
+        // 从管道移除并释放推流元素
+        GstObject *parent = gst_element_get_parent(_streamerSink);
+        if (parent) {
+            gst_bin_remove(GST_BIN(_pipeline), _streamerSink);
+            gst_element_set_state(_streamerSink, GST_STATE_NULL);
+            gst_clear_object(&parent);
+        }
+        gst_clear_object(&_streamerSink);
+    }
+
+    _streamingOut = false;
+    _dispatchSignal([this]() { emit streamingOutChanged(_streamingOut); });
+    GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-streaming-stopped");
+}
+
 bool GstVideoReceiver::_needDispatch()
 {
     return _worker->needDispatch();
@@ -1176,10 +1470,12 @@ void GstVideoReceiver::_dispatchSignal(Task emitter)
     _signalDepth -= 1;
 }
 
-gboolean GstVideoReceiver::_onBusMessage(GstBus *bus, GstMessage *msg, gpointer data)
+gboolean GstVideoReceiver::_onBusMessage(GstBus * /* bus */, GstMessage *msg, gpointer data)
 {
-    Q_UNUSED(bus)
-    Q_ASSERT(msg); Q_ASSERT(data);
+    if (!msg || !data) {
+        qCCritical(GstVideoReceiverLog) << "Invalid parameters in _onBusMessage: msg=" << msg << "data=" << data;
+        return TRUE;
+    }
 
     GstVideoReceiver *pThis = static_cast<GstVideoReceiver*>(data);
 
@@ -1410,100 +1706,6 @@ GstPadProbeReturn GstVideoReceiver::_keyframeWatch(GstPad *pad, GstPadProbeInfo 
 
     return GST_PAD_PROBE_REMOVE;
 }
-
-// void Streamer::handle_gst_message(GstElement *pipeline, const QString &pipelineType)
-// {
-//   GstBus *bus = gst_element_get_bus(pipeline);
-//   GstMessage *message = gst_bus_pop_filtered(bus, GST_MESSAGE_ANY);
-//   if (message) {
-//     switch (GST_MESSAGE_TYPE(message)) {
-//     case GST_MESSAGE_ERROR: {
-//       GError *error = nullptr;
-//       gst_message_parse_error(message, &error, nullptr);
-//       QString errorMsg = QString("%1 pipeline error: %2").arg(pipelineType, error->message);
-//       emit errorOccurred(errorMsg);
-//       g_clear_error(&error);
-//       break;
-//     }
-//     case GST_MESSAGE_WARNING: {
-//       GError *warning = nullptr;
-//       gst_message_parse_warning(message, &warning, nullptr);
-//       QString warningMsg = QString("%1 pipeline warning: %2").arg(pipelineType, warning->message);
-//       emit errorOccurred(warningMsg);
-//       g_clear_error(&warning);
-//       break;
-//     }
-//     case GST_MESSAGE_EOS: {
-//       QString eosMsg = QString("%1 pipeline reached end of stream.").arg(pipelineType);
-//       emit errorOccurred(eosMsg);
-//       break;
-//     }
-//     case GST_MESSAGE_STATE_CHANGED: {
-//       GstState oldState, newState, pendingState;
-//       gst_message_parse_state_changed(message, &oldState, &newState, &pendingState);
-//       if (GST_MESSAGE_SRC(message) == GST_OBJECT(pipeline)) {
-//         QString stateChangeMsg = QString("%1 pipeline state changed from %2 to %3.").arg(pipelineType, gst_element_state_get_name(oldState), gst_element_state_get_name(newState));
-//       }
-//       break;
-//     }
-//     case GST_MESSAGE_BUFFERING: {
-//       gint percent = 0;
-//       gst_message_parse_buffering(message, &percent);
-//       QString bufferingMsg = QString("%1 pipeline buffering: %2%%").arg(pipelineType).arg(percent);
-//       break;
-//     }
-//     case GST_MESSAGE_STREAM_STATUS: {
-//       GstStreamStatusType streamStatus;
-//       GstElement *owner = nullptr;
-//       gst_message_parse_stream_status(message, &streamStatus, &owner);
-//       const gchar *statusTypeName = get_stream_status_type_name(streamStatus);
-//       QString streamStatusMsg = QString("%1 stream status: %2 for element %3.").arg(pipelineType, statusTypeName, GST_ELEMENT_NAME(owner));
-//       break;
-//     }
-//     case GST_MESSAGE_NEW_CLOCK: {
-//       GstClock *newClock = nullptr;
-//       gst_message_parse_new_clock(message, &newClock);
-//       QString newClockMsg = QString("%1 new clock: %2.").arg(pipelineType, gst_object_get_name(GST_OBJECT(newClock)));
-//       break;
-//     }
-//     case GST_MESSAGE_TAG: {
-//       GstTagList *tags = nullptr;
-//       gst_message_parse_tag(message, &tags);
-//       gchar *tagsStr = gst_tag_list_to_string(tags);
-//       QString tagMsg = QString("%1 tags: %2.").arg(pipelineType).arg(tagsStr);
-//       g_free(tagsStr);
-//       gst_tag_list_unref(tags);
-//       break;
-//     }
-//     case GST_MESSAGE_LATENCY: {
-//       QString latencyMsg = QString("%1 latency message received.").arg(pipelineType);
-//       break;
-//     }
-//     case GST_MESSAGE_ASYNC_DONE: {
-//       QString asyncDoneMsg = QString("%1 async done message received.").arg(pipelineType);
-//       break;
-//     }
-//     case GST_MESSAGE_STREAM_START: {
-//       QString streamStartMsg = QString("%1 stream start message received.").arg(pipelineType);
-//       break;
-//     }
-//     case GST_MESSAGE_QOS: {
-//       GstFormat format;
-//       guint64 processed, dropped;
-//       gst_message_parse_qos_stats(message, &format, &processed, &dropped);
-//       QString qosMsg = QString("%1 QOS message received: processed=%2, dropped=%3.").arg(pipelineType).arg(processed).arg(dropped);
-//       break;
-//     }
-//     default:
-//       qCDebug(GstVideoReceiverLog) << "Unhandled message type: " << GST_MESSAGE_TYPE_NAME(message);
-//       break;
-//     }
-//     gst_message_unref(message);
-//   }
-//   gst_object_unref(bus);
-// }
-
-/*===========================================================================*/
 
 GstVideoWorker::GstVideoWorker(QObject *parent)
     : QThread(parent)

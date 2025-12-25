@@ -17,6 +17,7 @@ class CloudServerSettings : public SettingsGroup
     CloudServerSettings(QObject* parent = nullptr);
 
     Q_INVOKABLE void setLoginResult(const QString jsonStr);
+    Q_INVOKABLE void setLiveshareConfig(int type, const QString jsonStr);
     Q_INVOKABLE QString getToken();
     Q_INVOKABLE void setToken(const QString token);
 

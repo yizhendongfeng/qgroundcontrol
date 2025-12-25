@@ -3,6 +3,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include "MultiVehicleManager.h"
+#include "SettingsManager.h"
+#include "VideoSettings.h"
+#include "VideoManager.h"
 
 DECLARE_SETTINGGROUP(CloudServer, "")
 {
@@ -32,6 +35,38 @@ void CloudServerSettings::setLoginResult(const QString jsonStr)
     _workSpaceIdFact->setRawValue(jsonObj["workspace_id"].toString());
     qDebug() << "setLoginResult" << jsonStr;
     MultiVehicleManager::instance()->connectToMqttHost();
+}
+
+void CloudServerSettings::setLiveshareConfig(int type, const QString jsonStr)
+{
+    QString url;
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonStr.toUtf8());
+    QJsonObject jsonObj = jsonDoc.object();
+    qDebug() << "setLiveshareConfig type: " << type << "jsonStr:" << jsonStr << jsonObj;
+    //网页中直播类型
+    // export enum ELiveTypeValue {
+    //     Unknown,
+    //     Agora,
+    //     RTMP,
+    //     RTSP,
+    //     GB28181
+    // }
+    // dgcs直播类型     0：rtsp,1：rtmp:
+    int streamingType = -1;
+    if (type == 2) {       // rtmp
+        streamingType = 1;
+        url = jsonObj.contains("url") ? jsonObj["url"].toString() : "";
+    }
+    else if (type == 3) {  // rtsp
+        streamingType = 0;
+        QString userName = jsonObj.contains("userName") ? jsonObj["userName"].toString() : "";
+        QString password = jsonObj.contains("password") ? jsonObj["password"].toString() : "";
+        int port = jsonObj["port"].toString().toInt();
+        url = "rtsp://" + userName + ":" + password + "@127.0.0.1:" + QString::number(port) + "/dgcs";
+    }
+    SettingsManager::instance()->videoSettings()->streamingType()->setRawValue(streamingType);
+    SettingsManager::instance()->videoSettings()->streamingUrl()->setRawValue(url);
+    VideoManager::instance()->startStreaming();
 }
 
 QString CloudServerSettings::getToken()

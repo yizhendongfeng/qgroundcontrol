@@ -156,6 +156,38 @@ DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, lowLatencyMode)
     return _lowLatencyModeFact;
 }
 
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, streamingType)
+{
+    if (!_streamingTypeFact) {
+        _streamingTypeFact = _createSettingsFact(streamingTypeName);
+
+        _streamingTypeFact->setVisible(
+#ifdef QGC_GST_STREAMING
+            true
+#else
+            false
+#endif
+            );
+    }
+    return _streamingTypeFact;
+}
+
+DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, streamingUrl)
+{
+    if (!_streamingUrlFact) {
+        _streamingUrlFact = _createSettingsFact(streamingUrlName);
+
+        _streamingUrlFact->setVisible(
+#ifdef QGC_GST_STREAMING
+            true
+#else
+            false
+#endif
+            );
+    }
+    return _streamingUrlFact;
+}
+
 DECLARE_SETTINGSFACT_NO_FUNC(VideoSettings, rtspTimeout)
 {
     if (!_rtspTimeoutFact) {
@@ -276,6 +308,14 @@ bool VideoSettings::streamConfigured(void)
     }
 #endif
     return false;
+}
+
+void VideoSettings::setStreamingOut(const bool streaming)
+{
+    if (_streamingOut != streaming) {
+        _streamingOut = streaming;
+        emit streamingOutChanged();
+    }
 }
 
 void VideoSettings::_configChanged(QVariant)

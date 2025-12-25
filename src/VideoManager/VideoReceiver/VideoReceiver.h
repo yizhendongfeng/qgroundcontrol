@@ -43,6 +43,12 @@ public:
     void setStarted(bool started) { if (started != _started) { _started = started; emit startedChanged(_started); } }
     void setLowLatency(bool lowLatency) { if (lowLatency != _lowLatency) { _lowLatency = lowLatency; emit lowLatencyChanged(_lowLatency); } }
     void setVideoStreamInfo(QGCVideoStreamInfo *videoStreamInfo) { if (videoStreamInfo != _videoStreamInfo) { _videoStreamInfo = videoStreamInfo; emit videoStreamInfoChanged(); } }
+    // 推流类型枚举（供界面调用）
+    enum StreamType {
+        StreamTypeRTSP,
+        StreamTypeRTMP
+    };
+    Q_ENUMS(StreamType)
 
     // QMediaFormat::FileFormat
     enum FILE_FORMAT {
@@ -66,7 +72,8 @@ public:
     };
     Q_ENUM(STATUS)
     static bool isValidStatus(STATUS status) { return ((status >= STATUS_MIN) && (status <= STATUS_MAX)); }
-
+    virtual void startStreaming(const QString &streamUrl, StreamType streamType){};
+    virtual void stopStreaming(){};
 signals:
     void timeout();
     void streamingChanged(bool active);
@@ -90,6 +97,10 @@ signals:
     void onStartRecordingComplete(STATUS status);
     void onStopRecordingComplete(STATUS status);
     void onTakeScreenshotComplete(STATUS status);
+    // 推流相关信号（供界面响应）
+    void onStartStreamingComplete(STATUS status);
+    void onStopStreamingComplete(STATUS status);
+    void streamingOutChanged(bool streamingOut);
 
 public slots:
     virtual void start(uint32_t timeout) = 0;

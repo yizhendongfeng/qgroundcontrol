@@ -193,5 +193,40 @@ QGCPopupDialog {
                 enabled:            _videoSettings.enableStorageLimit.rawValue
             }
         }
+
+        SettingsGroupLayout {
+            Layout.fillWidth: true
+            heading:            qsTr("直播")
+
+            LabelledFactComboBox {
+                Layout.fillWidth:   true
+                label:              qsTr("推流类型")
+                fact:               _videoSettings.streamingType
+                visible:            _videoSettings.streamingType.visible
+            }
+
+
+            LabelledFactTextField {
+                Layout.fillWidth:   true
+                label:              qsTr("推流地址")
+                fact:               _videoSettings.streamingUrl
+                visible:            fact.visible
+                textFieldPreferredWidth:    _urlFieldWidth
+            }
+
+            QGCButton {
+                Layout.alignment: Qt.AlignLeft
+                Layout.fillWidth: true
+                text:               _videoSettings.streamingOut ? qsTr("停止直播") : qsTr("开始直播")
+                onClicked: {
+                    // _videoManager.startStreaming()
+                    console.log("直播", _videoSettings.streamingOut)
+                    _videoSettings.streamingOut ? _videoManager.stopStreaming() : _videoManager.startStreaming()
+                }
+                Component.onCompleted: {
+                    console.log("streaming:",  _videoSettings.streamingOut)
+                }
+            }
+        }
     }
 }

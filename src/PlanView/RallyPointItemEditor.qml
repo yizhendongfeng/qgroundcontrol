@@ -11,7 +11,7 @@ import QGroundControl.Palette
 Rectangle {
     id:     root
     height: _currentItem ? valuesRect.y + valuesRect.height + (_margin * 2) : titleBar.y - titleBar.height + _margin
-    color:  _currentItem ? qgcPal.missionItemEditor : qgcPal.windowShade
+    color:  _currentItem ? qgcPal.buttonHighlight : qgcPal.windowShadeLight//_currentItem ? qgcPal.missionItemEditor : qgcPal.windowShade
     radius: _radius
 
     signal clicked()

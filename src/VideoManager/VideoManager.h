@@ -41,7 +41,6 @@ class VideoManager : public QObject
     Q_PROPERTY(bool     hasVideo                READ hasVideo                                   NOTIFY hasVideoChanged)
     Q_PROPERTY(bool     isStreamSource          READ isStreamSource                             NOTIFY isStreamSourceChanged)
     Q_PROPERTY(bool     isUvc                   READ isUvc                                      NOTIFY isUvcChanged)
-    // Q_PROPERTY(bool     isUvc2                   READ isUvc2                                      NOTIFY isUvc2Changed)
     Q_PROPERTY(bool     recording               READ recording                                  NOTIFY recordingChanged)
     Q_PROPERTY(bool     streaming               READ streaming                                  NOTIFY streamingChanged)
     Q_PROPERTY(double   aspectRatio             READ aspectRatio                                NOTIFY aspectRatioChanged)
@@ -51,7 +50,6 @@ class VideoManager : public QObject
     Q_PROPERTY(QSize    videoSize               READ videoSize                                  NOTIFY videoSizeChanged)
     Q_PROPERTY(QString  imageFile               READ imageFile                                  NOTIFY imageFileChanged)
     Q_PROPERTY(QString  uvcVideoSourceID        READ uvcVideoSourceID                           NOTIFY uvcVideoSourceIDChanged)
-    Q_PROPERTY(QString  uvcVideoSourceID2        READ uvcVideoSourceID2                           NOTIFY uvcVideoSourceID2Changed)
     Q_PROPERTY(QObject*  gcu                         READ gcu)
 
 
@@ -67,6 +65,8 @@ public:
     Q_INVOKABLE void startVideo();
     Q_INVOKABLE void stopRecording();
     Q_INVOKABLE void stopVideo();
+    Q_INVOKABLE void startStreaming();
+    Q_INVOKABLE void stopStreaming();
 
     void init(QQuickWindow *rootWindow);
     void cleanup();
@@ -75,10 +75,8 @@ public:
     bool fullScreen() const { return _fullScreen; }
     bool hasThermal() const;
     bool hasVideo() const;
-    bool hasVideo2() const;
     bool isStreamSource() const;
     bool isUvc() const;
-    // bool isUvc2() const;
     bool recording() const { return _recording; }
     bool streaming() const { return _streaming; }
     double aspectRatio() const;
@@ -88,7 +86,6 @@ public:
     QSize videoSize() const { return _videoSize; }
     QString imageFile() const { return _imageFile; }
     QString uvcVideoSourceID() const { return _uvcVideoSourceID; }
-    QString uvcVideoSourceID2() const { return _uvcVideoSourceID2; }
     void setfullScreen(bool on);
     GCU* gcu() {return _gcu;};
     static bool gstreamerEnabled();
@@ -105,12 +102,10 @@ signals:
     void isAutoStreamChanged();
     void isStreamSourceChanged();
     void isUvcChanged();
-    void isUvc2Changed();
     void recordingChanged();
     void recordingStarted(const QString &filename);
     void streamingChanged();
     void uvcVideoSourceIDChanged();
-    void uvcVideoSourceID2Changed();
     void videoSizeChanged();
 
 private slots:
@@ -143,10 +138,7 @@ private:
     QSize _videoSize;
     QString _imageFile;
     QString _uvcVideoSourceID;
-    QString _uvcVideoSourceID2;
-    QString _videoFile;
     Vehicle *_activeVehicle = nullptr;
-    VideoSettings *_videoSettings2 = nullptr;
     GCU *_gcu = nullptr;
 };
 

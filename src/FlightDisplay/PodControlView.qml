@@ -58,7 +58,7 @@ Item {    // 吊舱的设置界面
                     anchors.left: parent.left
                     anchors.right: parent.right
                     height: 30
-                    anchors.margins: 5
+                    anchors.margins: 10
                     // spacing: 5
                     QGCLabel {
                         Layout.fillWidth: true
@@ -720,7 +720,8 @@ Item {    // 吊舱的设置界面
                                 if (checked) {
                                     mainWindow.showMessageDialog(qsTr("警告"), qsTr("吊舱所搭载激光照明模块属于 Class 3B 类非可见光激光器，在照明模块开启状态下，严禁直接目视（≤ 12m）或使用光学仪器直接观察激光光束，照明模块前方 20cm 内严禁放置易燃物体。确定开启？"),
                                                                     MessageDialog.Yes | MessageDialog.Cancel,
-                                                                    function() { _gcu.turnOnFillLight(255)})
+                                                                    function() { _gcu.turnOnFillLight(255)},
+                                                                    function() {checked = false})
                                 } else {
                                     _gcu.turnOnFillLight(0)
                                 }

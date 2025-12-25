@@ -40,11 +40,14 @@ public:
     DEFINE_SETTINGFACT(disableWhenDisarmed)
     DEFINE_SETTINGFACT(lowLatencyMode)
     DEFINE_SETTINGFACT(forceVideoDecoder)
+    DEFINE_SETTINGFACT(streamingType)
+    DEFINE_SETTINGFACT(streamingUrl)
 
     // DEFINE_SETTINGFACT(tcpVideoControlIp)
     // DEFINE_SETTINGFACT(tcpVideoControlPort)
 
     Q_PROPERTY(bool     streamConfigured        READ streamConfigured       NOTIFY streamConfiguredChanged)
+    Q_PROPERTY(bool     streamingOut            READ streamingOut           WRITE setStreamingOut      NOTIFY streamingOutChanged)
     Q_PROPERTY(QString  rtspVideoSource         READ rtspVideoSource        CONSTANT)
     Q_PROPERTY(QString  udp264VideoSource       READ udp264VideoSource      CONSTANT)
     Q_PROPERTY(QString  udp265VideoSource       READ udp265VideoSource      CONSTANT)
@@ -53,13 +56,14 @@ public:
     Q_PROPERTY(QString  disabledVideoSource     READ disabledVideoSource    CONSTANT)
 
     bool     streamConfigured       ();
+    bool     streamingOut           () { return _streamingOut; }
     QString  rtspVideoSource        () { return videoSourceRTSP; }
     QString  udp264VideoSource      () { return videoSourceUDPH264; }
     QString  udp265VideoSource      () { return videoSourceUDPH265; }
     QString  tcpVideoSource         () { return videoSourceTCP; }
     QString  mpegtsVideoSource      () { return videoSourceMPEGTS; }
     QString  disabledVideoSource    () { return videoDisabled; }
-
+    void     setStreamingOut(const bool streaming);
     static constexpr const char* videoSourceNoVideo           = QT_TRANSLATE_NOOP("VideoSettings", "No Video Available");
     static constexpr const char* videoDisabled                = QT_TRANSLATE_NOOP("VideoSettings", "Video Stream Disabled");
     static constexpr const char* videoSourceRTSP              = QT_TRANSLATE_NOOP("VideoSettings", "RTSP Video Stream");
@@ -75,7 +79,7 @@ public:
 
 signals:
     void streamConfiguredChanged    (bool configured);
-
+    void streamingOutChanged();
 private slots:
     void _configChanged             (QVariant value);
 
@@ -85,5 +89,5 @@ private:
 
 private:
     bool _noVideo = false;
-
+    bool _streamingOut = false;
 };

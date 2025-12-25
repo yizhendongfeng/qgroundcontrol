@@ -92,7 +92,7 @@ Rectangle {
                     radius:             ScreenTools.defaultFontPixelWidth / 2
                     fontPointSize:      ScreenTools.smallFontPointSize
                     toolStripAction:    modelData
-                    dropPanel:          _dropPanel
+                    // dropPanel:          _dropPanel
                     // showText:           showActionText
                     onDropped:          _root.dropped(index)
                     onCheckedChanged: {

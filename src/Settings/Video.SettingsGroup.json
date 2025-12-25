@@ -96,7 +96,7 @@
     "type":             "uint32",
     "enumStrings":      "Fit Width,Fit Height,Fill,No Crop",
     "enumValues":       "0,1,2,3",
-    "default":     0
+    "default":     3
 },
 {
     "name":             "showRecControl",
@@ -160,7 +160,7 @@
     "shortDesc": "Tweaks video for lower latency",
     "longDesc":  "If this option is enabled, the rtpjitterbuffer is removed and the video sink is set to assynchronous mode, reducing the latency by about 200 ms.",
     "type":             "bool",
-    "default":     false
+    "default":     true
 },
 {
     "name":             "forceVideoDecoder",
@@ -170,6 +170,22 @@
     "enumStrings":      "Default,Force software decoder,Force NVIDIA decoder,Force VA-API decoder,Force DirectX3D 11 decoder,Force VideoToolbox decoder,Force Intel decoder,Force Vulkan decoder",
     "enumValues":       "0,1,2,3,4,5,6,7",
     "default":           0
+},
+{
+    "name":             "streamingType",
+    "shortDesc":        "streamingType",
+    "longDesc":         "streamingType",
+    "type":             "uint32",
+    "enumStrings":      "rtsp,rtmp",
+    "enumValues":       "0,1",
+    "default":           0
+},
+{
+    "name":             "streamingUrl",
+    "shortDesc":        "streamingUrl",
+    "longDesc":         "streamingUrl",
+    "type":             "string",
+    "default":           ""
 }
 ]
 }

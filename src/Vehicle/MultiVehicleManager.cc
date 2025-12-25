@@ -29,7 +29,10 @@
 #include "VehicleObjectAvoidance.h"
 #include "TrajectoryPoints.h"
 #include "QmlObjectListModel.h"
+
 #include "VideoManager.h"
+#include "SettingsManager.h"
+#include "VideoSettings.h"
 
 #ifdef Q_OS_IOS
 #include "MobileScreenMgr.h"
@@ -56,6 +59,8 @@ MultiVehicleManager::MultiVehicleManager(QObject *parent)
     , _selectedVehicles(new QmlObjectListModel(this))
     , _mqttClient(new QMqttClient(this))
     , _timerSendOsd(new QTimer(this))
+    , _videoSettings(SettingsManager::instance()->videoSettings())
+    , _videoManager(VideoManager::instance())
 {
     // qCDebug(MultiVehicleManagerLog) << Q_FUNC_INFO << this;
 }
@@ -104,11 +109,12 @@ void MultiVehicleManager::init()
             case QMqttClient::Connected:
                 // 发送更新拓扑信息：地面站→无人机
                 updateDevicesInCloudServer();
+                _sendStateLiveCapacityToServer();
 
             case QMqttClient::Connecting:
                 break;
             case QMqttClient::Disconnected:
-                // connectToMqttHost(); // 重新继续连接
+                connectToMqttHost(); // 重新继续连接
                 break;
             default:
                 break;
@@ -141,24 +147,48 @@ void MultiVehicleManager::updateDevicesInCloudServer()
     jsonData["device_secret"] = "device_secret";
     jsonData["nonce"] = "nonce";
     jsonData["version"] = 1;
+    jsonData["workspace_id"] = SettingsManager::instance()->cloudServerSettings()->workSpaceId()->rawValueString();
     QJsonArray jsonArraySubDevices;
-    QJsonObject jsonObjSubDevice;
-    jsonObjSubDevice["sn"] = SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString();
-    jsonObjSubDevice["domain"] = 0;
-    jsonObjSubDevice["type"] = 77;
-    jsonObjSubDevice["sub_type"] = 0;
-    jsonObjSubDevice["index"] = "A";
-    jsonObjSubDevice["device_secret"] = "secret";
+    if (_activeVehicle) {
+        QJsonObject jsonObjSubDevice;
+        jsonObjSubDevice["sn"] = SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString();
+        jsonObjSubDevice["domain"] = 0;
+        jsonObjSubDevice["type"] = 77;
+        jsonObjSubDevice["sub_type"] = 0;
+        jsonObjSubDevice["index"] = "A";
+        jsonObjSubDevice["device_secret"] = "secret";
+        jsonArraySubDevices.append(jsonObjSubDevice);
+    }
     jsonData["nonce"] = "nonce";
     jsonData["version"] = 1;
-    jsonArraySubDevices.append(jsonObjSubDevice);
     jsonData["sub_devices"] = jsonArraySubDevices;
     jsonDevices["data"] = jsonData;
     QJsonDocument jsonDoc{jsonDevices};
     QString topic = "sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status";
     _mqttClient->subscribe("sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status_reply");
+    _mqttClient->subscribe("thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/services");
     qint32 result = _mqttClient->publish(QMqttTopicName(topic), jsonDoc.toJson(QJsonDocument::Compact));
-    // qDebug() << "updateDevicesInCloudServer() topic:" << topic << ", json:" << jsonDoc.toJson(QJsonDocument::Compact);
+    qDebug() << "updateDevicesInCloudServer() topic:" << topic << ", json:" << jsonDoc.toJson(QJsonDocument::Compact);
+}
+
+void MultiVehicleManager::sendMqttReply(const QString& topicPrefix, const QString& topicSuffix, const QString& tid, const QString& bid, const QString& method, const int& result)
+{
+    if (!_mqttConnected) {
+        qDebug() << "sendMqttReply mqtt not connected";
+        return;
+    }
+    QJsonObject jsonObjectReply;
+    jsonObjectReply["tid"] = tid;
+    jsonObjectReply["bid"] = bid;
+    jsonObjectReply["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+    jsonObjectReply["method"] = method;
+    QJsonObject jsonObjectData;
+    jsonObjectData["result"] = result;
+    jsonObjectReply["data"] = jsonObjectData;
+    QString topic = topicPrefix + "/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/" + topicSuffix;
+    QJsonDocument jsonDoc(jsonObjectReply);
+    qint32 writeCount = _mqttClient->publish(QMqttTopicName(topic), jsonDoc.toJson(QJsonDocument::Compact), 1);
+    qDebug() << "sendMqttReply() topic" << topic << jsonDoc.toJson(QJsonDocument::Compact) << "writeCount:" << writeCount;
 }
 
 void MultiVehicleManager::_vehicleHeartbeatInfo(LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType)
@@ -270,136 +300,254 @@ void MultiVehicleManager::_sendOsdToServer()
     if(!_mqttConnected)
         return;
     // 发送地面站状态信息
-    QJsonObject jsonGcs;
-    jsonGcs["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    jsonGcs["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    jsonGcs["timestamp"] = QDateTime::currentMSecsSinceEpoch();
-    jsonGcs["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
+    QJsonObject jsonGcsOsd;
+    jsonGcsOsd["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    jsonGcsOsd["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    jsonGcsOsd["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+    jsonGcsOsd["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
     QJsonObject jsonObjGcsData;
+    // // 直播能力
+    // QJsonObject liveCapacity;
+    // liveCapacity["available_video_number"] = 1;
+    // liveCapacity["coexist_video_number_max"] = 1;
+    // QJsonArray deviceList;
+    // QJsonObject device;
+    // device["sn"] = "D80-pro";
+    // device["available_video_number"] = 1;
+    // device["coexist_video_number_max"] = 1;
+
+    // QJsonArray cameraList;
+    // QJsonObject camera;
+    // camera["camera_index"] = "66-0-0";
+    // camera["available_video_number"] = 1;
+    // camera["coexist_video_number_max"] = 1;
+
+    // QJsonArray videoList;
+    // QJsonObject video;
+    // video["video_index"] = "1";
+    // video["video_type"] = "HD";
+    // video["switchable_video_types"] = QJsonArray{"visual light", "infrared camera"};
+    // videoList.append(video);
+    // camera["video_list"] = videoList;
+    // cameraList.append(camera);
+    // device["camera_list"] = cameraList;
+    // deviceList.append(device);
+    // liveCapacity["device_list"] = deviceList;
+    // jsonObjGcsData["live_capacity"] = liveCapacity;
+
     jsonObjGcsData["capacity_percent"] = 100;
+
+    // 直播信息
+    QJsonArray liveStatus;
+    QJsonObject videoLive;
+    //{sn}/{camera_index}/{video_index}
+    videoLive["video_id"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/66-0-0/" + "normal-0" ;
+    videoLive["video_type"] = "normal"; // 表明视频镜头的类型，如normal/wide/zoom/infrared等
+    videoLive["video_quality"] = 3;     //{"0":"自适应","1":"流畅","2":"标清","3":"高清","4":"超清"}
+    videoLive["status"] = _videoSettings->streamingOut();            //{"0":"未直播","1":"在直播"}
+    videoLive["error_status"] = 0;      // 错误码{"length":6}
+    liveStatus.append(videoLive);
+    jsonObjGcsData["live_status"] = liveStatus;
+    jsonObjGcsData["capacity_percent"] = 100;
+    jsonObjGcsData["drc_state"] = 0;    // 远程遥控链路状态{"0":"未连接","1":"连接中","2":"已连接"}
+
 
     // 发送无人机状态信息
     qDebug() << "vehicles->count:" << _vehicles->count();
-    for(int i = 0; i < _vehicles->count(); i++) {
-        QObject* obj = _vehicles->get(i);
-        if (obj) {
-            Vehicle* vehicle = qobject_cast<Vehicle*>(obj);
-            QJsonObject jsonDrone;
-            jsonDrone["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-            jsonDrone["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-            jsonDrone["timestamp"] = QDateTime::currentMSecsSinceEpoch();
-            jsonDrone["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
-            QJsonObject jsonObjDroneData;
-            if (!vehicle->flying()) {
-                // {"0":"待机","1":"起飞准备","2":"起飞准备完毕","3":"手动飞行","4":"自动起飞","5":"航线飞行","6":"全景拍照","7":"智能跟随","8":"ADS-B 躲避","9":"自动返航","10":"自动降落","11":"强制降落","12":"三桨叶降落","13":"升级中","14":"未连接","15":"APAS","16":"虚拟摇杆状态","17":"指令飞行","18":"空中 RTK 收敛模式"}
-                jsonObjDroneData["mode_code"] = 0;
 
+    if (_activeVehicle) {
+        QJsonObject jsonDrone;
+        jsonDrone["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        jsonDrone["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        jsonDrone["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+        jsonDrone["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
+        QJsonObject jsonObjDroneData;
+        if (!_activeVehicle->flying()) {
+            // {"0":"待机","1":"起飞准备","2":"起飞准备完毕","3":"手动飞行","4":"自动起飞","5":"航线飞行","6":"全景拍照","7":"智能跟随","8":"ADS-B 躲避","9":"自动返航","10":"自动降落","11":"强制降落","12":"三桨叶降落","13":"升级中","14":"未连接","15":"APAS","16":"虚拟摇杆状态","17":"指令飞行","18":"空中 RTK 收敛模式"}
+            jsonObjDroneData["mode_code"] = 0;
+
+        } else {
+            if (_activeVehicle->flightMode() == "Ready") {
+                jsonObjDroneData["mode_code"] = 2;
+            } else if (_activeVehicle->flightMode() == "Takeoff") {
+                jsonObjDroneData["mode_code"] = 3;
+            } else if (_activeVehicle->flightMode() == "Position") {
+                jsonObjDroneData["mode_code"] = 4;
+            } else if (_activeVehicle->flightMode() == "Mission") {
+                jsonObjDroneData["mode_code"] = 5;
+            } else if (_activeVehicle->flightMode() == "Return") {
+                jsonObjDroneData["mode_code"] = 9;
+            } else if (_activeVehicle->flightMode() == "Land") {
+                jsonObjDroneData["mode_code"] = 10;
             } else {
-                if (vehicle->flightMode() == "Ready") {
-                    jsonObjDroneData["mode_code"] = 2;
-                } else if (vehicle->flightMode() == "Takeoff") {
-                    jsonObjDroneData["mode_code"] = 3;
-                } else if (vehicle->flightMode() == "Position") {
-                    jsonObjDroneData["mode_code"] = 4;
-                } else if (vehicle->flightMode() == "Mission") {
-                    jsonObjDroneData["mode_code"] = 5;
-                } else if (vehicle->flightMode() == "Return") {
-                    jsonObjDroneData["mode_code"] = 9;
-                } else if (vehicle->flightMode() == "Land") {
-                    jsonObjDroneData["mode_code"] = 10;
-                } else {
-                    jsonObjDroneData["mode_code"] = 0;
-                }
+                jsonObjDroneData["mode_code"] = 0;
             }
-            QJsonObject jsonPositionState;
-            switch (vehicle->gpsFactGroup()->getFact("lock")->enumIndex()) {
-                //"None,None,2D Lock,3D Lock,3D DGPS Lock,3D RTK GPS Lock (float),3D RTK GPS Lock (fixed),Static (fixed)",
-                case 0:
-                case 1:
-                    jsonPositionState["is_fixed"] = 0;
-                    break;
-                case 2:
-                    jsonPositionState["is_fixed"] = 1;
-                    break;
-                case 3:
-                case 4:
-                case 5:
-                    jsonPositionState["is_fixed"] = 2;
-                    break;
-            }
-            jsonPositionState["gps_number"] = vehicle->gpsFactGroup()->getFact("count")->rawValue().toInt();
-            GPSRtk * gpsRtk = GPSManager::instance()->gpsRtk();
-            jsonPositionState["rtk_number"] = gpsRtk->connected() ? gpsRtk->gpsRtkFactGroup()->getFact("numSatellites")->rawValue().toInt() : 0;
-            jsonObjDroneData["position_state"] = jsonPositionState;
-            QJsonObject jsonObjBattery;
-            VehicleBatteryFactGroup *batteryFactGroup;
-            if (vehicle->batteries()->count() > 0) { // 获取第一个电池组
-                batteryFactGroup = qobject_cast<VehicleBatteryFactGroup *>(vehicle->batteries()->get(0));
-                jsonObjBattery["capacity_percent"] = batteryFactGroup->percentRemaining()->rawValue().toDouble();
-                jsonObjBattery["remain_flight_time"] = batteryFactGroup->timeRemaining()->rawValue().toDouble();
-            }
-            jsonObjDroneData["battery"] = jsonObjBattery;
-            jsonObjDroneData["home_distance"] = vehicle->distanceToHome()->rawValue().toDouble();
-            jsonObjDroneData["home_latitude"] = vehicle->homePosition().latitude();
-            jsonObjDroneData["home_longitude"] = vehicle->homePosition().longitude();
-            jsonObjDroneData["attitude_head"] = vehicle->heading()->rawValue().toInt();
-            jsonObjDroneData["attitude_roll"] = vehicle->roll()->rawValue().toDouble();
-            jsonObjDroneData["attitude_pitch"] = vehicle->pitch()->rawValue().toDouble();
-            jsonObjDroneData["elevation"] = vehicle->altitudeRelative()->rawValue().toDouble();
-            jsonObjDroneData["height"] = vehicle->altitudeAMSL()->rawValue().toDouble();
-            jsonObjDroneData["latitude"] = vehicle->latitude();
-            jsonObjDroneData["longitude"] = vehicle->longitude();
-            jsonObjDroneData["vertical_speed"] = vehicle->climbRate()->rawValue().toDouble();
-            jsonObjDroneData["horizontal_speed"] = vehicle->groundSpeed()->rawValue().toDouble();
-            jsonObjDroneData["firmware_version"] = QString::number(vehicle->firmwareMajorVersion()) + "." +
-                QString::number(vehicle->firmwareMinorVersion()) + "." +
-                QString::number(vehicle->firmwarePatchVersion()) + ".";
-            jsonObjDroneData["wind_direction"] = vehicle->windFactGroup()->getFact("direction")->rawValue().toDouble();
-            jsonObjDroneData["wind_speed"] = vehicle->windFactGroup()->getFact("speed")->rawValue().toDouble();
-            jsonObjGcsData["latitude"] = vehicle->homePosition().latitude();
-            jsonObjGcsData["longitude"] = vehicle->homePosition().longitude();
-
-            jsonDrone["data"] = jsonObjDroneData;
-            QJsonDocument jsonDocDrone{jsonDrone};
-            QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString() + "/osd";
-            int result = _mqttClient->publish(QMqttTopicName(topic),
-                // R"(
-                //     {
-                //         "bid": "df43a2cf-cc8c-4634-a958-ee808c260f23",
-                //         "data": {
-                //             "battery": {
-                //                 "capacity_percent": 1
-                //             },
-                //             "mode_code": 0,
-                //             "position_state": {
-                //                 "gps_number": 8,
-                //                 "is_fixed": 2
-                //             }
-                //         },
-                //         "gateway": "dgcs001",
-                //         "tid": "b5382804-e04f-4c7c-8517-62b381301080",
-                //         "timestamp": 1762187092880
-                //     }
-                // )"); //
-                jsonDocDrone.toJson(QJsonDocument::Compact));
-            qDebug() << "drone publish result: " << result << "topic:" << topic << jsonDocDrone.toJson();
         }
+        QJsonObject jsonPositionState;
+        switch (_activeVehicle->gpsFactGroup()->getFact("lock")->enumIndex()) {
+        //"None,None,2D Lock,3D Lock,3D DGPS Lock,3D RTK GPS Lock (float),3D RTK GPS Lock (fixed),Static (fixed)",
+        case 0:
+        case 1:
+            jsonPositionState["is_fixed"] = 0;
+            break;
+        case 2:
+            jsonPositionState["is_fixed"] = 1;
+            break;
+        case 3:
+        case 4:
+        case 5:
+            jsonPositionState["is_fixed"] = 2;
+            break;
+        }
+        jsonPositionState["gps_number"] = _activeVehicle->gpsFactGroup()->getFact("count")->rawValue().toInt();
+        GPSRtk * gpsRtk = GPSManager::instance()->gpsRtk();
+        jsonPositionState["rtk_number"] = gpsRtk->connected() ? gpsRtk->gpsRtkFactGroup()->getFact("numSatellites")->rawValue().toInt() : 0;
+        jsonObjDroneData["position_state"] = jsonPositionState;
+        QJsonObject jsonObjBattery;
+        VehicleBatteryFactGroup *batteryFactGroup;
+        if (_activeVehicle->batteries()->count() > 0) { // 获取第一个电池组
+            batteryFactGroup = qobject_cast<VehicleBatteryFactGroup *>(_activeVehicle->batteries()->get(0));
+            jsonObjBattery["capacity_percent"] = batteryFactGroup->percentRemaining()->rawValue().toDouble();
+            jsonObjBattery["remain_flight_time"] = batteryFactGroup->timeRemaining()->rawValue().toDouble();
+        }
+        jsonObjDroneData["battery"] = jsonObjBattery;
+        jsonObjDroneData["home_distance"] = _activeVehicle->distanceToHome()->rawValue().toDouble();
+        jsonObjDroneData["home_latitude"] = _activeVehicle->homePosition().latitude();
+        jsonObjDroneData["home_longitude"] = _activeVehicle->homePosition().longitude();
+        jsonObjDroneData["attitude_head"] = _activeVehicle->heading()->rawValue().toInt();
+        jsonObjDroneData["attitude_roll"] = _activeVehicle->roll()->rawValue().toDouble();
+        jsonObjDroneData["attitude_pitch"] = _activeVehicle->pitch()->rawValue().toDouble();
+        jsonObjDroneData["elevation"] = _activeVehicle->altitudeRelative()->rawValue().toDouble();
+        jsonObjDroneData["height"] = _activeVehicle->altitudeAMSL()->rawValue().toDouble();
+        jsonObjDroneData["latitude"] = _activeVehicle->latitude();
+        jsonObjDroneData["longitude"] = _activeVehicle->longitude();
+        jsonObjDroneData["vertical_speed"] = _activeVehicle->climbRate()->rawValue().toDouble();
+        jsonObjDroneData["horizontal_speed"] = _activeVehicle->groundSpeed()->rawValue().toDouble();
+        jsonObjDroneData["firmware_version"] = QString::number(_activeVehicle->firmwareMajorVersion()) + "." +
+                                               QString::number(_activeVehicle->firmwareMinorVersion()) + "." +
+                                               QString::number(_activeVehicle->firmwarePatchVersion()) + ".";
+        jsonObjDroneData["wind_direction"] = _activeVehicle->windFactGroup()->getFact("direction")->rawValue().toDouble();
+        jsonObjDroneData["wind_speed"] = _activeVehicle->windFactGroup()->getFact("speed")->rawValue().toDouble();
+        jsonObjGcsData["latitude"] = _activeVehicle->homePosition().latitude();
+        jsonObjGcsData["longitude"] = _activeVehicle->homePosition().longitude();
+        jsonObjGcsData["height"] = _activeVehicle->homePosition().altitude();
+
+        jsonDrone["data"] = jsonObjDroneData;
+        QJsonDocument jsonDocDrone{jsonDrone};
+        QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString() + "/osd";
+        int result = _mqttClient->publish(QMqttTopicName(topic),
+                                          // R"(
+                                          //     {
+                                          //         "bid": "df43a2cf-cc8c-4634-a958-ee808c260f23",
+                                          //         "data": {
+                                          //             "battery": {
+                                          //                 "capacity_percent": 1
+                                          //             },
+                                          //             "mode_code": 0,
+                                          //             "position_state": {
+                                          //                 "gps_number": 8,
+                                          //                 "is_fixed": 2
+                                          //             }
+                                          //         },
+                                          //         "gateway": "dgcs001",
+                                          //         "tid": "b5382804-e04f-4c7c-8517-62b381301080",
+                                          //         "timestamp": 1762187092880
+                                          //     }
+                                          // )"); //
+                                          jsonDocDrone.toJson(QJsonDocument::Compact));
+        // qDebug() << "drone publish result: " << result << "topic:" << topic << jsonDocDrone.toJson();
     }
 
-    jsonGcs["data"] = jsonObjGcsData;
-    QJsonDocument jsonDocGcs{jsonGcs};
+    jsonGcsOsd["data"] = jsonObjGcsData;
+    QJsonDocument jsonDocGcs{jsonGcsOsd};
     QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/osd";
     _mqttClient->publish(QMqttTopicName(topic), jsonDocGcs.toJson());
     // qDebug() << "dgcs: " << topic << jsonDocGcs.toJson();
 }
 
+void MultiVehicleManager::_sendStateLiveCapacityToServer()
+{
+    qDebug() << "_sendStateLiveCapacityToServer()";
+    QJsonObject jsonGcsState;
+    jsonGcsState["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    jsonGcsState["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    jsonGcsState["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+    jsonGcsState["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
+    QJsonObject jsonObjGcsData;
+    // 直播能力
+    QJsonObject liveCapacity;
+    liveCapacity["available_video_number"] = 1;
+    liveCapacity["coexist_video_number_max"] = 1;
+    QJsonArray deviceList;
+    QJsonObject device;
+    device["sn"] = SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString();
+    device["available_video_number"] = 1;
+    device["coexist_video_number_max"] = 1;
+
+    QJsonArray cameraList;
+    QJsonObject camera;
+    camera["camera_index"] = "66-0-0";
+    camera["available_video_number"] = 1;
+    camera["coexist_video_number_max"] = 1;
+
+    QJsonArray videoList;
+    QJsonObject video;
+    video["video_index"] = "1";
+    video["video_type"] = "normal";
+    video["switchable_video_types"] = QJsonArray{"zoom", "wide", "thermal", "normal", "ir"};
+    videoList.append(video);
+    camera["video_list"] = videoList;
+    cameraList.append(camera);
+    device["camera_list"] = cameraList;
+    deviceList.append(device);
+    liveCapacity["device_list"] = deviceList;
+    jsonObjGcsData["live_capacity"] = liveCapacity;
+    jsonGcsState["data"] = jsonObjGcsData;
+    QJsonDocument jsonDocGcs{jsonGcsState};
+    QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/state";
+    _mqttClient->publish(QMqttTopicName(topic), jsonDocGcs.toJson(), 1);
+}
+
 void MultiVehicleManager::_receiveMqttFromServer(const QByteArray &message, const QMqttTopicName &topic)
 {
     QJsonDocument jsonDocMsg = QJsonDocument::fromJson(message);
-    qDebug() << "_receiveMqttFromServer: " << message << "topic:" << topic;
+    QJsonObject jsonObjectMsg = jsonDocMsg.object();
+    qDebug() << "_receiveMqttFromServer topic: " << topic << "message:" << jsonObjectMsg;
+    QString tid = jsonObjectMsg["tid"].toString();
+    QString bid = jsonObjectMsg["bid"].toString();
     if (topic == "sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status_reply") {
         // 收到拓扑更新成功信息
         _timerSendOsd->start();
+    } else if (topic == "thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/services") { // 服务器下发指令
+
+        QString method = jsonObjectMsg.contains("method") ? jsonObjectMsg["method"].toString() : "";
+        if (method == "live_start_push") {
+            QJsonObject jsonObjectData = jsonObjectMsg.contains("data") ? jsonObjectMsg["data"].toObject() : QJsonObject();
+            if (!jsonObjectData.isEmpty()) {
+                int urlType = jsonObjectData.contains("url_type") ? jsonObjectData["url_type"].toInt() : -1;
+                QString url = jsonObjectData.contains("url") ? jsonObjectData["url"].toString() : "";
+                QString videoId = jsonObjectData.contains("video_id") ? jsonObjectData["video_id"].toString() : "";
+                int videoQuality = jsonObjectData.contains("video_quality") ? jsonObjectData["video_quality"].toInt() : -1;
+                if (urlType == -1 || url.isEmpty()) {
+                    qDebug() << "live_start_push wrong parameter";
+                    return;
+                }
+                _videoSettings->streamingUrl()->setRawValue(url);
+                int streamingType = -1;
+                if (urlType == 1)
+                    streamingType = 1;
+                else if (urlType == 4)
+                    streamingType = 0;
+                _videoSettings->streamingType()->setRawValue(streamingType);
+                _videoManager->startStreaming();
+                qDebug() << "startstreaming type:" << urlType << "url:" << url;
+                sendMqttReply("thing", "services_reply", tid, bid, "live_start_push", 0);
+            }
+        }
+        // qDebug() << "_receiveMqttFromServer: " << message << "topic:" << topic;
+
+
+
     }
 
 }
@@ -659,6 +807,7 @@ void MultiVehicleManager::_setActiveVehicle(Vehicle *vehicle)
         _activeVehicle = vehicle;
         emit activeVehicleChanged(vehicle);
         connect(vehicle, &Vehicle::gcuRequiredDataChanged, VideoManager::instance()->gcu(), &GCU::receiveVehicleMessage);
+        updateDevicesInCloudServer();
     }
 }
 

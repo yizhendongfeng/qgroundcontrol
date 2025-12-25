@@ -26,29 +26,29 @@ SettingsPage {
     property var    _cloudServerSettings:       _settingsManager.cloudServerSettings
     property var    _multivehicleManager:       QGroundControl.multiVehicleManager
 
-    SettingsGroupLayout {
-        Layout.fillWidth:   true
-        heading:            qsTr("CloudServer")
-        RowLayout {
-            spacing: ScreenTools.defaultFontPixelWidth
+    // SettingsGroupLayout {
+    //     Layout.fillWidth:   true
+    //     heading:            qsTr("CloudServer")
+    //     RowLayout {
+    //         spacing: ScreenTools.defaultFontPixelWidth
 
-            LabelledFactTextField {
-                id:                         _serverUrl
-                Layout.fillWidth:           true
-                textFieldPreferredWidth:    ScreenTools.defaultFontPixelWidth * 20
-                label:                      qsTr("URL")
-                fact:                       _cloudServerSettings.serverUrl
-                visible:                    fact.visible
-            }
+    //         LabelledFactTextField {
+    //             id:                         _serverUrl
+    //             Layout.fillWidth:           true
+    //             textFieldPreferredWidth:    ScreenTools.defaultFontPixelWidth * 20
+    //             label:                      qsTr("URL")
+    //             fact:                       _cloudServerSettings.serverUrl
+    //             visible:                    fact.visible
+    //         }
 
-            QGCButton {
-                text:       qsTr("Open")
-                onClicked: {
-                    // _multivehicleManager.connectToMqttHost()
-                }
-            }
-        }
-    }
+    //         QGCButton {
+    //             text:       qsTr("Open")
+    //             onClicked: {
+    //                 // _multivehicleManager.connectToMqttHost()
+    //             }
+    //         }
+    //     }
+    // }
 
     // Dio
 

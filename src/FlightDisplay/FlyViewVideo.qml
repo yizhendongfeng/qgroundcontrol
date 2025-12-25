@@ -162,29 +162,23 @@ Item {
         }
         onPositionChanged: (mouse) => {
             //on move, update the width of rectangle
-            if (trackingROI !== null) {
-                if (mouse.x < trackingROI.x) {
-                    trackingROI.x = mouse.x
-                    trackingROI.width = Math.abs(mouse.x - _track_rec_x)
-                } else {
-                    trackingROI.width = Math.abs(mouse.x - trackingROI.x)
-                }
-                if (mouse.y < trackingROI.y) {
-                    trackingROI.y = mouse.y
-                    trackingROI.height = Math.abs(mouse.y - _track_rec_y)
-                } else {
-                    trackingROI.height = Math.abs(mouse.y - trackingROI.y)
-                }
+
+            if (pressed && trackingROI !== null) {
+                trackingROI.x = Math.min(mouse.x, _track_rec_x)
+                trackingROI.y = Math.min(mouse.y, _track_rec_y)
+                trackingROI.width = Math.abs(mouse.x - _track_rec_x)
+                trackingROI.height = Math.abs(mouse.y - _track_rec_y)
             }
         }
         onReleased: (mouse) => {
             onScreenGimbalController.releaseControl()
             
             //if there is already a selection, delete it
+                console.log("mouse released!")
             if (trackingROI !== null) {
+                console.log("trackingROI.destroy()")
                 trackingROI.destroy();
             }
-
             // if(_gcu.podMode === 0x17) {
                 // order coordinates --> top/left and bottom/right
                 x0 = Math.min(_track_rec_x, mouse.x)

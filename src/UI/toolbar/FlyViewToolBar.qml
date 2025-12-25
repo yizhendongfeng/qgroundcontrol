@@ -224,7 +224,7 @@ Rectangle {
         visible:        !largeProgressBar.visible
     }
     // 电量进度条
-    Row {
+/*    Row {
         id:             rowFlyTimeLeft
         anchors.bottom: parent.bottom
         anchors.left:   parent.left
@@ -282,7 +282,7 @@ Rectangle {
             }
         }
     }
-
+*/
 
 
     // Large parameter download progress bar

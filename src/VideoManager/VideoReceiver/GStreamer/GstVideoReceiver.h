@@ -55,10 +55,13 @@ typedef struct _GstElement GstElement;
 class GstVideoReceiver : public VideoReceiver
 {
     Q_OBJECT
-
 public:
     explicit GstVideoReceiver(QObject *parent = nullptr);
     ~GstVideoReceiver();
+
+
+    void startStreaming(const QString &streamUrl, StreamType streamType) override;
+    void stopStreaming() override;
 
 public slots:
     void start(uint32_t timeout) override;
@@ -69,6 +72,7 @@ public slots:
     void stopRecording() override;
     void takeScreenshot(const QString &imageFile) override;
 
+
 private slots:
     void _watchdog();
     void _handleEOS();
@@ -77,7 +81,8 @@ private:
     GstElement *_makeSource(const QString &input);
     GstElement *_makeDecoder(GstCaps *caps = nullptr, GstElement *videoSink = nullptr);
     GstElement *_makeFileSink(const QString &videoFile, FILE_FORMAT format);
-
+    //创建推流元素链 _makeStreamSink（核心）,根据 RTSP/RTMP 类型构建不同的编码 + 传输链：
+    GstElement *_makeStreamSink(const QString &streamUrl, StreamType streamType);
     void _onNewSourcePad(GstPad *pad);
     void _onNewDecoderPad(GstPad *pad);
     bool _addDecoder(GstElement *src);
@@ -90,6 +95,7 @@ private:
     bool _unlinkBranch(GstElement *from);
     void _shutdownDecodingBranch();
     void _shutdownRecordingBranch();
+    void _shutdownStreamingBranch();
 
     bool _needDispatch();
     void _dispatchSignal(Task emitter);
@@ -113,6 +119,16 @@ private:
     GstElement *_source = nullptr;
     GstElement *_tee = nullptr;
     GstElement *_videoSink = nullptr;
+
+    // 推流分支核心元素
+    GstElement *_streamerValve = nullptr;
+    GstElement *_streamerSink = nullptr;
+
+    // 推流状态
+    bool _streamingOut = false;  // 区分现有 _streaming（接收流）
+    QString _streamUrl;          // 推流目标URL
+    StreamType _streamType;      // 推流类型（RTSP/RTMP）
+
     GstVideoWorker *_worker = nullptr;
     gulong _teeProbeId = 0;
     gulong _videoSinkProbeId = 0;
@@ -122,4 +138,6 @@ private:
         "qtmux",
         "mp4mux"
     };
+
+
 };

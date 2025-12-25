@@ -144,7 +144,7 @@ Rectangle {
                 }
 
 
-
+/*
                 // 1. 定义接收前端数据的对象（核心：暴露给前端的接口）
                 QtObject {
                     id: loginReceiver
@@ -187,13 +187,13 @@ Rectangle {
                     }
                 }
 
-
+*/
                 WebChannel {
                     id: webChannel
                     registeredObjects: []
                     // registeredObjects: [loginReceiver]
                     Component.onCompleted: {
-                        _cloudServerSettings.WebChannel.id = "qmlReceiver"
+                        // _cloudServerSettings.WebChannel.id = "qmlReceiver"
                         console.log("Item QML: WebChannel id：", _cloudServerSettings.WebChannel.id)
                         registeredObjects = [_cloudServerSettings]
                     }
