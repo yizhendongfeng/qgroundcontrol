@@ -18,8 +18,6 @@ class CloudServerSettings : public SettingsGroup
 
     Q_INVOKABLE void setLoginResult(const QString jsonStr);
     Q_INVOKABLE void setLiveshareConfig(int type, const QString jsonStr);
-    Q_INVOKABLE QString getToken();
-    Q_INVOKABLE void setToken(const QString token);
 
     DEFINE_SETTING_NAME_GROUP()
 
@@ -31,6 +29,7 @@ class CloudServerSettings : public SettingsGroup
     DEFINE_SETTINGFACT(appKey)
     DEFINE_SETTINGFACT(appLicense)
     DEFINE_SETTINGFACT(serverUrl)
+    DEFINE_SETTINGFACT(serverIp)
     DEFINE_SETTINGFACT(websocketUrl)
     DEFINE_SETTINGFACT(rtmURL)
     DEFINE_SETTINGFACT(userName)

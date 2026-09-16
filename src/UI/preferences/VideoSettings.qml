@@ -53,7 +53,7 @@ SettingsPage {
         SettingsGroupLayout {
             Layout.fillWidth:   true
             heading:            qsTr("Connection")
-            visible:            !_videoAutoStreamConfig && (_isTCP || _isRTSP | _requiresUDPPort)
+            visible:            !_videoAutoStreamConfig && (_isTCP || _isRTSP | _requiresUDPUrl)
 
             LabelledFactTextField {
                 Layout.fillWidth:           true
@@ -73,9 +73,9 @@ SettingsPage {
 
             LabelledFactTextField {
                 Layout.fillWidth:   true
-                label:              qsTr("UDP Port")
-                fact:               _videoSettings.udpPort
-                visible:            _requiresUDPPort && _videoSettings.udpPort.visible
+                label:              qsTr("UDP Url")
+                fact:               _videoSettings.udpUrl
+                visible:            _requiresUDPUrl && _videoSettings.udpUrl.visible
             }
     // SettingsGroupLayout {
     //     Layout.fillWidth:   true

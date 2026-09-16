@@ -16,6 +16,7 @@
 #include <QtCore/QTranslator>
 
 #include <QtWidgets/QApplication>
+#include "DjiBridge/DjiBridgeServer.h"
 
 class QQmlApplicationEngine;
 class QQuickWindow;
@@ -25,6 +26,7 @@ class QEvent;
 class QPostEventList;
 class QMetaMethod;
 class QMetaObject;
+class DjiBridgeServer;
 
 #if defined(qApp)
 #undef qApp
@@ -160,6 +162,7 @@ private:
 
     QList<QPair<QString /* title */, QString /* message */>> _delayedAppMessages;
 
+    DjiBridgeServer bridgeServer;
     class CompressedSignalList
     {
     public:

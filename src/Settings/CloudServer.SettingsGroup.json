@@ -63,6 +63,13 @@
     "default":     "http://192.168.31.208:8080/pilot-login"
 },
 {
+    "name":             "serverIp",
+    "shortDesc": "server ip",
+    "longDesc":  "",
+    "type":             "string",
+    "default":     "127.0.0.1"
+},
+{
     "name":             "websocketUrl",
     "shortDesc": "webSocket access address",
     "longDesc":  "",

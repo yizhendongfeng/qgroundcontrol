@@ -18,7 +18,8 @@ import QGroundControl.GCU
 
 Item {    // 吊舱的设置界面
     height:                     250
-    property var    _gcu:              QGroundControl.videoManager.gcu
+    // property var    _gcu:              QGroundControl.videoManager.gcu
+    property var    _inyyoA102Pro:  QGroundControl.videoManager.inyyoA102Pro
     property bool   pointMoveEnabled:  pointMoveCheckBoxSlider.checked
     QGCLabel {
         id:                     textPodTitle
@@ -52,6 +53,11 @@ Item {    // 吊舱的设置界面
                 border.color:           borderColor
                 Layout.fillWidth:         true
                 Layout.fillHeight:        true
+                // Rectangle {
+                //     anchors.fill: gridPodControl
+                //     color: "red"
+                // }
+
                 RowLayout {
                     id: rowAngles
                     anchors.top: parent.top
@@ -63,244 +69,302 @@ Item {    // 吊舱的设置界面
                     QGCLabel {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 65
-                        text: qsTr("横滚:") + _gcu.roll.toFixed(1)
+                        text: qsTr("横滚:") + _inyyoA102Pro.podRoll.toFixed(1)
                     }
                     QGCLabel {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 65
-                        text: qsTr("俯仰:") + _gcu.pitch.toFixed(1)
+                        text: qsTr("俯仰:") + _inyyoA102Pro.podPitch.toFixed(1)
                     }
                     QGCLabel {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 65
-                        text: qsTr("偏航:") + _gcu.yaw.toFixed(1)
+                        text: qsTr("偏航:") + _inyyoA102Pro.podYaw.toFixed(1)
                     }
                 }
-// Rectangle {
+
+                GridLayout {
+                    id:                gridPodControl
+                    anchors.top:       rowAngles.bottom
+                    anchors.bottom:    parent.bottom
+                    anchors.left:      parent.left
+                    anchors.right:     parent.right
+                    anchors.margins:   10//_margins * 2
+                    columns:            3
+                    rowSpacing:         16
+                    columnSpacing:      5
+
+
+                    // 第一行
+                    QGCLabel {
+                        Layout.alignment: Qt.AlignLeft
+                        text: qsTr("偏航:")
+                    }
+
+                    QGCSlider {
+                        id: sliderYawRate
+                        Layout.fillWidth: true
+                        from: -0xff
+                        to:   0xff
+                        stepSize: 1
+                        onValueChanged: {
+                            if (pressed) {
+                                // _gcu.rotatePod(0, value)
+                                _inyyoA102Pro.yawRotate(value < 0, Math.abs(value))
+                                console.log("Yaw value:", value, value < 0)
+                            }
+                        }
+                        PropertyAnimation {
+                            id: centerAnimYaw
+                            target: sliderYawRate
+                            property: "value"
+                            to: (sliderYawRate.from + sliderYawRate.to) / 2
+                            duration:  100
+                            easing.type: Easing.OutQuart
+                        }
+                        onPressedChanged: {
+                            if (!pressed && sliderYawRate.value !== (sliderYawRate.from + sliderYawRate.to) / 2) {
+                                // _gcu.rotatePod(0, 0)
+                                _inyyoA102Pro.stopRoate()
+                                centerAnimYaw.start()
+                            }
+                        }
+                    }
+                    QGCLabel {
+                        Layout.preferredWidth: 20
+                        Layout.alignment: Qt.AlignRight
+                        text: Math.round(sliderYawRate.value)
+                    }
+
+                    // 第二行
+                    QGCLabel {
+                        Layout.alignment: Qt.AlignLeft
+                        text: qsTr("俯仰:")
+                    }
+
+                    QGCSlider {
+                        id: sliderPitchRate
+                        Layout.fillWidth: true
+                        from: -150
+                        to:   150
+                        stepSize: 1
+                        onValueChanged: {
+                            if (pressed) {
+                                // _gcu.rotatePod(1, value)
+                                _inyyoA102Pro.pitchRotate(value < 0, Math.abs(value))
+                            }
+                        }
+
+                        PropertyAnimation {
+                            id: centerAnimPitch
+                            target: sliderPitchRate
+                            property: "value"
+                            to: (sliderPitchRate.from + sliderPitchRate.to) / 2
+                            duration:  100
+                            easing.type: Easing.OutQuart
+                        }
+                        onPressedChanged: {
+                            if (!pressed && sliderPitchRate.value !== (sliderPitchRate.from + sliderPitchRate.to) / 2) {
+                                // _gcu.rotatePod(1, 0)
+                                _inyyoA102Pro.stopRoate()
+                                centerAnimPitch.start()
+                            }
+                        }
+                    }
+                    QGCLabel {
+                        Layout.preferredWidth: 20
+                        Layout.alignment: Qt.AlignRight
+                        text: Math.round(sliderPitchRate.value)
+                    }
+
+                    // 第三行
+                    QGCLabel {
+                        Layout.alignment: Qt.AlignLeft
+                        text: qsTr("可见光:")
+                    }
+
+                    QGCSlider {
+                        id: sliderVisualZoom
+                        Layout.fillWidth: true
+                        from: -8
+                        to:   8
+                        stepSize: 1
+                        onValueChanged: {
+                            if (pressed) {
+                                // _gcu.rotatePod(1, value)
+                                _inyyoA102Pro.zoomChange(value > 0, Math.abs(value))
+                            }
+                        }
+
+                        PropertyAnimation {
+                            id: centerAnimVisualZoom
+                            target: sliderVisualZoom
+                            property: "value"
+                            to: (sliderVisualZoom.from + sliderVisualZoom.to) / 2
+                            duration:  100
+                            easing.type: Easing.OutQuart
+                        }
+                        onPressedChanged: {
+                            if (!pressed && sliderVisualZoom.value !== (sliderVisualZoom.from + sliderVisualZoom.to) / 2) {
+                                // _gcu.rotatePod(1, 0)
+                                _inyyoA102Pro.zoomStop()
+                                centerAnimVisualZoom.start()
+                            }
+                        }
+                    }
+                    QGCLabel {
+                        Layout.preferredWidth: 20
+                        Layout.alignment: Qt.AlignRight
+                        text: Math.round(sliderVisualZoom.value)
+                    }
+
+                    // 第四行
+                    QGCLabel {
+                        Layout.alignment: Qt.AlignLeft
+                        text: qsTr("红   外:")
+                    }
+
+                    QGCSlider {
+                        id: sliderInfraredZoom
+                        Layout.fillWidth: true
+                        from: 1
+                        to:   8
+                        stepSize: 1
+                        onValueChanged: {
+                            if (pressed) {
+                                // _gcu.rotatePod(1, value)
+                                _inyyoA102Pro.thermalZoom(value - 1)
+                            }
+                        }
+                    }
+                    QGCLabel {
+                        Layout.preferredWidth: 20
+                        Layout.alignment: Qt.AlignRight
+                        text: Math.round(sliderInfraredZoom.value)
+                    }
+                }
+                // Rectangle {
 //     anchors.fill: columnPodRate
 //     color: "red"
 // }
 
-                StackLayout {
-                    id: stackLayoutPodControl
-                    anchors.left:  parent.left
-                    anchors.right: parent.right
-                    anchors.top:   rowAngles.botton
-                    anchors.bottom: rowLayoutZoom.top
-                    anchors.margins: 5
-                    //角度模式:0x10, 欧拉角模式:0x14,FPV模式:0x1c
-                    //指向锁定:0x11,指向跟随:0x12,俯拍模式:0x13,凝视模式:0x16, 跟踪模式:0x17,
-                    property bool angleMode: _gcu.podMode === 0x10 ||  _gcu.podMode === 0x14 ||  _gcu.podMode === 0x1c
-                    currentIndex: angleMode ? 1 : 0
+//                 StackLayout {
+//                     id: stackLayoutPodControl
+//                     anchors.left:  parent.left
+//                     anchors.right: parent.right
+//                     anchors.top:   rowAngles.bottom
+//                     anchors.bottom: parent.bottom
+//                     anchors.margins: 5
+//                     anchors.topMargin: 10
+//                     //角度模式:0x10, 欧拉角模式:0x14,FPV模式:0x1c
+//                     //指向锁定:0x11,指向跟随:0x12,俯拍模式:0x13,凝视模式:0x16, 跟踪模式:0x17,
+//                     property bool angleMode: _gcu.podMode === 0x10 ||  _gcu.podMode === 0x14 ||  _gcu.podMode === 0x1c
+//                     currentIndex: angleMode ? 1 : 0
 
 
-                    ColumnLayout {
-                        id: columnPodRate
-                        anchors.fill: parent
-                        anchors.margins: 5
-                        anchors.topMargin: 30
-                        spacing: 10
-                        // Rectangle {
-                        //     Layout.fillHeight: true
-                        //     Layout.fillWidth: true
-                        //     color: "red"
-                        // }
 
-                        // Item {
-                        //     Layout.fillHeight: true
-                        //     Layout.fillWidth: true
-                        // }
-                        RowLayout {
-                            Layout.fillHeight: true
-                            Layout.fillWidth:  true
-                            Layout.minimumHeight: 30
-                            // Layout.preferredHeight: 1
-                            QGCLabel {
-                                Layout.alignment: Qt.AlignLeft
-                                text: qsTr("偏航:")
-                            }
+// /*
+//                     ColumnLayout {
+//                         id: columnPodAngle
+//                         anchors.fill: parent
+//                         anchors.margins: 5
 
-                            QGCSlider {
-                                id: sliderYawRate
-                                Layout.fillWidth: true
-                                from: -150
-                                to:   150
-                                onValueChanged: {
-                                    if (pressed) {
-                                        _gcu.rotatePod(0, value)
-                                    }
-                                }
-                                PropertyAnimation {
-                                    id: centerAnimYaw
-                                    target: sliderYawRate
-                                    property: "value"
-                                    to: (sliderYawRate.from + sliderYawRate.to) / 2
-                                    duration:  100
-                                    easing.type: Easing.OutQuart
-                                }
-                                onPressedChanged: {
-                                    if (!pressed && sliderYawRate.value !== (sliderYawRate.from + sliderYawRate.to) / 2) {
-                                        _gcu.rotatePod(0, 0)
-                                        centerAnimYaw.start()
-                                    }
-                                }
-                            }
-                            QGCLabel {
-                                Layout.preferredWidth: 30
-                                Layout.alignment: Qt.AlignRight
-                                text: Math.round(sliderYawRate.value)
-                            }
-                        }
-                        RowLayout {
-                            Layout.fillHeight: true
-                            Layout.fillWidth:  true
-                            Layout.minimumHeight: 30
-                            // Layout.preferredHeight: 1
-                            QGCLabel {
-                                Layout.alignment: Qt.AlignLeft
-                                text: qsTr("俯仰:")
-                            }
+//                         RowLayout {
+//                             Layout.fillHeight: true
+//                             Layout.fillWidth: true
+//                             QGCLabel {
+//                                 text: qsTr("偏航:")
+//                             }
+//                             QGCTextField {
+//                                 id: textFieldYawAngle
+//                                 Layout.fillWidth: true
+//                                 placeholderText: "-180~180"
+//                                 validator: DoubleValidator {
+//                                                         bottom: -180        // 最小值
+//                                                         top: 180           // 最大值
+//                                                         decimals: 1        // 最多1位小数
+//                                                         locale: Qt.locale("C")
+//                                                     }
+//                                 onAccepted: {
+//                                     _gcu.setPodAngle(0, parseFloat(text))
+//                                     focus = false
+//                                 }
+//                                 Connections {
+//                                     id: connectionsYawAngle
+//                                     target: _gcu
+//                                     enabled: !textFieldYawAngle.focus
+//                                     onYawChanged: {
+//                                         textFieldYawAngle.text = _gcu.yaw.toFixed(1)
+//                                     }
+//                                 }
+//                             }
+//                         }
+//                         RowLayout {
+//                             Layout.fillHeight: true
+//                             Layout.fillWidth: true
+//                             QGCLabel {
+//                                 text: qsTr("俯仰:")
+//                             }
+//                             QGCTextField {
+//                                 id: textFieldPitchAngle
+//                                 Layout.fillWidth: true
+//                                 placeholderText: "-90~90"
+//                                 validator: DoubleValidator {
+//                                     bottom: -90        // 最小值
+//                                     top: 90            // 最大值
+//                                     decimals: 1        // 最多1位小数
+//                                     locale: Qt.locale("C")
+//                                 }
+//                                 onAccepted: {
+//                                     _gcu.setPodAngle(1, parseFloat(text))
+//                                     focus = false
+//                                 }
+//                                 Connections {
+//                                     id: connectionsPitchAngle
+//                                     target: _gcu
+//                                     enabled: !textFieldPitchAngle.focus
+//                                     onPitchChanged: {
+//                                         textFieldPitchAngle.text = _gcu.pitch.toFixed(1)
+//                                     }
+//                                 }
+//                             }
+//                         }
+//                         RowLayout {
+//                             Layout.fillHeight: true
+//                             Layout.fillWidth: true
+//                             QGCLabel {
+//                                 text: qsTr("横滚:")
+//                             }
+//                             QGCTextField {
+//                                 id: textFieldRollAngle
+//                                 Layout.fillWidth: true
+//                                 placeholderText: "-90~90"
+//                                 validator: DoubleValidator {
+//                                     bottom: -90        // 最小值
+//                                     top: 90            // 最大值
+//                                     decimals: 1        // 最多1位小数
+//                                     locale: Qt.locale("C")
+//                                 }
+//                                 onAccepted: {
+//                                     _gcu.setPodAngle(2, parseFloat(text))
+//                                     focus = false
+//                                 }
+//                                 Connections {
+//                                     id: connectionsRollAngle
+//                                     enabled: !textFieldRollAngle.focus
+//                                     target: _gcu
+//                                     onRollChanged: {
+//                                         textFieldRollAngle.text = _gcu.roll.toFixed(1)
+//                                     }
+//                                 }
+//                             }
+//                         }
 
-                            QGCSlider {
-                                id: sliderPitchRate
-                                Layout.fillWidth: true
-                                from: -150
-                                to:   150
-                                onValueChanged: {
-                                    if (pressed) {
-                                        _gcu.rotatePod(1, value)
-                                    }
-                                }
+//                     }
+// */
+//                 }
 
-                                PropertyAnimation {
-                                    id: centerAnimPitch
-                                    target: sliderPitchRate
-                                    property: "value"
-                                    to: (sliderPitchRate.from + sliderPitchRate.to) / 2
-                                    duration:  100
-                                    easing.type: Easing.OutQuart
-                                }
-                                onPressedChanged: {
-                                    if (!pressed && sliderPitchRate.value !== (sliderPitchRate.from + sliderPitchRate.to) / 2) {
-                                        _gcu.rotatePod(1, 0)
-                                        centerAnimPitch.start()
-                                    }
-                                }
-                            }
-                            QGCLabel {
-                                Layout.preferredWidth: 30
-                                Layout.alignment: Qt.AlignRight
-                                text: Math.round(sliderPitchRate.value)
-                            }
-                        }
 
-                    }
-
-                    ColumnLayout {
-                        id: columnPodAngle
-                        anchors.fill: parent
-                        anchors.margins: 5
-
-                        RowLayout {
-                            Layout.fillHeight: true
-                            Layout.fillWidth: true
-                            QGCLabel {
-                                text: qsTr("偏航:")
-                            }
-                            QGCTextField {
-                                id: textFieldYawAngle
-                                Layout.fillWidth: true
-                                placeholderText: "-180~180"
-                                validator: DoubleValidator {
-                                                        bottom: -180        // 最小值
-                                                        top: 180           // 最大值
-                                                        decimals: 1        // 最多1位小数
-                                                        locale: Qt.locale("C")
-                                                    }
-                                onAccepted: {
-                                    _gcu.setPodAngle(0, parseFloat(text))
-                                    focus = false
-                                }
-                                Connections {
-                                    id: connectionsYawAngle
-                                    target: _gcu
-                                    enabled: !textFieldYawAngle.focus
-                                    onYawChanged: {
-                                        textFieldYawAngle.text = _gcu.yaw.toFixed(1)
-                                    }
-                                }
-                            }
-                        }
-                        RowLayout {
-                            Layout.fillHeight: true
-                            Layout.fillWidth: true
-                            QGCLabel {
-                                text: qsTr("俯仰:")
-                            }
-                            QGCTextField {
-                                id: textFieldPitchAngle
-                                Layout.fillWidth: true
-                                placeholderText: "-90~90"
-                                validator: DoubleValidator {
-                                    bottom: -90        // 最小值
-                                    top: 90            // 最大值
-                                    decimals: 1        // 最多1位小数
-                                    locale: Qt.locale("C")
-                                }
-                                onAccepted: {
-                                    _gcu.setPodAngle(1, parseFloat(text))
-                                    focus = false
-                                }
-                                Connections {
-                                    id: connectionsPitchAngle
-                                    target: _gcu
-                                    enabled: !textFieldPitchAngle.focus
-                                    onPitchChanged: {
-                                        textFieldPitchAngle.text = _gcu.pitch.toFixed(1)
-                                    }
-                                }
-                            }
-                        }
-                        RowLayout {
-                            Layout.fillHeight: true
-                            Layout.fillWidth: true
-                            QGCLabel {
-                                text: qsTr("横滚:")
-                            }
-                            QGCTextField {
-                                id: textFieldRollAngle
-                                Layout.fillWidth: true
-                                placeholderText: "-90~90"
-                                validator: DoubleValidator {
-                                    bottom: -90        // 最小值
-                                    top: 90            // 最大值
-                                    decimals: 1        // 最多1位小数
-                                    locale: Qt.locale("C")
-                                }
-                                onAccepted: {
-                                    _gcu.setPodAngle(2, parseFloat(text))
-                                    focus = false
-                                }
-                                Connections {
-                                    id: connectionsRollAngle
-                                    enabled: !textFieldRollAngle.focus
-                                    target: _gcu
-                                    onRollChanged: {
-                                        textFieldRollAngle.text = _gcu.roll.toFixed(1)
-                                    }
-                                }
-                            }
-                        }
-
-                    }
-
-                    // Item {
-                    //     Layout.fillWidth: true
-                    //     Layout.fillHeight: true
-                    //     id: podAngleControl
-
-                    // }
-                }
 
 /*
                 Rectangle {       // 外圆
@@ -460,202 +524,6 @@ Item {    // 吊舱的设置界面
                 }
 */
 
-                RowLayout {
-                    id: rowLayoutZoom
-                    anchors.bottom: rowLayoutMode.top
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.margins: _margins * 2
-                    height: 20
-
-                    QGCLabel {
-                        Layout.alignment: Qt.AlignLeft
-                        text: qsTr("缩放:")
-                    }
-
-                    QGCIconButton {
-                        id:                       cameraZoomOut
-                        // anchors.bottom:           parent.bottom
-                        // anchors.horizontalCenter: parent.horizontalCenter
-                        Layout.preferredHeight: ScreenTools.implicitIconButtonHeight
-                        Layout.preferredWidth:  ScreenTools.implicitIconButtonHeight
-                        iconSource:               "/qmlimages/Minus.svg"
-                        highlighted:              hovered
-                        width:                    ScreenTools.implicitIconButtonHeight * 2
-                        onPressed: {
-                            textFieldConnections.enabled = true
-                            sliderConnections.enabled = true
-                            console.log("zoom out")
-                            _gcu.continuousZoom(-1)
-                        }
-                        onReleased: {
-                            console.log("zoom out stop")
-                            _gcu.continuousZoom(0)
-                        }
-                    }
-                    QGCSlider {
-                        id: sliderZoom
-                        Layout.fillWidth: true
-                        from: 1
-                        to:   40
-                        // value: _gcu.zoom * -10
-                        onPressedChanged: {
-                            if (!pressed) {
-                                sliderConnections.enabled = false
-                                textFieldConnections.enabled = true
-                                _gcu.setZoom(value)
-                            } else {
-                                sliderConnections.enabled = false
-                            }
-                        }
-                        Connections {
-                            id: sliderConnections
-                            // enabled: false
-                            target: _gcu
-                            onZoomChanged: {
-                                sliderZoom.value = _gcu.zoom
-                            }
-                        }
-                    }
-                    QGCIconButton {
-                        id:                       cameraZoomIn
-                        // anchors.top:              parent.top
-                        // anchors.horizontalCenter: parent.horizontalCenter
-                        Layout.preferredHeight: ScreenTools.implicitIconButtonHeight
-                        Layout.preferredWidth:  ScreenTools.implicitIconButtonHeight
-                        iconSource:               "/qmlimages/Plus.svg"
-                        highlighted:              hovered
-                        width:                    ScreenTools.implicitIconButtonHeight * 2
-                        onPressed: {
-                            console.log("zoom in")
-                            textFieldConnections.enabled = true
-                            sliderConnections.enabled = true
-                            _gcu.continuousZoom(1)
-                        }
-                        onReleased: {
-                            console.log("zoom in stop")
-                            _gcu.continuousZoom(0)
-                        }
-                    }
-                    QGCTextField {
-                        id:           textFieldZoomValue
-                        Layout.preferredWidth: 35
-                        Layout.preferredHeight: 25
-                        validator: DoubleValidator {
-                            bottom: 1.0        // 最小值0
-                            top: 40.0          // 最大值100
-                            decimals: 1        // 最多1位小数
-                            locale: Qt.locale("C")
-                        }
-                        onAccepted: {
-                            textFieldConnections.enabled = false
-                            sliderConnections.enabled = true
-                            _gcu.setZoom(parseFloat(text))
-                        }
-                        onFocusChanged: {
-                            if (focus)
-                                textFieldConnections.enabled = false
-                        }
-
-                        Connections {
-                            id: textFieldConnections
-                            // enabled: false
-                            target: _gcu
-                            onZoomChanged: {
-                                textFieldZoomValue.text = _gcu.zoom.toFixed(1)
-                            }
-                        }
-                    }
-                    // Connections {
-                    //     target: _gcu
-                    //     onZoomChanged: {
-                    //         enabled = false
-                    //         textFieldConnections.enabled = false
-                    //         sliderConnections.enabled = false
-                    //     }
-                    // }
-                }
-
-                RowLayout {
-                    id: rowLayoutMode
-                    // width: parent.width
-                    anchors.bottom: parent.bottom
-                    // anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.margins: _margins * 2
-                    spacing: _margins * 2
-                    QGCLabel {
-                        text: qsTr("模式:")
-                    }
-                    QGCComboBox {
-                        id: podMode
-                        textRole: "text"
-                        valueRole: "value"
-                        currentIndex: 2
-                        // sizeToContents: true
-                        height:        ScreenTools.defaultFontPixelHeight
-                        Layout.fillWidth: true
-                        model: [
-                            { value: 0x10, text: qsTr("角度模式")},
-                            { value: 0x11, text: qsTr("指向锁定")},
-                            { value: 0x12, text: qsTr("指向跟随")},
-                            { value: 0x13, text: qsTr("俯拍模式")},
-                            { value: 0x14, text: qsTr("欧拉角模式")},
-                            // { value: 0x16, text: qsTr("凝视模式")},
-                            { value: 0x17, text: qsTr("跟踪模式")},
-                            { value: 0x1c, text: qsTr("FPV模式")}
-                        ]
-                        onActivated:{
-                            _gcu.setPodHeadMode(currentValue)
-                            connectionMode.enabled = true
-                            console.log("new pod mode:", index, currentValue)
-                        }
-                        Connections {
-                            id: connectionMode
-                            target: _gcu
-                            onPodModeChanged: {
-                                podMode.currentIndex = podMode.indexOfValue(_gcu.podMode)
-                            }
-                        }
-                        onPressedChanged: {
-                            console.log("mode pressed:", pressed)
-                            connectionMode.enabled = false
-                        }
-                    }
-
-                    // QGCRadioButton {
-                    //     id: podFollow
-                    //     text: qsTr("跟随")
-                    //     Layout.alignment: Qt.AlignLeft
-                    //     checked: _gcu.podMode === 0x12
-                    //     onCheckedChanged: {
-                    //         if (checked)
-                    //             _gcu.setPodHeadMode(0x12)
-                    //     }
-                    // }
-                    // QGCRadioButton {
-                    //     id: podLock
-                    //     text: qsTr("锁定")
-                    //     Layout.alignment: Qt.AlignHCenter
-                    //     checked: _gcu.podMode === 0x11
-                    //     onCheckedChanged: {
-                    //         if (checked)
-                    //             _gcu.setPodHeadMode(0x11)
-                    //     }
-                    // }
-                    // QGCRadioButton {
-                    //     id: podAngle
-                    //     text: qsTr("角度")
-                    //     Layout.alignment: Qt.AlignRight
-                    //     checked: _gcu.podMode === 0x10
-                    //     onCheckedChanged: {
-                    //         if (checked)
-                    //             _gcu.setPodHeadMode(0x10)
-                    //     }
-                    // }
-
-                }
             }
 
         }
@@ -665,7 +533,7 @@ Item {    // 吊舱的设置界面
             Layout.fillWidth:   true
             Layout.preferredWidth:  parent.width / 2
             QGCLabel {
-                text:     qsTr("型号: ") + _gcu.cameraName
+                text:     qsTr("型号: ")// + _gcu.cameraName
                 Layout.alignment:  Qt.AlignHCenter
             }
 
@@ -677,136 +545,112 @@ Item {    // 吊舱的设置界面
                 width:                    parent.width
                 Layout.fillWidth:         true
                 Layout.fillHeight:        true
-                ColumnLayout {
-                    id:                 itemPodSettings
+                GridLayout {
+                    id:                 itemPodSettingsGridLayout
                     anchors.fill:       parent
-                    anchors.margins:    _margins
-                    RowLayout {
+                    anchors.margins:    _margins * 2
+                    columns:            2
+                    rowSpacing:         16
+                    columnSpacing:      20
+                    QGCCheckBoxSlider {
+                        id:                 osdCheckBoxSlider
                         Layout.fillWidth:   true
-                        QGCRadioButton {
-                            text:           qsTr("可见光")
-                            Layout.fillWidth:   true
-                            Layout.leftMargin:  _margins
-                            Layout.rightMargin: _margins
-                            checked:        true
-                            onClicked: {
-                                _gcu.setVisualLight(true);
-                            }
-                        }
-                        QGCRadioButton {
-                            text:             qsTr("夜视")
-                            Layout.fillWidth:   true
-                            Layout.leftMargin:  _margins
-                            Layout.rightMargin: _margins
-                            checked:           _gcu.nightVision
-                            onClicked: {
-                                _gcu.setVisualLight(false);
-                            }
+                        text:               qsTr("OSD")
+                        visible:            true
+                        onCheckedChanged: {
+                            _inyyoA102Pro.osd(checked)
+                            console.log("osd chedked:", checked)
                         }
                     }
 
-                    RowLayout {
-                        Layout.fillWidth:   true
-                        QGCCheckBoxSlider {
-                            id:                 useCheckList
-                            Layout.fillWidth:   true
-                            Layout.alignment:    Qt.AlignLeft
-                            Layout.leftMargin:  _margins
-                            Layout.rightMargin: _margins
-                            text:               qsTr("补光")
-                            visible:            true
-                            checked:           _gcu.fillLight
-                            onCheckedChanged: {
-                                if (checked) {
-                                    mainWindow.showMessageDialog(qsTr("警告"), qsTr("吊舱所搭载激光照明模块属于 Class 3B 类非可见光激光器，在照明模块开启状态下，严禁直接目视（≤ 12m）或使用光学仪器直接观察激光光束，照明模块前方 20cm 内严禁放置易燃物体。确定开启？"),
-                                                                    MessageDialog.Yes | MessageDialog.Cancel,
-                                                                    function() { _gcu.turnOnFillLight(255)},
-                                                                    function() {checked = false})
-                                } else {
-                                    _gcu.turnOnFillLight(0)
-                                }
-                            }
-                        }
-                        QGCCheckBoxSlider {
-                            id:                 osdCheckBoxSlider
-                            Layout.fillWidth:   true
-                            Layout.alignment:    Qt.AlignRight
-                            // Layout.fillWidth:   true
-                            Layout.leftMargin:  _margins
-                            Layout.rightMargin: _margins
-                            text:               qsTr("OSD")
-                            visible:            true
-                            onCheckedChanged: {
-                                _gcu.setOsd(checked)
-                                console.log("osd chedked:", checked)
-                            }
-                        }
-
-                    }
                     QGCCheckBoxSlider {
                         id:                 pointMoveCheckBoxSlider
-                        // Layout.fillWidth:   true
-                        Layout.alignment:   Qt.AlignLeft
-                        Layout.leftMargin:  _margins
-                        Layout.rightMargin: _margins
-                        Layout.preferredWidth: parent.height / 2
-                        text:               qsTr("指点平移")
+                        Layout.fillWidth:   true
+                        text:               qsTr("指点移动")
                         visible:            true
-                        // onCheckedChanged: {
-                        //     _gcu.setOsd(checked)
-                        //     console.log("osd chedked:", checked)
-                        // }
+                        onCheckedChanged: {
+                            // _gcu.setOsd(checked)
+                            if (!checked)
+                                _inyyoA102Pro.stopTrackToPoint()
+                            console.log("指点移动 chedked:", checked)
+                        }
                     }
 
-
-                    RowLayout {
+                    QGCCheckBoxSlider {
+                        id:                 targetDetectCheckBoxSlider
                         Layout.fillWidth:   true
-                        Layout.alignment: Qt.AlignBottom
-                        Layout.bottomMargin: 5
-                        QGCButton{
-                            text: qsTr("校准")
-                            Layout.fillWidth:   true
-                            Layout.leftMargin:  _margins
-                            Layout.rightMargin: _margins
-                            height:             ScreenTools.defaultFontPixelHeight
-                            heightFactor: 0.1
-                            onClicked: {
-                                mainWindow.showMessageDialog(qsTr("警告"), qsTr("校准过程中请保持静止，约15秒完成"),
-                                                                MessageDialog.Ok,
-                                                                function(){
-                                                                    console.log("校准")
-                                                                    _gcu.calibratePod()
-                                                                })
-
-                            }
+                        text:               qsTr("目标检测")
+                        visible:            true
+                        onCheckedChanged: {
+                            _inyyoA102Pro.targetDetect(checked)
+                            console.log("targetDetect chedked:", checked)
                         }
-                        QGCButton{
-                            text: qsTr("回中")
-                            Layout.fillWidth:   true
-                            Layout.leftMargin:  _margins
-                            Layout.rightMargin: _margins
-                            height:             ScreenTools.defaultFontPixelHeight
-                            heightFactor: 0.1
-                            onClicked: {
-                                _gcu.podCentering()
-                            }
+                    }
+
+                    QGCCheckBoxSlider {
+                        id:                 auxiliaryTrackingCheckBoxSlider
+                        Layout.fillWidth:   true
+                        text:               qsTr("辅助跟踪")
+                        visible:            true
+                        onCheckedChanged: {
+                            // _gcu.setOsd(checked)
+                            if (!checked)
+                                _inyyoA102Pro.auxiliaryTracking()
+                            console.log("辅助跟踪 chedked:", checked)
                         }
+                    }
 
-
+                    QGCButton {
+                        Layout.fillWidth:   true
+                        property int mode: 0
+                        text: qsTr("画中画")
+                        height:             ScreenTools.defaultFontPixelHeight
+                        heightFactor: 0.1
+                        onClicked: {
+                            mode = (mode + 1) % 4
+                            _inyyoA102Pro.thermalModeSwitch(mode)
+                        }
                     }
                     QGCButton {
-                        text:               qsTr("设置")
                         Layout.fillWidth:   true
-                        Layout.leftMargin:  _margins
-                        Layout.rightMargin: _margins
+                        text: qsTr("重启")
+                        height:             ScreenTools.defaultFontPixelHeight
+                        heightFactor: 0.1
+                        onClicked: {
+                            mainWindow.showMessageDialog(qsTr("警告"), qsTr("确定重启？"),
+                                                         MessageDialog.Yes | MessageDialog.Cancel,
+                                                         function() { _inyyoA102Pro.podPower(2)},
+                                                         function() {checked = false})
+
+                        }
+                    }
+
+                    QGCButton{
+                        Layout.fillWidth:   true
+                        text: qsTr("向下")
+                        height:             ScreenTools.defaultFontPixelHeight
+                        heightFactor: 0.1
+                        onClicked: {
+                            _inyyoA102Pro.lookDown()
+                        }
+                    }
+                    QGCButton{
+                        Layout.fillWidth:   true
+                        text: qsTr("回中")
+                        height:             ScreenTools.defaultFontPixelHeight
+                        heightFactor: 0.1
+                        onClicked: {
+                            _inyyoA102Pro.lookForward()
+                        }
+                    }
+
+                    QGCButton {
+                        Layout.fillWidth:   true
+                        text:               qsTr("设置")
+                        Layout.columnSpan:  2
                         height:             ScreenTools.defaultFontPixelHeight
                         heightFactor: 0.1
 
-                        // background: Rectangle {
-                        //     color:      qgcPal.buttonHighlight
-                        //     opacity:    pressed ? 1 : enabled && hovered ? .2 : 0
-                        //     radius:     ScreenTools.defaultFontPixelWidth / 2
-                        // }
                         onClicked: {
                             var componentVideoSetting = Qt.createComponent("qrc:/qml/DialogueVideoSettings.qml")
                             if (componentVideoSetting.status === Component.Ready) {
@@ -822,14 +666,8 @@ Item {    // 吊舱的设置界面
                             }
                         }
                     }
-
-
-
-
                 }
             }
-        }
-
         /*
         ColumnLayout {
             Layout.fillHeight:  true
@@ -927,5 +765,6 @@ Item {    // 吊舱的设置界面
             }
         }
     */
+        }
     }
 }

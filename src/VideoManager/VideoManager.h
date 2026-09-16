@@ -15,6 +15,7 @@
 #include <QtCore/QSize>
 // #include <QtQmlIntegration/QtQmlIntegration>
 #include "Camera/GCU.h"
+#include "Camera/InyyoA102Pro.h"
 
 Q_DECLARE_LOGGING_CATEGORY(VideoManagerLog)
 
@@ -50,7 +51,8 @@ class VideoManager : public QObject
     Q_PROPERTY(QSize    videoSize               READ videoSize                                  NOTIFY videoSizeChanged)
     Q_PROPERTY(QString  imageFile               READ imageFile                                  NOTIFY imageFileChanged)
     Q_PROPERTY(QString  uvcVideoSourceID        READ uvcVideoSourceID                           NOTIFY uvcVideoSourceIDChanged)
-    Q_PROPERTY(QObject*  gcu                         READ gcu)
+    // Q_PROPERTY(QObject*  gcu                         READ gcu)
+    Q_PROPERTY(QObject*  inyyoA102Pro           READ inyyoA102Pro)
 
 
 public:
@@ -88,6 +90,7 @@ public:
     QString uvcVideoSourceID() const { return _uvcVideoSourceID; }
     void setfullScreen(bool on);
     GCU* gcu() {return _gcu;};
+    InyyoA102Pro* inyyoA102Pro() {return _inyyoA102Pro;};
     static bool gstreamerEnabled();
     static bool qtmultimediaEnabled();
     static bool uvcEnabled();
@@ -140,6 +143,7 @@ private:
     QString _uvcVideoSourceID;
     Vehicle *_activeVehicle = nullptr;
     GCU *_gcu = nullptr;
+    InyyoA102Pro* _inyyoA102Pro = nullptr;
 };
 
 /*===========================================================================*/

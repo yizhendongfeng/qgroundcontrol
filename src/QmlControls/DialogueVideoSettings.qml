@@ -28,7 +28,8 @@ QGCPopupDialog {
     property var    _settingsManager:           QGroundControl.settingsManager
     property var    _videoManager:              QGroundControl.videoManager
     property var    _videoSettings:             _settingsManager.videoSettings
-    property var    _gcu:                       _videoManager.gcu
+    // property var    _gcu:                       _videoManager.gcu
+    property var    _inyyoA102Pro:              _videoManager.inyyoA102Pro
 
     property string _videoSource:               _videoSettings.videoSource.rawValue
     property bool   _isGST:                     _videoManager.gstreamerEnabled
@@ -40,7 +41,7 @@ QGCPopupDialog {
     property bool   _isMPEGTS:                  _isStreamSource && (_videoSource === _videoSettings.mpegtsVideoSource)
     property bool   _videoAutoStreamConfig:     _videoManager.autoStreamConfigured
     property real   _urlFieldWidth:             ScreenTools.defaultFontPixelWidth * 25
-    property bool   _requiresUDPPort:           _isUDP264 || _isUDP265 || _isMPEGTS
+    property bool   _requiresUDPUrl:           _isUDP264 || _isUDP265 || _isMPEGTS
     readonly property real  _margin:            ScreenTools.defaultFontPixelWidth / 2
     ColumnLayout {
         spacing: _margin
@@ -62,7 +63,7 @@ QGCPopupDialog {
             SettingsGroupLayout {
                 Layout.fillWidth:   true
                 heading:            qsTr("Connection")
-                visible:            !_videoAutoStreamConfig && (_isTCP || _isRTSP | _requiresUDPPort)
+                visible:            !_videoAutoStreamConfig && (_isTCP || _isRTSP | _requiresUDPUrl)
 
                 LabelledFactTextField {
                     Layout.fillWidth:           true
@@ -81,9 +82,9 @@ QGCPopupDialog {
                 }
                 LabelledFactTextField {
                     Layout.fillWidth:   true
-                    label:              qsTr("UDP Port")
-                    fact:               _videoSettings.udpPort
-                    visible:            _requiresUDPPort && _videoSettings.udpPort.visible
+                    label:              qsTr("UDP URL")
+                    fact:               _videoSettings.udpUrl
+                    visible:            _requiresUDPUrl && _videoSettings.udpUrl.visible
                 }
             }
 
@@ -114,10 +115,11 @@ QGCPopupDialog {
                     QGCButton {
                         Layout.alignment: Qt.AlignLeft
                         Layout.fillWidth: true
-                        text:               _gcu.connected ? qsTr("断开") : qsTr("连接")
+                        text:             _inyyoA102Pro.connected ? qsTr("断开") : qsTr("连接")
                         onClicked: {
                             console.log("连接吊舱控制端口！")
-                            _gcu.connectToGcu(!_gcu.connected);
+                            // _gcu.connectToGcu(!_gcu.connected);
+                            _inyyoA102Pro.connectToPod(!_inyyoA102Pro.connected)
                         }
                     }
 
@@ -220,7 +222,7 @@ QGCPopupDialog {
                 text:               _videoSettings.streamingOut ? qsTr("停止直播") : qsTr("开始直播")
                 onClicked: {
                     // _videoManager.startStreaming()
-                    console.log("直播", _videoSettings.streamingOut)
+                    console.log("直播中:", _videoSettings.streamingOut)
                     _videoSettings.streamingOut ? _videoManager.stopStreaming() : _videoManager.startStreaming()
                 }
                 Component.onCompleted: {

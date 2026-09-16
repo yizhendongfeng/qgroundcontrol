@@ -15,11 +15,16 @@
 // _source-->_tee
 //              |
 //              +-->queue-->_recorderValve[-->_fileSink]
+//              |
+//              |
+//              +-->queue--> _streamerValve[-->编码器 → 封装器 → RTSP/RTMP 发送端] （推流分支）
 //-----------------------------------------------------------------------------
 
 #include "GstVideoReceiver.h"
 #include "GStreamerHelpers.h"
 #include "QGCLoggingCategory.h"
+
+#include <algorithm>
 
 #include <QtCore/QDateTime>
 #include <QtCore/QUrl>
@@ -38,7 +43,7 @@ GstVideoReceiver::GstVideoReceiver(QObject *parent)
 
     _worker->start();
     (void) connect(&_watchdogTimer, &QTimer::timeout, this, &GstVideoReceiver::_watchdog);
-    _watchdogTimer.start(1000);
+    // 看门狗在 start() 成功建好管道后启动、stop() 停止；重连成功会再次启动。
 }
 
 GstVideoReceiver::~GstVideoReceiver()
@@ -117,6 +122,43 @@ void GstVideoReceiver::startStreaming(const QString &streamUrl, StreamType strea
         emit streamingOutChanged(_streamingOut);
     });
 
+}
+
+void GstVideoReceiver::setLiveClarity(const LIVE_CLARITY liveClarity)
+{
+    if (liveClarity == _liveClarity)
+        return;
+    // 线程安全：确保在视频工作线程执行
+    if (_needDispatch()) {
+        _worker->dispatch([this, liveClarity]() { setLiveClarity(liveClarity); });
+        return;
+    }
+
+    _liveClarity = liveClarity;
+    switch (_liveClarity) {
+    case ADAPTIVE:
+        _liveBitRate = 512;
+        _liveResolution = QSize(960, 540);
+        break;
+    case SMOOTH:
+        _liveBitRate = 512;
+        _liveResolution = QSize(960, 540);
+        break;
+    case STANDARD:
+        _liveBitRate = 1000;
+        _liveResolution = QSize(1280, 720);
+        break;
+    case HD:
+        _liveBitRate = 1500;
+        _liveResolution = QSize(1280, 720);
+        break;
+    case SUPER_CLEAR:
+        _liveBitRate = 3000;
+        _liveResolution = QSize(1920, 1080);
+        break;
+    default:
+        break;
+    }
 }
 
 void GstVideoReceiver::stopStreaming()
@@ -341,6 +383,9 @@ void GstVideoReceiver::start(uint32_t timeout)
         GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-started");
         qCDebug(GstVideoReceiverLog) << "Started" << _uri;
 
+        // _watchdogTimer 属于 `this`（GUI 线程），而 start() 在工作线程执行，
+        // 需切回 GUI 线程再启动定时器（否则 QObject 会告警）。
+        QMetaObject::invokeMethod(this, [this]() { _watchdogTimer.start(1000); }, Qt::QueuedConnection);
         _dispatchSignal([this]() { emit onStartComplete(STATUS_OK); });
     }
 }
@@ -358,6 +403,12 @@ void GstVideoReceiver::stop()
     }
 
     qCDebug(GstVideoReceiverLog) << "Stopping" << _uri;
+
+    // 同步递增代际（原子操作，无需 GUI 线程）——任何在途的重连 lambda 在 stop() 返回前即被作废；
+    // 跨调用点的 QueuedConnection FIFO 顺序并不保证。
+    _reconnectEpoch.fetch_add(1, std::memory_order_relaxed);
+    // 只有 _watchdogTimer.stop() 必须在 GUI 线程执行（定时器属于 `this`）。
+    QMetaObject::invokeMethod(this, [this]() { _watchdogTimer.stop(); }, Qt::QueuedConnection);
 
     if (_teeProbeId != 0) {
         GstPad *sinkpad = gst_element_get_static_pad(_tee, "sink");
@@ -421,8 +472,13 @@ void GstVideoReceiver::stop()
 
         GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-stopped");
 
-        gst_clear_object(&_pipeline);
-        _pipeline = nullptr;
+        // 先加锁再置空：流线程上在途的 _onBusMessage 不能读到半销毁的 _pipeline。
+        // _acquirePipelineRef 在同一把锁下取自己的引用。
+        {
+            QMutexLocker lock(&_pipelineMutex);
+            gst_clear_object(&_pipeline);
+            _pipeline = nullptr;
+        }
 
         _recorderValve = nullptr;
         _decoderValve = nullptr;
@@ -668,30 +724,83 @@ void GstVideoReceiver::_watchdog()
         }
 
         const qint64 now = QDateTime::currentSecsSinceEpoch();
-        if (_lastSourceFrameTime == 0) {
-            _lastSourceFrameTime = now;
+        qint64 lastSourceFrameTime = _lastSourceFrameTime.load(std::memory_order_relaxed);
+        if (lastSourceFrameTime == 0) {
+            lastSourceFrameTime = now;
+            _lastSourceFrameTime.store(now, std::memory_order_relaxed);
         }
 
-        qint64 elapsed = now - _lastSourceFrameTime;
+        qint64 elapsed = now - lastSourceFrameTime;
         if (elapsed > _timeout) {
             qCDebug(GstVideoReceiverLog) << "Stream timeout, no frames for" << elapsed << _uri;
+            GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-watchdog-timeout");
             _dispatchSignal([this]() { emit timeout(); });
-            stop();
+            _scheduleReconnect("source watchdog");
+            return;
         }
 
         if (_decoding && !_removingDecoder) {
-            if (_lastVideoFrameTime == 0) {
-                _lastVideoFrameTime = now;
+            qint64 lastVideoFrameTime = _lastVideoFrameTime.load(std::memory_order_relaxed);
+            if (lastVideoFrameTime == 0) {
+                lastVideoFrameTime = now;
+                _lastVideoFrameTime.store(now, std::memory_order_relaxed);
             }
 
-            elapsed = now - _lastVideoFrameTime;
+            elapsed = now - lastVideoFrameTime;
             if (elapsed > (_timeout * 2)) {
                 qCDebug(GstVideoReceiverLog) << "Video decoder timeout, no frames for" << elapsed << _uri;
+                GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(_pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline-watchdog-timeout");
                 _dispatchSignal([this]() { emit timeout(); });
-                stop();
+                _scheduleReconnect("decoder watchdog");
             }
         }
     });
+}
+
+void GstVideoReceiver::_scheduleReconnect(const char *reason)
+{
+    // 无论是否开启自动重连都先干净拆除——stop() 会递增 _reconnectEpoch，
+    // 使任何先前挂起的 singleShot lambda 变成 no-op。
+    stop();
+
+    if (!_autoReconnect.load(std::memory_order_relaxed)) {
+        qCDebug(GstVideoReceiverLog) << "Auto-reconnect disabled — not retrying after" << reason;
+        return;
+    }
+
+    if (_uri.isEmpty()) {
+        return;
+    }
+
+    // 在工作线程上快照（start() 最后写 _timeout 的地方、_uri 读取已有序），
+    // 避免下面 GUI 线程的 lambda 读到竞态成员。
+    const uint32_t reconnectTimeout = (_timeout != 0) ? _timeout : 8;
+    const QString uri = _uri;
+
+    // 在 GUI 线程上调度（QTimer::singleShot 要求接收者线程）。当前唯一调用方是工作线程，
+    // 但走 invokeMethod 使未来 GUI 线程的直接调用（如用户手动重试）也保持正确。
+    QMetaObject::invokeMethod(this, [this, reason, reconnectTimeout, uri]() {
+        const int next = std::min(_reconnectAttempts.load(std::memory_order_relaxed) + 1, 30);
+        _reconnectAttempts.store(next, std::memory_order_relaxed);
+        // 固定短间隔重试：RTSP 服务器通常几秒内即可恢复，固定 3s 比指数退避
+        // （会一路涨到 30s）恢复更快，对本地/局域网测试服务器也足够温和。
+        const int delaySec = 3;
+        const quint64 epoch = _reconnectEpoch.load(std::memory_order_relaxed);
+        const int attempts = next;
+        qCInfo(GstVideoReceiverLog) << "Scheduling reconnect #" << attempts
+                                    << "in" << delaySec << "s after" << reason << uri;
+        QTimer::singleShot(delaySec * 1000, this, [this, epoch, attempts, reconnectTimeout, uri]() {
+            if (epoch != _reconnectEpoch.load(std::memory_order_relaxed)) return;  // 已被 stop() 作废
+            // _pipeline 由工作线程在 _pipelineMutex 下变更；此处（GUI 线程）直接解引用会与拆除竞态，
+            // 因此通过带锁的访问器探测存活状态。
+            GstElement *livePipeline = _acquirePipelineRef();
+            const bool pipelineUp = (livePipeline != nullptr);
+            if (livePipeline) gst_object_unref(livePipeline);
+            if (uri.isEmpty() || pipelineUp) return;  // 管道已经回来了
+            qCInfo(GstVideoReceiverLog) << "Reconnecting (attempt" << attempts << ")" << uri;
+            start(reconnectTimeout);
+        });
+    }, Qt::QueuedConnection);
 }
 
 void GstVideoReceiver::_handleEOS()
@@ -701,7 +810,9 @@ void GstVideoReceiver::_handleEOS()
     }
 
     if (_endOfStream) {
-        stop();
+        // 源流 EOS（如 RTSP 服务器断开/流正常结束）：接入自动重连而不是静默停止，
+        // 这样 VLC 等测试服务器停止推流后，应用能自动重连恢复。
+        _scheduleReconnect("EOS");
     } else if (_decoding && _removingDecoder) {
         _shutdownDecodingBranch();
     } else if (_recording && _removingRecorder) {
@@ -1315,16 +1426,30 @@ bool GstVideoReceiver::_addVideoSink(GstPad *pad)
 
 void GstVideoReceiver::_noteTeeFrame()
 {
-    _lastSourceFrameTime = QDateTime::currentSecsSinceEpoch();
+    _lastSourceFrameTime.store(QDateTime::currentSecsSinceEpoch(), std::memory_order_relaxed);
+    // 帧正常到达：清空重连退避计数，使下一次失败从 1s 重新开始，而不是延续数分钟后的曲线。
+    // 该探针运行在流线程，而退避递增在 GUI 线程；把重置也投递到 GUI 线程，
+    // 使 _reconnectAttempts 的所有变更单线程化，递增不会覆盖重置。
+    if (_reconnectAttempts.load(std::memory_order_relaxed) != 0) {
+        QMetaObject::invokeMethod(
+            this, [this]() { _reconnectAttempts.store(0, std::memory_order_relaxed); }, Qt::QueuedConnection);
+    }
+    const quint64 sourceFrames = _sourceFrameCount.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (sourceFrames == 1) {
+        qCInfo(GstVideoReceiverLog).noquote() << "Source receiving frames (tee):" << _uri;
+    } else if ((sourceFrames % 300) == 0) {
+        qCDebug(GstVideoReceiverLog).noquote()
+            << "Source flow: teeFrames=" << sourceFrames << "decoding=" << _decoding << _uri;
+    }
 }
 
 void GstVideoReceiver::_noteVideoSinkFrame()
 {
-    _lastVideoFrameTime = QDateTime::currentSecsSinceEpoch();
-    if (!_decoding) {
-        _decoding = true;
+    _lastVideoFrameTime.store(QDateTime::currentSecsSinceEpoch(), std::memory_order_relaxed);
+    if (!_decoding.load(std::memory_order_relaxed)) {
+        _decoding.store(true, std::memory_order_relaxed);
         qCDebug(GstVideoReceiverLog) << "Decoding started";
-        _dispatchSignal([this]() { emit decodingChanged(_decoding); });
+        _dispatchSignal([this]() { emit decodingChanged(_decoding.load(std::memory_order_relaxed)); });
     }
 }
 
@@ -1470,6 +1595,13 @@ void GstVideoReceiver::_dispatchSignal(Task emitter)
     _signalDepth -= 1;
 }
 
+GstElement *GstVideoReceiver::_acquirePipelineRef() const
+{
+    QMutexLocker lock(&_pipelineMutex);
+    if (!_pipeline) return nullptr;
+    return GST_ELEMENT(gst_object_ref(_pipeline));
+}
+
 gboolean GstVideoReceiver::_onBusMessage(GstBus * /* bus */, GstMessage *msg, gpointer data)
 {
     if (!msg || !data) {
@@ -1497,7 +1629,7 @@ gboolean GstVideoReceiver::_onBusMessage(GstBus * /* bus */, GstMessage *msg, gp
 
         pThis->_worker->dispatch([pThis]() {
             qCDebug(GstVideoReceiverLog) << "Stopping because of error";
-            pThis->stop();
+            pThis->_scheduleReconnect("pipeline error");
         });
         break;
     }

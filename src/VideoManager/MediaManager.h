@@ -11,9 +11,6 @@
 #include <QTimer>
 
 // 配置参数
-const QString SERVER_BASE_URL = "http://192.168.31.208:6789";
-const QString MINIO_ENDPOINT  = "http://192.168.31.208:9000";
-const QString WORKSPACE_ID    = "e3dea0f5-37f2-4d79-ae58-490af3228069";
 const qint64  CHUNK_SIZE      = 10 * 1024 * 1024;
 
 
@@ -105,6 +102,8 @@ private:
     int m_totalUploadedBytes;            // 已上传总字节数
     QNetworkReply* m_currentMinioReply;  // 当前MinIO请求响应对象
 
+    int m_serverPort = 6789;
+    int m_minioPort  = 9000;
     QByteArray token{
         "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ3b3Jrc3BhY2VfaWQiOiJlM2RlYTBmNS0zN2YyLTRkNzktYWU1OC00OTBhZjMyMjgwNjkiLCJzdWIiOiJDbG91ZEFwaVNhbXBsZSIsInVzZXJfdHlwZSI6IjIiLCJuYmYiOjE3NjQ4OTQxNzIsImxvZyI6IkxvZ2dlcltjb20uZGppLnNhbXBsZS5jb21tb24ubW9kZWwuQ3VzdG9tQ2xhaW1dIiwiaXNzIjoiREpJIiwiaWQiOiJiZTdjNmMzZC1hZmU5LTRiZTQtYjllYi1jNTUwNjZjMDkxNGUiLCJleHAiOjE3NjQ5ODA1NzIsImlhdCI6MTc2NDg5NDE3MiwidXNlcm5hbWUiOiJwaWxvdCJ9.sZbwy8cLkyga2wS4F_0QQIPEd-zqUwvbkeEv4DNdW3o"
     };

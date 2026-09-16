@@ -42,6 +42,7 @@ Rectangle {
     property int    _photoCaptureCount:         0
     property int    _viewRecordSeconds:         0
     property var    _gcu:                       QGroundControl.videoManager.gcu
+    property var    _inyyoA102Pro :    QGroundControl.videoManager.inyyoA102Pro
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
 
     DeadMouseArea { anchors.fill: parent }
@@ -167,19 +168,21 @@ Rectangle {
                                 rectShoot._isShootingInPhotoMode = true
                                 _photoCaptureCount++
                                 timerShooting.start()
-                                _gcu.takePhoto()
+                                // _gcu.takePhoto()
+                                _inyyoA102Pro.takePhoto()
                             } else {
                                 if (rectShoot._isShootingInVideoMode){
                                     rectShoot._isShootingInVideoMode = false
                                     timerVideoRecord.stop()
                                     videoRecordTime.text = "00:00:00"
                                     _viewRecordSeconds = 0
-                                    _gcu.startRecording(false)
+                                    // _gcu.startRecording(false)
+                                    _inyyoA102Pro.recording(false)
                                 } else {
                                     rectShoot._isShootingInVideoMode = true
                                     _viewRecordSeconds = 0
                                     timerVideoRecord.start()
-                                    _gcu.startRecording(true)
+                                    _inyyoA102Pro.recording(true)
                                 }
                             }
                         }

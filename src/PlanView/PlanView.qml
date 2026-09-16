@@ -638,10 +638,10 @@ Item {
                     visible:    QGroundControl.corePlugin.options.enablePlanViewSelector/*  && !_utmspEnabled*/
                     Component.onCompleted: currentIndex = 0
                     QGCTabButton {
-                        text:       qsTr("New Mission")
+                        text:       qsTr("Local Mission")
                     }
                     QGCTabButton {
-                        text:       qsTr("Completed Mission")
+                        text:       qsTr("Cloud Mission")
                     }
                 }
 
@@ -651,7 +651,7 @@ Item {
                     width:        parent.width
                     // height:       leftPanel.height - planTabBar.y
                     Layout.fillHeight: true
-                    /******************** 新任务 ********************/
+                    /******************** 本地任务 ********************/
                     ColumnLayout {
                         Layout.fillHeight: true
                         Layout.fillWidth:  true
@@ -680,7 +680,7 @@ Item {
                         }
                     }
 
-                    /******************** 已完成任务 ********************/
+                    /******************** 云端任务 ********************/
                     ColumnLayout {
                         Layout.fillHeight:     true
                         Layout.fillWidth:      true
@@ -747,6 +747,15 @@ Item {
                         visible:        !QGroundControl.corePlugin.options.disableVehicleConnection
                         onClicked: {
                             downloadClicked(qsTr("Plan overwrite"))
+                        }
+                    }
+                    QGCButton {
+                        width:   parent.width
+                        text:    qsTr("上传到云端")
+                        enabled:         !_planMasterController.offline && !_planMasterController.syncInProgress && _planMasterController.containsItems
+                        visible:        !QGroundControl.corePlugin.options.disableVehicleConnection
+                        onClicked: {
+                            // downloadClicked(qsTr("Plan overwrite"))
                         }
                     }
 

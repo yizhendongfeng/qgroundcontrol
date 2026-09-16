@@ -1,7 +1,9 @@
-#include "CloudServerSettings.h"
 #include <QQmlEngine>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QUrl>
+
+#include "CloudServerSettings.h"
 #include "MultiVehicleManager.h"
 #include "SettingsManager.h"
 #include "VideoSettings.h"
@@ -33,7 +35,8 @@ void CloudServerSettings::setLoginResult(const QString jsonStr)
     _userNameFact->setRawValue(jsonObj["username"].toString());
     _userPasswordFact->setRawValue(jsonObj["mqtt_password"].toString());
     _workSpaceIdFact->setRawValue(jsonObj["workspace_id"].toString());
-    qDebug() << "setLoginResult" << jsonStr;
+    _serverIpFact->setRawValue(QUrl(_serverUrlFact->rawValueString()).host());
+    qDebug() << "setLoginResult" << jsonStr << _serverIpFact->rawValueString();
     MultiVehicleManager::instance()->connectToMqttHost();
 }
 
@@ -62,21 +65,12 @@ void CloudServerSettings::setLiveshareConfig(int type, const QString jsonStr)
         QString userName = jsonObj.contains("userName") ? jsonObj["userName"].toString() : "";
         QString password = jsonObj.contains("password") ? jsonObj["password"].toString() : "";
         int port = jsonObj["port"].toString().toInt();
-        url = "rtsp://" + userName + ":" + password + "@127.0.0.1:" + QString::number(port) + "/dgcs";
+        QString serverIp = _serverIpFact->rawValueString();
+        url = "rtsp://" + userName + ":" + password + "@" + serverIp + ":" + QString::number(port) + "/dgcs";
     }
     SettingsManager::instance()->videoSettings()->streamingType()->setRawValue(streamingType);
     SettingsManager::instance()->videoSettings()->streamingUrl()->setRawValue(url);
     VideoManager::instance()->startStreaming();
-}
-
-QString CloudServerSettings::getToken()
-{
-    return _serverTokenFact->rawValueString();
-}
-
-void CloudServerSettings::setToken(const QString token)
-{
-    _serverTokenFact->setRawValue(token);
 }
 
 DECLARE_SETTINGSFACT(CloudServerSettings, mqttHost)
@@ -87,6 +81,7 @@ DECLARE_SETTINGSFACT(CloudServerSettings, appId)
 DECLARE_SETTINGSFACT(CloudServerSettings, appKey)
 DECLARE_SETTINGSFACT(CloudServerSettings, appLicense)
 DECLARE_SETTINGSFACT(CloudServerSettings, serverUrl)
+DECLARE_SETTINGSFACT(CloudServerSettings, serverIp)
 DECLARE_SETTINGSFACT(CloudServerSettings, websocketUrl)
 DECLARE_SETTINGSFACT(CloudServerSettings, rtmURL)
 DECLARE_SETTINGSFACT(CloudServerSettings, userName)

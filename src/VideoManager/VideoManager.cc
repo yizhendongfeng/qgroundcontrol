@@ -50,7 +50,8 @@ VideoManager::VideoManager(QObject *parent)
     : QObject(parent)
     , _subtitleWriter(new SubtitleWriter(this))
     , _videoSettings(SettingsManager::instance()->videoSettings())
-    , _gcu(new GCU(_videoSettings))
+    // , _gcu(new GCU(_videoSettings))
+    , _inyyoA102Pro(new InyyoA102Pro(_videoSettings))
 {
     // qCDebug(VideoManagerLog) << this;
 
@@ -623,7 +624,11 @@ void VideoManager::_restartVideo(VideoReceiver *receiver)
 
     if (receiver->started()) {
         _stopReceiver(receiver);
-        // onStopComplete Signal Will Restart It
+        // 显式延迟重启：onStopComplete 不再自动重启，重连统一由接收器内部
+        // _scheduleReconnect 的指数退避负责，避免两套机制互相竞争。
+        QTimer::singleShot(500, receiver, [this, receiver]() {
+            _startReceiver(receiver);
+        });
     } else {
         _startReceiver(receiver);
     }
@@ -719,12 +724,10 @@ void VideoManager::_initVideoReceiver(VideoReceiver *receiver, QQuickWindow *win
         receiver->setStarted(false);
         if (status == VideoReceiver::STATUS_INVALID_URL) {
             qCDebug(VideoManagerLog) << "Invalid video URL. Not restarting";
-        } else {
-            QTimer::singleShot(1000, receiver, [this, receiver]() {
-                qCDebug(VideoManagerLog) << "Restarting video receiver" << receiver->name() << receiver->uri();
-                _startReceiver(receiver);
-            });
         }
+        // 不再在此自动重启：视频流重连统一由 GstVideoReceiver::_scheduleReconnect 的
+        // 指数退避负责（错误/EOS/看门狗超时都会触发），避免双重机制互相竞争、
+        // 也避免退避节奏被这里的固定 1 秒重启架空。
     });
 
     (void) connect(receiver, &VideoReceiver::streamingChanged, this, [this, receiver](bool active) {

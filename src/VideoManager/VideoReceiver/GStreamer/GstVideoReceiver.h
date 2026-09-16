@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QMutex>
 #include <QtCore/QQueue>
@@ -61,7 +63,10 @@ public:
 
 
     void startStreaming(const QString &streamUrl, StreamType streamType) override;
+    void setLiveClarity(const LIVE_CLARITY liveClarity) override;
     void stopStreaming() override;
+    void setBitrate(int biterate = 1000); // kbps
+    void setResolution(QSize res = QSize(1080, 720)); // 720p
 
 public slots:
     void start(uint32_t timeout) override;
@@ -100,6 +105,15 @@ private:
     bool _needDispatch();
     void _dispatchSignal(Task emitter);
 
+    /// 停止管道并排队延迟重启（指数退避）。`reason` 用于日志定位重连风暴；
+    /// 当 autoReconnect() 关闭时仅做干净停止、不重试。
+    void _scheduleReconnect(const char *reason);
+
+    /// 返回 _pipeline 的强引用（调用方需 gst_object_unref），管道已拆除时返回 nullptr。
+    /// 总线同步消息回调运行在流线程，与工作线程上的 stop() 并发，
+    /// 直接解引用 _pipeline 会与 gst_clear_object(&_pipeline) 产生竞态。
+    GstElement *_acquirePipelineRef() const;
+
     static gboolean _onBusMessage(GstBus *bus, GstMessage *message, gpointer user_data);
     static void _onNewPad(GstElement *element, GstPad *pad, gpointer data);
     static void _wrapWithGhostPad(GstElement *element, GstPad *pad, gpointer data);
@@ -130,6 +144,10 @@ private:
     StreamType _streamType;      // 推流类型（RTSP/RTMP）
 
     GstVideoWorker *_worker = nullptr;
+    mutable QMutex _pipelineMutex;  // 串行化 _pipeline 变更（worker）与 _onBusMessage 读取（流线程）
+    std::atomic<int> _reconnectAttempts = 0;     ///< 流线程（_noteTeeFrame）与 GUI 线程（重连 lambda）写入；原子。
+    std::atomic<quint64> _reconnectEpoch = 0;    ///< 每次 stop() 递增——挂起的 singleShot lambda 触发前比对，取代显式 pending 标志。
+    std::atomic<quint64> _sourceFrameCount = 0;  ///< tee 探针帧计数（流线程），驱动源端心跳日志。
     gulong _teeProbeId = 0;
     gulong _videoSinkProbeId = 0;
 

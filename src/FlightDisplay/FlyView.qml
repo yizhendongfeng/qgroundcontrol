@@ -27,7 +27,8 @@ import QGroundControl.FlightMap
 import QGroundControl.Palette
 import QGroundControl.ScreenTools
 import QGroundControl.Vehicle
-import QGroundControl.GCU
+import QGroundControl.InyyoA102Pro
+// import QGroundControl.GCU
 // 3D Viewer modules
 import Viewer3D
 
@@ -65,7 +66,8 @@ Item {
     property real   _pipItemZorder:     QGroundControl.zOrderWidgets
     property string _signalLightColor:  "green"
     property string _selectedMp3File:  qsTr("前方雨雪.mp3")
-    property var    _gcu:              QGroundControl.videoManager.gcu
+    property var    _inyyoA102Pro :    QGroundControl.videoManager.inyyoA102Pro
+    // property var    _gcu:              QGroundControl.videoManager.gcu
     function _calcCenterViewPort() {
         var newToolInset = Qt.rect(0, 0, width, height)
         toolstrip.adjustToolInset(newToolInset)

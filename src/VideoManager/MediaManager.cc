@@ -44,10 +44,12 @@ void MediaManager::startUpload(const QString &localFilePath, const int index)
         emit uploadError("本地文件不存在：" + localFilePath);
         return;
     }
-    QString url = SERVER_BASE_URL + "/media/api/v1/workspaces/" + WORKSPACE_ID + "/fast-upload";
+    QString serverIp = SettingsManager::instance()->cloudServerSettings()->serverIp()->rawValueString();
+    QString workspaceId = SettingsManager::instance()->cloudServerSettings()->workSpaceId()->rawValueString();
+    QString url = "http://" + serverIp + ":" + QString::number(m_serverPort) + "/media/api/v1/workspaces/" + workspaceId + "/fast-upload";
     QNetworkRequest request((QUrl(url)));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json; charset=utf-8"); // 必须添加！
-    request.setRawHeader("x-auth-token", SettingsManager::instance()->cloudServerSettings()->getToken().toUtf8());
+    request.setRawHeader("x-auth-token", SettingsManager::instance()->cloudServerSettings()->serverToken()->rawValueString().toUtf8());
 
     m_fileMd5 = calculateFileMD5(localFilePath);
     qDebug() << "m_fileMd5: " << m_fileMd5;
@@ -103,10 +105,13 @@ void MediaManager::startUpload(const QString &localFilePath, const int index)
 // 1. 向服务端获取MinIO临时上传凭证
 void MediaManager::getTemporaryCredential()
 {
-    QString url = SERVER_BASE_URL + "/storage/api/v1/workspaces/" + WORKSPACE_ID + "/sts";
+    QString serverIp = SettingsManager::instance()->cloudServerSettings()->serverIp()->rawValueString();
+    QString workspaceId = SettingsManager::instance()->cloudServerSettings()->workSpaceId()->rawValueString();
+    QString url = "http://" + serverIp + ":" + QString::number(m_serverPort) + "/storage/api/v1/workspaces/" + workspaceId + "/sts";
     QNetworkRequest request((QUrl(url)));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json; charset=utf-8");
-    request.setRawHeader("x-auth-token", SettingsManager::instance()->cloudServerSettings()->getToken().toUtf8());
+    QByteArray token = SettingsManager::instance()->cloudServerSettings()->serverToken()->rawValueString().toUtf8();
+    request.setRawHeader("x-auth-token", token);
 
     QNetworkReply* reply = m_manager->post(request, QByteArray());
     connect(reply, &QNetworkReply::finished, this, &MediaManager::onCredentialReplyFinished);
@@ -135,7 +140,8 @@ void MediaManager::initMultipartUpload()
 {
     QUrlQuery query;
     query.addQueryItem("uploads", "");
-    QString url = MINIO_ENDPOINT + "/" + m_credential.bucket + "/" + m_credential.objectName;
+    QString serverIp = SettingsManager::instance()->cloudServerSettings()->serverIp()->rawValueString();
+    QString url = "http://" + serverIp + ":" + QString::number(m_minioPort) + "/" + m_credential.bucket + "/" + m_credential.objectName;
     QUrl requestUrl(url);
     requestUrl.setQuery(query);
     QNetworkRequest request(requestUrl);
@@ -143,7 +149,7 @@ void MediaManager::initMultipartUpload()
 
     // 构造请求头
     QMap<QString, QString> headers;
-    headers["Host"] = QUrl(MINIO_ENDPOINT).authority();
+    headers["Host"] = serverIp + ":" + QString::number(m_minioPort);
     headers["X-Amz-Security-Token"] = m_credential.sessionToken.trimmed();
     QString amzDate = getIso8601Time();
     headers["X-Amz-Date"] = amzDate;
@@ -200,7 +206,8 @@ void MediaManager::uploadNextChunk()
     QByteArray chunkData = m_file.read(chunkSize);
 
     // 构造MinIO分块上传URL
-    QString url = MINIO_ENDPOINT + "/" + m_credential.bucket + "/" + m_credential.objectName;
+    QString serverIp = SettingsManager::instance()->cloudServerSettings()->serverIp()->rawValueString();
+    QString url = "http://" + serverIp + ":" + QString::number(m_minioPort) + "/" + m_credential.bucket + "/" + m_credential.objectName;
     QUrlQuery query;
     query.addQueryItem("partNumber", QString::number(currentChunk.partNumber));
     query.addQueryItem("uploadId", m_uploadId);
@@ -209,7 +216,7 @@ void MediaManager::uploadNextChunk()
     qDebug() << "uploadNextChunk() requestUrl: " << requestUrl;
     QNetworkRequest request(requestUrl);
     QMap<QString, QString> headers;
-    headers["Host"] = QUrl(MINIO_ENDPOINT).authority();
+    headers["Host"] = serverIp + ":" + QString::number(m_minioPort);
     headers["Content-Type"] = "application/octet-stream"; // 显式设置，避免Qt默认填充
     headers["Content-Length"] = QString::number(chunkData.size());
     headers["X-Amz-Security-Token"] = m_credential.sessionToken.trimmed();
@@ -231,7 +238,8 @@ void MediaManager::uploadNextChunk()
 // 5. 完成MinIO分块上传（合并分块）
 void MediaManager::completeMultipartUpload()
 {
-    QString url = MINIO_ENDPOINT + "/" + m_credential.bucket + "/" + m_credential.objectName;
+    QString serverIp = SettingsManager::instance()->cloudServerSettings()->serverIp()->rawValueString();
+    QString url = "http://" + serverIp + ":" + QString::number(m_minioPort) + "/" + m_credential.bucket + "/" + m_credential.objectName;
     QUrlQuery query;
     query.addQueryItem("uploadId", m_uploadId);
     // url += "?" + query.toString();
@@ -271,7 +279,7 @@ void MediaManager::completeMultipartUpload()
     requestUrl.setQuery(query);
     QNetworkRequest request(requestUrl);
     QMap<QString, QString> headers;
-    headers["Host"] = QUrl(MINIO_ENDPOINT).host();
+    headers["Host"] = serverIp + ":" + QString::number(m_minioPort);
     headers["Content-Type"] = "application/json";
     headers["Content-Length"] = QString::number(requestBody.size());
     headers["X-Amz-Security-Token"] = m_credential.sessionToken.trimmed();
@@ -291,13 +299,16 @@ void MediaManager::completeMultipartUpload()
 // 6. 向服务端上报上传结果
 void MediaManager::reportUploadResult(const QString &fileMd5)
 {
-    QString url = SERVER_BASE_URL + "/media/api/v1/workspaces/" + WORKSPACE_ID + "/upload-callback";
+    QString serverIp = SettingsManager::instance()->cloudServerSettings()->serverIp()->rawValueString();
+    QString workspaceId = SettingsManager::instance()->cloudServerSettings()->workSpaceId()->rawValueString();
+    QString url = "http://" + serverIp + ":" + QString::number(m_serverPort) + "/media/api/v1/workspaces/" + workspaceId + "/upload-callback";
     QUrl requestUrl((QUrl(url)));
     QNetworkRequest request(requestUrl);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("x-auth-token", SettingsManager::instance()->cloudServerSettings()->getToken().toUtf8());
+    request.setRawHeader("x-auth-token", SettingsManager::instance()->cloudServerSettings()->serverToken()->rawValueString().toUtf8());
     QUrlQuery query;
-    query.addQueryItem("workspaceId", WORKSPACE_ID);
+
+    query.addQueryItem("workspaceId", workspaceId);
     // query.addQueryItem("x-auth-token", QString(token));
     requestUrl.setQuery(query);
 

@@ -70,7 +70,9 @@
 #include "VehicleComponent.h"
 #include "VideoManager.h"
 #include "GCU.h"
+#include "InyyoA102Pro.h"
 #include "MediaFileModel.h"
+#include "DjiBridge/DjiBridgeServer.h"
 
 #ifndef QGC_DISABLE_MAVLINK_INSPECTOR
 #include "MAVLinkInspectorController.h"
@@ -296,6 +298,7 @@ void QGCApplication::init()
     qmlRegisterType<MAVLinkConsoleController>("QGroundControl.Controllers", 1, 0, "MAVLinkConsoleController");
     // 注册吊舱控制，与GCU的通信 zjm
     qmlRegisterUncreatableType<GCU>("QGroundControl.GCU", 1, 0, "GcuCameraControl", "Reference only");
+    qmlRegisterUncreatableType<InyyoA102Pro>("QGroundControl.InyyoA102Pro", 1, 0, "InyyoA102ProControl", "Reference only");
     qmlRegisterType<MediaFileModel>("QGroundControl.MediaBrowser", 1, 0, "MediaFileModel");
     qmlRegisterUncreatableType<AutoPilotPlugin>("QGroundControl.AutoPilotPlugin", 1, 0, "AutoPilotPlugin", "Reference only");
     qmlRegisterType<ESP8266ComponentController>("QGroundControl.Controllers", 1, 0, "ESP8266ComponentController");

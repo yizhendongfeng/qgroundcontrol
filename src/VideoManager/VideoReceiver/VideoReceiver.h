@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <QtCore/QObject>
 #include <QtCore/QSize>
 #include <QtCore/QTimer>
@@ -33,6 +35,7 @@ public:
     QString uri() const { return _uri; }
     bool started() const { return _started; }
     bool lowLatency() const { return _lowLatency; }
+    bool autoReconnect() const { return _autoReconnect; }
     QGCVideoStreamInfo *videoStreamInfo() { return _videoStreamInfo; }
     QString recordingOutput() const { return _recordingOutput; }
 
@@ -42,13 +45,14 @@ public:
     void setUri(const QString &uri) { if (uri != _uri) { _uri = uri; emit uriChanged(_uri); } }
     void setStarted(bool started) { if (started != _started) { _started = started; emit startedChanged(_started); } }
     void setLowLatency(bool lowLatency) { if (lowLatency != _lowLatency) { _lowLatency = lowLatency; emit lowLatencyChanged(_lowLatency); } }
+    void setAutoReconnect(bool enabled) { if (enabled != _autoReconnect) { _autoReconnect = enabled; emit autoReconnectChanged(_autoReconnect); } }
     void setVideoStreamInfo(QGCVideoStreamInfo *videoStreamInfo) { if (videoStreamInfo != _videoStreamInfo) { _videoStreamInfo = videoStreamInfo; emit videoStreamInfoChanged(); } }
     // 推流类型枚举（供界面调用）
     enum StreamType {
         StreamTypeRTSP,
         StreamTypeRTMP
     };
-    Q_ENUMS(StreamType)
+    Q_ENUM(StreamType)
 
     // QMediaFormat::FileFormat
     enum FILE_FORMAT {
@@ -71,9 +75,20 @@ public:
         STATUS_MAX = STATUS_NOT_IMPLEMENTED
     };
     Q_ENUM(STATUS)
+
+    enum LIVE_CLARITY {
+        ADAPTIVE = 0,
+        SMOOTH,
+        STANDARD,
+        HD,
+        SUPER_CLEAR
+    };
+    Q_ENUM(LIVE_CLARITY)
+
     static bool isValidStatus(STATUS status) { return ((status >= STATUS_MIN) && (status <= STATUS_MAX)); }
     virtual void startStreaming(const QString &streamUrl, StreamType streamType){};
     virtual void stopStreaming(){};
+    virtual void setLiveClarity(const LIVE_CLARITY liveClarity){};
 signals:
     void timeout();
     void streamingChanged(bool active);
@@ -87,6 +102,7 @@ signals:
     void uriChanged(const QString &uri);
     void startedChanged(bool started);
     void lowLatencyChanged(bool lowLatency);
+    void autoReconnectChanged(bool enabled);
     void videoStreamInfoChanged();
     void widgetChanged(QQuickItem *widget);
 
@@ -118,10 +134,12 @@ protected:
     QString _name;
     QString _uri;
     bool _started = false;
-    bool _decoding = false;
+    std::atomic<bool> _decoding = false;
     bool _recording = false;
     bool _streaming = false;
     bool _lowLatency = false;
+    // 写入：GUI 线程（setAutoReconnect）；读取：视频工作线程（_scheduleReconnect）。
+    std::atomic<bool> _autoReconnect = true;     ///< 失败（看门狗/管道错误）后按指数退避自动重连
     bool _resetVideoSink = false;
     bool _endOfStream = false;
     bool _removingDecoder = false;
@@ -131,8 +149,8 @@ protected:
     //      0 - default buffer length
     //      N - buffer length, ms
     int _buffer = 0;
-    qint64 _lastSourceFrameTime = 0;
-    qint64 _lastVideoFrameTime = 0;
+    std::atomic<qint64> _lastSourceFrameTime = 0;
+    std::atomic<qint64> _lastVideoFrameTime = 0;
     QTimer _watchdogTimer;
     uint32_t _signalDepth = 0;
     uint32_t _timeout = 0;
@@ -142,4 +160,11 @@ protected:
     // bool _fullScreen = false;
     // QSize _videoSize;
     // QString _imageFile;
+
+    // 直播清晰度设置
+    LIVE_CLARITY _liveClarity = HD;
+    int   _liveBitRate = 1000; // kbps
+    QSize _liveResolution; // 直播分辨率
 };
+
+

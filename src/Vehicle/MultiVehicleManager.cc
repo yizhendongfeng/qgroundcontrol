@@ -635,7 +635,7 @@ void MultiVehicleManager::setActiveVehicle(Vehicle *vehicle)
             // any existing ui from the currently active vehicle.
             _setActiveVehicleAvailable(false);
             _setParameterReadyVehicleAvailable(false);
-            disconnect(_activeVehicle, &Vehicle::gcuRequiredDataChanged, VideoManager::instance()->gcu(), &GCU::receiveVehicleMessage);
+            // disconnect(_activeVehicle, &Vehicle::gcuRequiredDataChanged, VideoManager::instance()->gcu(), &GCU::receiveVehicleMessage);
         }
 
         QTimer::singleShot(20, this, [this, vehicle]() {
@@ -806,7 +806,7 @@ void MultiVehicleManager::_setActiveVehicle(Vehicle *vehicle)
     if (vehicle != _activeVehicle) {
         _activeVehicle = vehicle;
         emit activeVehicleChanged(vehicle);
-        connect(vehicle, &Vehicle::gcuRequiredDataChanged, VideoManager::instance()->gcu(), &GCU::receiveVehicleMessage);
+        // connect(vehicle, &Vehicle::gcuRequiredDataChanged, VideoManager::instance()->gcu(), &GCU::receiveVehicleMessage);
         updateDevicesInCloudServer();
     }
 }
