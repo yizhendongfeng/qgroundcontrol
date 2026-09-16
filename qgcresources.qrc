@@ -117,8 +117,8 @@
         <file alias="2.jpg">resources/CapturedPictures/R-C.jpg</file>
         <file alias="3.png">resources/CapturedPictures/u379.png</file>
         <file alias="4.png">resources/CapturedPictures/u389.png</file>
-        <file alias="5.jpg">resources/CapturedPictures/高速拥堵.jpg</file>
-        <file alias="6.jpg">resources/CapturedPictures/收费站堵车.jpg</file>
+        <file alias="5.jpg">resources/CapturedPictures/captured_highway.jpg</file>
+        <file alias="6.jpg">resources/CapturedPictures/captured_toll.jpg</file>
     </qresource>
     <qresource prefix="/gcscontrolIndicator">
         <file alias="gcscontrol_device.svg">resources/gcscontrolIndicator/gcscontrol_device.svg</file>

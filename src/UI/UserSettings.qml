@@ -11,15 +11,13 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtWebEngine 1.15
 
 import QGroundControl
 import QGroundControl.Palette
 import QGroundControl.Controls
 import QGroundControl.FactControls
 import QGroundControl.ScreenTools
-import QtWebEngine 1.15
-import QtWebChannel 1.15
-// import QtWebEngine.Core 1.15  // 子模块（包含 WebEnginePage，关键！）
 Rectangle {
     id:     settingsView
     color:  qgcPal.window
@@ -36,10 +34,6 @@ Rectangle {
     readonly property real _buttonHeight:       ScreenTools.isTinyScreen ? ScreenTools.defaultFontPixelHeight * 3 : ScreenTools.defaultFontPixelHeight * 2
     readonly property real _defaultQGCIconButtonWidth: ScreenTools.implicitIconButtonHeight * 1.2
     property string customStoragePath: StandardPaths.writableLocation(StandardPaths.AppDataLocation) + "/webengine_data"
-    Component.onCompleted: {
-                            _cloudServerSettings.WebChannel.id = "qmlReceiver"
-                            console.log("QML: WebChannel id：", _cloudServerSettings.WebChannel.id);
-    }
     StackLayout {
         id:           mainLayout
         anchors.fill: parent
@@ -121,12 +115,7 @@ Rectangle {
                     Layout.fillHeight: true
                     Layout.fillWidth:  true
                     url:               _cloudServerSettings.serverUrl.value
-                    webChannel:        webChannel
-                    profile:            WebEngineProfile {
-                        storageName: "PrivateProfile"
-                        persistentStoragePath: Qt.application.name + "/webengine_data"
-                        persistentCookiesPolicy: WebEngineProfile.ForcePersistentCookies
-                    }
+                    profile:           djiBridgeServer.profile
                     // 1. 配置安全策略（解决 Agora 安全限制的关键）
                     settings {
                         // 禁用 web 安全（放行同源策略、CORS，Agora SDK 核心需求）
@@ -141,44 +130,15 @@ Rectangle {
                         javascriptEnabled: true
                     }
 
-                    onLoadingChanged: function(loadingInfo) {
-                        if (loadingInfo.status === WebEngineView.LoadSucceededStatus) {
-                            console.log("web page load succeed, start to run javascript: window.djiBridge.platformVerifyLicense(appId, appKey, appLicense)")
-                            runJavaScript(
-                            `(function(){
-                                // 定义JsResponse格式的响应（模拟成功场景，可根据需要修改）
-                                function createSuccessResponse() {
-                                    return JSON.stringify({
-                                        code: 0,          // 0表示成功，非0为失败
-                                        message: "验证成功",
-                                        data: {
-                                            licenseStatus: "valid",
-                                            expireTime: "2027-01-01"
-                                        }
-                                    });
-                                }
-                                // 注入djiBridge对象到window
-                                window.djiBridge = window.djiBridge || {};
-                                // 实现platformVerifyLicense方法
-                                window.djiBridge.platformVerifyLicense = function(appId, appKey, appLicense) {
-                                    console.log("收到验证请求：");
-                                    console.log("appId: " + appId);
-                                    console.log("appKey: " + appKey);
-                                    console.log("appLicense: " + appLicense);
 
-                                    // 这里可根据参数自定义返回逻辑，默认返回成功
-                                    return createSuccessResponse();
+                }
 
-                                    // 如需测试失败，取消下面注释：
-                                    // return createFailResponse();
-                                };
-                            })()`,
-                            function(result){
-                                console.log("js 注入成功，", result, Date.now())
-                            })
-                        }
+                // C++ → JS 回调通道：DjiBridgeServer 发出 jsCallbackRequested 信号时，在 webEngine 中执行脚本
+                Connections {
+                    target: djiBridgeServer
+                    function onJsCallbackRequested(script) {
+                        webEngine.runJavaScript(script)
                     }
-
                 }
 
 
@@ -226,17 +186,6 @@ Rectangle {
                 }
 
 */
-                WebChannel {
-                    id: webChannel
-                    registeredObjects: []
-                    // registeredObjects: [loginReceiver]
-                    Component.onCompleted: {
-                        // _cloudServerSettings.WebChannel.id = "qmlReceiver"
-                        console.log("Item QML: WebChannel id：", _cloudServerSettings.WebChannel.id)
-                        registeredObjects = [_cloudServerSettings]
-                    }
-
-                }
 
             }
 

@@ -37,7 +37,6 @@ void CloudServerSettings::setLoginResult(const QString jsonStr)
     _workSpaceIdFact->setRawValue(jsonObj["workspace_id"].toString());
     _serverIpFact->setRawValue(QUrl(_serverUrlFact->rawValueString()).host());
     qDebug() << "setLoginResult" << jsonStr << _serverIpFact->rawValueString();
-    MultiVehicleManager::instance()->connectToMqttHost();
 }
 
 void CloudServerSettings::setLiveshareConfig(int type, const QString jsonStr)

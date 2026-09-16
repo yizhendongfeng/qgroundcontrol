@@ -1,4 +1,4 @@
-# qt_add_qml_module(QGC
+﻿# qt_add_qml_module(QGC
 #     URI QGroundControl
 #     VERSION 1.0
 #     IMPORT_PATH ${QT_QML_OUTPUT_DIRECTORY}
@@ -60,6 +60,7 @@ add_subdirectory(API)
 add_subdirectory(AutoPilotPlugins)
 add_subdirectory(Camera)
 add_subdirectory(Comms)
+add_subdirectory(DjiBridge)
 add_subdirectory(FactSystem)
 add_subdirectory(FirmwarePlugin)
 add_subdirectory(FirstRunPromptDialogs)

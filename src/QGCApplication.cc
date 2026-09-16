@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  *
  * (c) 2009-2024 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
@@ -353,15 +353,22 @@ void QGCApplication::_initForNormalAppBoot()
     QGCCorePlugin::instance()->init();
     MAVLinkProtocol::instance()->init();
     MultiVehicleManager::instance()->init();
-    _qmlAppEngine = QGCCorePlugin::instance()->createQmlApplicationEngine(this);
-    QObject::connect(_qmlAppEngine, &QQmlApplicationEngine::objectCreationFailed, this, QCoreApplication::quit, Qt::QueuedConnection);
-    QGCCorePlugin::instance()->createRootWindow(_qmlAppEngine);
 
     AudioOutput::instance()->init(SettingsManager::instance()->appSettings()->audioMuted());
     FollowMe::instance()->init();
     QGCPositionManager::instance()->init();
     LinkManager::instance()->init();
     VideoManager::instance()->init(mainRootWindow());
+
+    bridgeServer.init();
+    _qmlAppEngine = QGCCorePlugin::instance()->createQmlApplicationEngine(this);
+    QObject::connect(_qmlAppEngine, &QQmlApplicationEngine::objectCreationFailed, this, QCoreApplication::quit, Qt::QueuedConnection);
+    // 注册 DjiBridgeServer 到 QML 上下文，UserSettings.qml 中通过 djiBridgeServer 访问
+    _qmlAppEngine->rootContext()->setContextProperty(QStringLiteral("djiBridgeServer"), &bridgeServer);
+    connect(MultiVehicleManager::instance(), &MultiVehicleManager::activeVehicleChanged, &bridgeServer, &DjiBridgeServer::activeVehicleChanged);
+    QGCCorePlugin::instance()->createRootWindow(_qmlAppEngine);
+
+
 
     // Image provider for Optical Flow
     _qmlAppEngine->addImageProvider(_qgcImageProviderId, new QGCImageProvider());
