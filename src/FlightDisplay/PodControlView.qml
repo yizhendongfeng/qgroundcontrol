@@ -17,10 +17,10 @@ import QGroundControl.Vehicle
 import QGroundControl.GCU
 
 Item {    // 吊舱的设置界面
-    height:                     250
+    height:                     270
     // property var    _gcu:              QGroundControl.videoManager.gcu
     property var    _inyyoA102Pro:  QGroundControl.videoManager.inyyoA102Pro
-    property bool   pointMoveEnabled:  pointMoveCheckBoxSlider.checked
+    property bool   pointTrackEnabled:  pointTrackCheckBoxSlider.checked
     QGCLabel {
         id:                     textPodTitle
         text:                   qsTr("吊舱")
@@ -44,7 +44,6 @@ Item {    // 吊舱的设置界面
                 text:     qsTr("吊舱控制 ")
                 Layout.alignment:  Qt.AlignHCenter
             }
-
 
             Rectangle {
                 color:                  "transparent"
@@ -86,7 +85,7 @@ Item {    // 吊舱的设置界面
                 GridLayout {
                     id:                gridPodControl
                     anchors.top:       rowAngles.bottom
-                    anchors.bottom:    parent.bottom
+                    // anchors.bottom:    parent.bottom
                     anchors.left:      parent.left
                     anchors.right:     parent.right
                     anchors.margins:   10//_margins * 2
@@ -243,6 +242,35 @@ Item {    // 吊舱的设置界面
                         text: Math.round(sliderInfraredZoom.value)
                     }
                 }
+
+                RowLayout {
+                    anchors.top: gridPodControl.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 30
+                    anchors.margins: 10
+                    // spacing: 5
+                    QGCButton{
+                        Layout.fillWidth:   true
+                        text: qsTr("一键向下")
+                        height:             ScreenTools.defaultFontPixelHeight
+                        heightFactor: 0.1
+                        onClicked: {
+                            _inyyoA102Pro.lookDown()
+                        }
+                    }
+                    QGCButton{
+                        Layout.fillWidth:   true
+                        text: qsTr("一键回中")
+                        height:             ScreenTools.defaultFontPixelHeight
+                        heightFactor: 0.1
+                        onClicked: {
+                            _inyyoA102Pro.lookForward()
+                        }
+                    }
+                }
+
+
                 // Rectangle {
 //     anchors.fill: columnPodRate
 //     color: "red"
@@ -547,11 +575,26 @@ Item {    // 吊舱的设置界面
                 Layout.fillHeight:        true
                 GridLayout {
                     id:                 itemPodSettingsGridLayout
-                    anchors.fill:       parent
-                    anchors.margins:    _margins * 2
+                    anchors.top:        parent.top
+                    anchors.left:       parent.left
+                    anchors.right:      parent.right
+                    anchors.margins:    10
+                    anchors.topMargin:  16
                     columns:            2
                     rowSpacing:         16
                     columnSpacing:      20
+                    QGCCheckBoxSlider {
+                        id:                 osdFollowVehicleSlider
+                        Layout.fillWidth:   true
+                        text:               qsTr("跟随载具")
+                        visible:            true
+                        checked:            true
+                        onCheckedChanged: {
+                            _inyyoA102Pro.followPlatform(checked)
+                            console.log("跟随载具:", checked)
+                        }
+                    }
+
                     QGCCheckBoxSlider {
                         id:                 osdCheckBoxSlider
                         Layout.fillWidth:   true
@@ -563,16 +606,18 @@ Item {    // 吊舱的设置界面
                         }
                     }
 
+                    // false默认为指点平移，true为指点跟踪
                     QGCCheckBoxSlider {
-                        id:                 pointMoveCheckBoxSlider
+                        id:                 pointTrackCheckBoxSlider
                         Layout.fillWidth:   true
-                        text:               qsTr("指点移动")
+                        text:               qsTr("指点跟踪")
                         visible:            true
                         onCheckedChanged: {
                             // _gcu.setOsd(checked)
-                            if (!checked)
+                            if (!checked) {
                                 _inyyoA102Pro.stopTrackToPoint()
-                            console.log("指点移动 chedked:", checked)
+                            }
+                            console.log("指点跟踪 chedked:", checked)
                         }
                     }
 
@@ -587,60 +632,50 @@ Item {    // 吊舱的设置界面
                         }
                     }
 
-                    QGCCheckBoxSlider {
-                        id:                 auxiliaryTrackingCheckBoxSlider
-                        Layout.fillWidth:   true
-                        text:               qsTr("辅助跟踪")
-                        visible:            true
-                        onCheckedChanged: {
-                            // _gcu.setOsd(checked)
-                            if (!checked)
-                                _inyyoA102Pro.auxiliaryTracking()
-                            console.log("辅助跟踪 chedked:", checked)
-                        }
-                    }
+                }
 
-                    QGCButton {
-                        Layout.fillWidth:   true
-                        property int mode: 0
+                GridLayout{
+                    anchors.top:        itemPodSettingsGridLayout.bottom
+                    anchors.left:       parent.left
+                    anchors.right:      parent.right
+                    // anchors.margins:    _margins * 2
+                    anchors.margins:    10
+                    anchors.topMargin:  16
+                    columns:            2
+                    rowSpacing:         16
+                    columnSpacing:      20
+
+                    QGCLabel {
                         text: qsTr("画中画")
-                        height:             ScreenTools.defaultFontPixelHeight
-                        heightFactor: 0.1
-                        onClicked: {
-                            mode = (mode + 1) % 4
-                            _inyyoA102Pro.thermalModeSwitch(mode)
-                        }
                     }
-                    QGCButton {
-                        Layout.fillWidth:   true
-                        text: qsTr("重启")
-                        height:             ScreenTools.defaultFontPixelHeight
-                        heightFactor: 0.1
-                        onClicked: {
-                            mainWindow.showMessageDialog(qsTr("警告"), qsTr("确定重启？"),
-                                                         MessageDialog.Yes | MessageDialog.Cancel,
-                                                         function() { _inyyoA102Pro.podPower(2)},
-                                                         function() {checked = false})
 
+                    QGCComboBox {
+                        Layout.fillWidth:   true
+                        // text:               qsTr("画中画")
+                        // Layout.columnSpan:  2
+                        height:             ScreenTools.defaultFontPixelHeight
+                        model:  [qsTr("可见光包含热成像"), qsTr("热成像包含可见光"),qsTr("仅可见光"),qsTr("仅热成像")]
+                        // sizeToContents: true
+                        onCurrentIndexChanged: {
+                            _inyyoA102Pro.pictureInPictureSwitch(currentIndex)
+                            console.log("画中画", currentIndex)
                         }
                     }
 
-                    QGCButton{
-                        Layout.fillWidth:   true
-                        text: qsTr("向下")
-                        height:             ScreenTools.defaultFontPixelHeight
-                        heightFactor: 0.1
-                        onClicked: {
-                            _inyyoA102Pro.lookDown()
-                        }
+                    QGCLabel {
+                        text: qsTr("热成像")
                     }
-                    QGCButton{
+
+                    QGCComboBox {
                         Layout.fillWidth:   true
-                        text: qsTr("回中")
+                        // text:               qsTr("热成像")
+                        // Layout.columnSpan:  2
                         height:             ScreenTools.defaultFontPixelHeight
-                        heightFactor: 0.1
-                        onClicked: {
-                            _inyyoA102Pro.lookForward()
+                        model:  [qsTr("黑热"), qsTr("白热"),qsTr("彩色")]
+                        // sizeToContents: true
+                        onCurrentIndexChanged: {
+                            _inyyoA102Pro.thermalModeSwitch(currentIndex)
+                            console.log("热成像", currentIndex)
                         }
                     }
 
@@ -666,6 +701,7 @@ Item {    // 吊舱的设置界面
                             }
                         }
                     }
+
                 }
             }
         /*

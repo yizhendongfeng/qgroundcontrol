@@ -115,24 +115,27 @@ Item {
         property var trackingROI:   null
         property var trackingStatus: trackingStatusComponent.createObject(flyViewVideoMouseArea, {})
 
-        onClicked: {
-            if (itemPod.pointMoveEnabled) {
-                var xInVideo = mouseX
-                var yInVideo = mouseY - (height - videoStreaming.getHeight()) / 2
-                xInVideo = Math.max(0, Math.min(xInVideo, videoStreaming.getWidth()))
-                yInVideo = Math.max(0, Math.min(yInVideo, videoStreaming.getHeight()))
-                movePoint = Qt.point(xInVideo / videoStreaming.getWidth() * 255, yInVideo / videoStreaming.getHeight() * 255)
-                // movePoint = Qt.point(mouseX / videoStreaming.getWidth() * 10000, mouseY / videoStreaming.getHeight() * 10000)
-                // console.log("clicked in video mouse:", mouseX, xInVideo, mouseY, yInVideo, movePoint, videoStreaming.getWidth(), videoStreaming.getHeight() )
-                // _gcu.moveToPoint(10000, 10000)
-                console.log("clicked", _track_rec_x - mouse.x ,_track_rec_y - mouse.y, xInVideo, yInVideo, movePoint)
+        onClicked: {            
+            var xInVideo = mouseX
+            var yInVideo = mouseY - (height - videoStreaming.getHeight()) / 2
+            xInVideo = Math.max(0, Math.min(xInVideo, videoStreaming.getWidth()))
+            yInVideo = Math.max(0, Math.min(yInVideo, videoStreaming.getHeight()))
+            movePoint = Qt.point(xInVideo / videoStreaming.getWidth() * 255, yInVideo / videoStreaming.getHeight() * 255)
+            // movePoint = Qt.point(mouseX / videoStreaming.getWidth() * 10000, mouseY / videoStreaming.getHeight() * 10000)
+            // console.log("clicked in video mouse:", mouseX, xInVideo, mouseY, yInVideo, movePoint, videoStreaming.getWidth(), videoStreaming.getHeight() )
+            // _gcu.moveToPoint(10000, 10000)
+            console.log("clicked", _track_rec_x - mouse.x ,_track_rec_y - mouse.y, xInVideo, yInVideo, movePoint)
+            if (itemPod.pointTrackEnabled) {
                 if (Math.abs(_track_rec_x - mouse.x) < 10 && Math.abs(_track_rec_y - mouse.y) < 10) {
                     // _gcu.moveToPoint(movePoint.x, movePoint.y)
                     _inyyoA102Pro.startTrackToPoint(movePoint.x, movePoint.y)
+                } else {
+                    _inyyoA102Pro.moveToPoint(movePoint.x, movePoint.y)
                 }
-                _track_rec_x = 0
-                _track_rec_y = 0
             }
+            _track_rec_x = 0
+            _track_rec_y = 0
+
             onScreenGimbalController.clickControl()
         }
         onDoubleClicked: QGroundControl.videoManager.fullScreen = !QGroundControl.videoManager.fullScreen

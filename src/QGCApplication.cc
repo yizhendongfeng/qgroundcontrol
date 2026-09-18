@@ -358,7 +358,6 @@ void QGCApplication::_initForNormalAppBoot()
     FollowMe::instance()->init();
     QGCPositionManager::instance()->init();
     LinkManager::instance()->init();
-    VideoManager::instance()->init(mainRootWindow());
 
     bridgeServer.init();
     _qmlAppEngine = QGCCorePlugin::instance()->createQmlApplicationEngine(this);
@@ -366,7 +365,13 @@ void QGCApplication::_initForNormalAppBoot()
     // 注册 DjiBridgeServer 到 QML 上下文，UserSettings.qml 中通过 djiBridgeServer 访问
     _qmlAppEngine->rootContext()->setContextProperty(QStringLiteral("djiBridgeServer"), &bridgeServer);
     connect(MultiVehicleManager::instance(), &MultiVehicleManager::activeVehicleChanged, &bridgeServer, &DjiBridgeServer::activeVehicleChanged);
+    // 必须先创建主窗口再初始化 VideoManager：
+    // VideoManager::init 需要有效的 QQuickWindow（用于创建 videoContent 接收器/widget）。
+    // 提交 8ed51cdb8 把窗口创建搞到了 init 之后，导致 mainRootWindow() 为 NULL、
+    // "Failed To Init Video Manager - window is NULL"、视频系统完全不启动。
     QGCCorePlugin::instance()->createRootWindow(_qmlAppEngine);
+
+    VideoManager::instance()->init(mainRootWindow());
 
 
 
