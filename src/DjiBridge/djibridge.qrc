@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/djibridge">
+        <file>bridge_inject.js</file>
+    </qresource>
+</RCC>
