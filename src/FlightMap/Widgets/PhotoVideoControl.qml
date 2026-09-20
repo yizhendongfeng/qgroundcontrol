@@ -155,7 +155,7 @@ Rectangle {
                             var minutes = Math.floor((_viewRecordSeconds % 3600) / 60)
                             var seconds = Math.floor(_viewRecordSeconds % 60)
                             videoRecordTime.text = hours.toString().padStart(2, '0') + ":" + minutes.toString().padStart(2, '0') + ":" + seconds.toString().padStart(2, '0')
-                            console.log("videoRecordTime.text: ", videoRecordTime.text, _viewRecordSeconds)
+                            // console.log("videoRecordTime.text: ", videoRecordTime.text, _viewRecordSeconds)
                         }
                     }
                     MouseArea {
@@ -163,7 +163,7 @@ Rectangle {
                         onClicked:      toggleShooting()
 
                         function toggleShooting() {
-                            console.log("toggleShooting(), _cameraInPhotoMode: ", _cameraInPhotoMode, rectShoot._isShootingInVideoMode)
+                            // console.log("toggleShooting(), _cameraInPhotoMode: ", _cameraInPhotoMode, rectShoot._isShootingInVideoMode)
                             if (_cameraInPhotoMode) {
                                 rectShoot._isShootingInPhotoMode = true
                                 _photoCaptureCount++

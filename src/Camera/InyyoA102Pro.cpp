@@ -1,3 +1,6 @@
+
+#include <QDateTime>
+
 #include "InyyoA102Pro.h"
 
 InyyoA102Pro::InyyoA102Pro(VideoSettings * videoSettings)
@@ -58,7 +61,6 @@ InyyoA102Pro::InyyoA102Pro(VideoSettings * videoSettings)
     _port = _videoSettings->podPort()->rawValue().toInt();
     _ip   = _videoSettings->podIp()->rawValue().toString();
     _autoConnect = _videoSettings->autoConnectToPod()->rawValue().toBool();
-
     _timerConnectToPod = new QTimer(this);
     _timerConnectToPod->setInterval(1000);
     _timerConnectToPod->setSingleShot(true);
@@ -71,6 +73,9 @@ InyyoA102Pro::InyyoA102Pro(VideoSettings * videoSettings)
     connect(&_tcpSocket, &QTcpSocket::connected,    this, [&](){ _connected = true;
         emit connectedChanged();
         _timerConnectToPod->stop();
+        updateLocalDateTimeToPod();
+        // requestPodVersion();
+        // requestPodTime();
     });
     connect(&_tcpSocket, &QTcpSocket::disconnected, this, [&](){ _connected = false;
         emit connectedChanged();
@@ -97,8 +102,8 @@ void InyyoA102Pro::connectToPod(bool connect)
 void InyyoA102Pro::stopRoate()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x00, 0x00, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x00, 0x00, 0x00, 0x00, data);
     qDebug() << "StopMove: " << QByteArray((const char*)data, length).toHex(' ');
     sendToPod(data, length);
 }
@@ -106,9 +111,9 @@ void InyyoA102Pro::stopRoate()
 void InyyoA102Pro::pitchRotate(bool up, uint8_t speed)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = up ? 0x08 : 0x10;
-    packData(0x00, command2, 0x00, speed, data, length);
+    packData(0x00, command2, 0x00, speed, data);
     sendToPod(data, length);
     qDebug() << "PitchUp: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -117,9 +122,9 @@ void InyyoA102Pro::pitchRotate(bool up, uint8_t speed)
 void InyyoA102Pro::yawRotate(bool left, uint8_t speed)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = left ? 0x04 : 0x02;
-    packData(0x00, command2, speed, 0x00, data, length);
+    packData(0x00, command2, speed, 0x00, data);
     sendToPod(data, length);
     qDebug() << "YawLeft: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -127,9 +132,9 @@ void InyyoA102Pro::yawRotate(bool left, uint8_t speed)
 void InyyoA102Pro::zoomChange(bool zoomIn, uint8_t speed)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = zoomIn ? 0x40 : 0x20;
-    packData(0x00, command2, speed, 0x00, data, length);
+    packData(0x00, command2, speed, 0x00, data);
     sendToPod(data, length);
     qDebug() << "ZoomOut: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -137,8 +142,8 @@ void InyyoA102Pro::zoomChange(bool zoomIn, uint8_t speed)
 void InyyoA102Pro::zoomStop()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x00, 0x60, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x00, 0x60, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "ZoomStop: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -146,8 +151,8 @@ void InyyoA102Pro::zoomStop()
 void InyyoA102Pro::moveToPoint(uint8_t x, uint8_t y)
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x10, 0x00, x, y, data, length);
+    int length = 7;
+    packData(0x10, 0x00, x, y, data);
     sendToPod(data, length);
     qDebug() << "ZoomStop: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -155,14 +160,14 @@ void InyyoA102Pro::moveToPoint(uint8_t x, uint8_t y)
 void InyyoA102Pro::setPitchAngle(float angle)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     if (angle > 30) {
         angle = 30;
     } else if (angle < -120) {
         angle = -120;
     }
     int16_t angleTemp = angle * 50;
-    packData(0x10, 0x01, (angleTemp >> 8) & 0xff, angleTemp & 0xff, data, length);
+    packData(0x10, 0x01, (angleTemp >> 8) & 0xff, angleTemp & 0xff, data);
     sendToPod(data, length);
     qDebug() << "SetPitchAngle: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -170,9 +175,9 @@ void InyyoA102Pro::setPitchAngle(float angle)
 void InyyoA102Pro::setYawAngle(float angle)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     int16_t angleTemp = angle * 50;
-    packData(0x10, 0x02, (angleTemp >> 8) & 0xff, angleTemp & 0xff, data, length);
+    packData(0x10, 0x02, (angleTemp >> 8) & 0xff, angleTemp & 0xff, data);
     sendToPod(data, length);
     qDebug() << "SetYawAngle: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -180,8 +185,8 @@ void InyyoA102Pro::setYawAngle(float angle)
 void InyyoA102Pro::startTrackToPoint(uint8_t x, uint8_t y)
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x11, 0x00, x, y, data, length);
+    int length = 7;
+    packData(0x11, 0x00, x, y, data);
     sendToPod(data, length);
     qDebug() << "StartTrackToPoint: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -189,8 +194,8 @@ void InyyoA102Pro::startTrackToPoint(uint8_t x, uint8_t y)
 void InyyoA102Pro::stopTrackToPoint()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x11, 0x01, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x11, 0x01, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "StopTrackToPoint: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -198,9 +203,9 @@ void InyyoA102Pro::stopTrackToPoint()
 void InyyoA102Pro::targetDetect(bool on)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = on ? 0x02 : 0x03;
-    packData(0x11, command2, 0x00, 0x00, data, length);
+    packData(0x11, command2, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "StartTargetDetect: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -208,9 +213,9 @@ void InyyoA102Pro::targetDetect(bool on)
 void InyyoA102Pro::auxiliaryTracking(bool on)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = on ? 0x04 : 0x05;
-    packData(0x11, command2, 0x00, 0x00, data, length);
+    packData(0x11, command2, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "StartAuxiliaryTracking: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -218,8 +223,8 @@ void InyyoA102Pro::auxiliaryTracking(bool on)
 void InyyoA102Pro::takePhoto()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x12, 0x00, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x12, 0x00, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "TakePhoto: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -227,9 +232,9 @@ void InyyoA102Pro::takePhoto()
 void InyyoA102Pro::recording(bool on)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = on ? 0x01 : 0x02;
-    packData(0x12, command2, 0x00, 0x00, data, length);
+    packData(0x12, command2, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "StartRecording: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -237,9 +242,9 @@ void InyyoA102Pro::recording(bool on)
 void InyyoA102Pro::followPlatform(bool on)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = on ? 0x00 : 0x01;
-    packData(0x13, command2, 0x00, 0x00, data, length);
+    packData(0x13, command2, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "StartFollowPlatform: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -247,8 +252,8 @@ void InyyoA102Pro::followPlatform(bool on)
 void InyyoA102Pro::lookDown()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x13, 0x02, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x13, 0x02, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "LookDown: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -256,8 +261,8 @@ void InyyoA102Pro::lookDown()
 void InyyoA102Pro::lookForward()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x13, 0x03, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x13, 0x03, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "LookForward: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -266,8 +271,8 @@ void InyyoA102Pro::pictureInPictureSwitch(uint8_t mode)
 {
     //数据码1为画面模式，0x00:可见光嵌入热成像，0x01:热成像嵌入可见光，0x02:可见光，0x03:热成像
     uint8_t data[7];
-    int length = 0;
-    packData(0x14, 0x00, mode, 0x00, data, length);
+    int length = 7;
+    packData(0x14, 0x00, mode, 0x00, data);
     sendToPod(data, length);
     qDebug() << "PictureInPictureSwitch: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -276,8 +281,8 @@ void InyyoA102Pro::thermalModeSwitch(uint8_t mode)
 {
     //数据码1为黑热、白热、彩色切换模式，0x00:白热，0x01:黑热，0x02:彩色
     uint8_t data[7];
-    int length = 0;
-    packData(0x15, 0x00, mode, 0x00, data, length);
+    int length = 7;
+    packData(0x15, 0x00, mode, 0x00, data);
     sendToPod(data, length);
     qDebug() << "ThermalModeSwitch: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -286,8 +291,8 @@ void InyyoA102Pro::thermalZoom(uint8_t zoom)
 {
     //数据码1为电子变倍倍数(1-8倍)，0x00:1倍，0x01:2倍，0x02:3倍，0x03:4倍
     uint8_t data[7];
-    int length = 0;
-    packData(0x17, 0x00, zoom, 0x00, data, length);
+    int length = 7;
+    packData(0x17, 0x00, zoom, 0x00, data);
     sendToPod(data, length);
     qDebug() << "ThermalZoom: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -295,9 +300,9 @@ void InyyoA102Pro::thermalZoom(uint8_t zoom)
 void InyyoA102Pro::stabilization(bool on)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = on ? 0x00 : 0x01;
-    packData(0x18, command2, 0x00, 0x00, data, length);
+    packData(0x18, command2, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "Stabilization: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -305,9 +310,9 @@ void InyyoA102Pro::stabilization(bool on)
 void InyyoA102Pro::osd(bool on)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = on ? 0x00 : 0x01;
-    packData(0x19, command2, 0x00, 0x00, data, length);
+    packData(0x19, command2, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "Osd: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -315,9 +320,9 @@ void InyyoA102Pro::osd(bool on)
 void InyyoA102Pro::manualFocus(bool on)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = on ? 0x00 : 0x01;
-    packData(0x1d, command2, 0x00, 0x00, data, length);
+    packData(0x1d, command2, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "ManualFocus: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -325,9 +330,9 @@ void InyyoA102Pro::manualFocus(bool on)
 void InyyoA102Pro::changeFocus(bool near)
 {
     uint8_t data[7];
-    int length = 0;
+    int length = 7;
     uint8_t command2 = near ? 0x02 : 0x03;
-    packData(0x1d, command2, 0x00, 0x00, data, length);
+    packData(0x1d, command2, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "ChangeFocus: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -335,8 +340,8 @@ void InyyoA102Pro::changeFocus(bool near)
 void InyyoA102Pro::stopFocus()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x1d, 0x04, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x1d, 0x04, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "StopFocus: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -344,8 +349,8 @@ void InyyoA102Pro::stopFocus()
 void InyyoA102Pro::requestSbusChannel()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x1e, 0x00, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x1e, 0x00, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "RequestSbusChannel: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -353,8 +358,8 @@ void InyyoA102Pro::requestSbusChannel()
 void InyyoA102Pro::requestPodTime()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x1e, 0x01, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x1e, 0x01, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "RequestPodTime: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -362,8 +367,8 @@ void InyyoA102Pro::requestPodTime()
 void InyyoA102Pro::requestPodVersion()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x1e, 0x02, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x1e, 0x02, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "RequestPodVersion: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -372,8 +377,8 @@ void InyyoA102Pro::setReturnFrequency(uint8_t frequency)
 {
     // 数据码1为回传频率，支持1-10Hz，0x01:1Hz,0x02:2Hz,…,0x0A:10Hz
     uint8_t data[7];
-    int length = 0;
-    packData(0x20, 0x00, frequency, 0x00, data, length);
+    int length = 7;
+    packData(0x20, 0x00, frequency, 0x00, data);
     sendToPod(data, length);
     qDebug() << "SetReturnFrequency: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -381,8 +386,8 @@ void InyyoA102Pro::setReturnFrequency(uint8_t frequency)
 void InyyoA102Pro::resetStreamIp()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x21, 0x00, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x21, 0x00, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "ResetStreamIp: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -390,8 +395,8 @@ void InyyoA102Pro::resetStreamIp()
 void InyyoA102Pro::requestStreamIp()
 {
     uint8_t data[7];
-    int length = 0;
-    packData(0x21, 0x01, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x21, 0x01, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "RequestStreamIp: " << QByteArray((const char*)data, length).toHex(' ');
 }
@@ -400,14 +405,14 @@ void InyyoA102Pro::podPower(uint8_t operation)
 {
     // 0x00:云台开机，0x01:关机，0x02:云台重启，0x03:机芯重启
     uint8_t data[7];
-    int length = 0;
-    packData(0x22, operation, 0x00, 0x00, data, length);
+    int length = 7;
+    packData(0x22, operation, 0x00, 0x00, data);
     sendToPod(data, length);
     qDebug() << "PodPower: " << QByteArray((const char*)data, length).toHex(' ');
 }
 
 
-void InyyoA102Pro::packData(uint8_t command1, uint8_t command2, uint8_t data1, uint8_t data2, uint8_t * packedData, int &packedLength)
+void InyyoA102Pro::packData(uint8_t command1, uint8_t command2, uint8_t data1, uint8_t data2, uint8_t * packedData)
 {
     // uint8_t data[8] ={0};
     packedData[0] = 0xff; // 帧头
@@ -421,7 +426,6 @@ void InyyoA102Pro::packData(uint8_t command1, uint8_t command2, uint8_t data1, u
     packedData[5] = data2;
     // “校验码”= 字节 2 + 字节 3 + 字节 4 + 字节 5 + 字节 6
     packedData[6] = checkCode(packedData + 1, 5);
-    packedLength = 7;
 }
 
 bool InyyoA102Pro::unpackData(uint8_t *data, int dataLength)
@@ -436,48 +440,59 @@ bool InyyoA102Pro::unpackData(uint8_t *data, int dataLength)
     for(int i = 0; i < dataLength; i++) {
         if (data[i] == 0xEE) {// 可能是帧头
             messageId = data[i + 1];
-            if (messageId != 0x01 && messageId != 0x81) // 总共接受两包数据，不是这两包数据就重新找帧头
-                continue;
+            // 总共接收三包数据，不是这两包数据就重新找帧头
+            // if (messageId != 0x01 && messageId != 0x81 && messageId != 0x06)
+            //     continue;
+
+            // 长度太小不够一包，当前帧头错误，继续循环寻找帧头
             messageLength = data[i + 2];
-            if (messageLength < 29 || i + messageLength < dataLength) // 长度太小不够一包，当前帧头错误，继续循环寻找帧头
+            if (messageLength < 29 || i + messageLength < dataLength)
                 continue;
             checkSum = data[i + messageLength - 1];
             for(int j = i; j < i + messageLength - 1; j++) {
                 caculatedSum += data[j];
             }
             if (caculatedSum == checkSum) {
-                uint16_t distance = 0;
-                memcpy(&distance, data + i + 3, 2);
-                _laserDistance = distance * 0.1f;
-                int16_t roll = 0;
-                memcpy(&roll, data + i + 5, 2);
-                _podRoll = roll * 0.1f;
-                emit podRollChanged();
-                int16_t pitch = 0;
-                memcpy(&pitch, data + i + 7, 2);
-                _podPitch = pitch * 0.1f;
-                emit podPitchChanged();
-                int16_t yaw = 0;
-                memcpy(&yaw, data + i + 9, 2);
-                _podYaw = yaw * 0.1f;
-                emit podYawChanged();
-                _zoom = data[i + 11];
-                emit zoomChanged();
-                _trackStatus = data[i + 12];
-                int32_t lat = 0;
-                memcpy(&lat, data + i + 13, 4);
-                _targetLatitude = lat / 10000000.0;
-                int32_t lon = 0;
-                memcpy(&lon, data + i + 17, 4);
-                _targetLongitude = lon / 10000000.0;
-                int16_t alt = 0;
-                memcpy(&alt, data + i + 21, 2);
-                _targetAltitude = alt * 0.1f;
-                uint16_t zoomDecimal = 0;
-                memcpy(&zoomDecimal, data + i + 23, 2);
-                _targetAltitude = alt * 0.1f;
-                _podMode = data[i + 27];
                 success = true;
+                // qDebug() << "InyyoA102Pro::unpackData check pass, messageId: " << messageId;
+                if (messageId == 0x01) {      // 吊舱回复数据
+                    uint16_t distance = 0;
+                    memcpy(&distance, data + i + 3, 2);
+                    _laserDistance = distance * 0.1f;
+                    int16_t roll = 0;
+                    memcpy(&roll, data + i + 5, 2);
+                    _podRoll = roll * 0.1f;
+                    emit podRollChanged();
+                    int16_t pitch = 0;
+                    memcpy(&pitch, data + i + 7, 2);
+                    _podPitch = pitch * 0.1f;
+                    emit podPitchChanged();
+                    int16_t yaw = 0;
+                    memcpy(&yaw, data + i + 9, 2);
+                    _podYaw = yaw * 0.1f;
+                    emit podYawChanged();
+                    _zoom = data[i + 11];
+                    emit zoomChanged();
+                    _trackStatus = data[i + 12];
+                    int32_t lat = 0;
+                    memcpy(&lat, data + i + 13, 4);
+                    _targetLatitude = lat / 10000000.0;
+                    int32_t lon = 0;
+                    memcpy(&lon, data + i + 17, 4);
+                    _targetLongitude = lon / 10000000.0;
+                    int16_t alt = 0;
+                    memcpy(&alt, data + i + 21, 2);
+                    _targetAltitude = alt * 0.1f;
+                    uint16_t zoomDecimal = 0;
+                    memcpy(&zoomDecimal, data + i + 23, 2);
+                    _targetAltitude = alt * 0.1f;
+                    _podMode = data[i + 27];
+                } else if (messageId == 0x06) { // 查询版本回复数据  //WARNING: 测试时收不到这个数据
+                    // qDebug() << "InyyoA102Pro::unpackData receive version";
+                    // requestPodTime();
+                } else if (messageId == 0x81)  {// 数据接受协议，感觉这个协议像是地面站给吊舱发送的  //WARNING: 测试时收不到这个数据
+                    // qDebug() << "InyyoA102Pro::unpackData receive vehicle data";
+                }
                 break;
             }
         }
@@ -505,6 +520,24 @@ int InyyoA102Pro::sendToPod(uint8_t *data, int dataLength)
         qDebug() << "吊舱tcpsocket不可用，或者未连接";
         return -1;
     }
+}
+
+void InyyoA102Pro::updateLocalDateTimeToPod()
+{
+    uint8_t data[10];
+    data[0] = 0xee;  // 帧头
+    data[1] = 0x83;  // 消息 ID
+    data[2] = 0x0a;  // 帧长
+    QDateTime currentDateTime = QDateTime::currentDateTime();
+    data[3] = currentDateTime.date().year() % 100;
+    data[4] = currentDateTime.date().month();
+    data[5] = currentDateTime.date().day();
+    data[6] = currentDateTime.time().hour();
+    data[7] = currentDateTime.time().minute();
+    data[8] = currentDateTime.time().second();
+    data[9] = checkCode(data, 9); // 校验和
+    sendToPod(data, data[2]);
+    qDebug() << "updateLocalDateTimeToPod: " << currentDateTime << QByteArray((const char*)data, data[2]).toHex(' ');
 }
 
 float InyyoA102Pro::podRoll() const

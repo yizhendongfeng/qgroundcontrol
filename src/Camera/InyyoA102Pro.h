@@ -58,10 +58,12 @@ public:
 
 
 
-    void packData(uint8_t command1, uint8_t command2, uint8_t data1, uint8_t data2, uint8_t *packedData, int& packedLength);
+    void packData(uint8_t command1, uint8_t command2, uint8_t data1, uint8_t data2, uint8_t *packedData);
     bool unpackData(uint8_t *data, int dataLength);
     uint8_t checkCode(uint8_t* data, int length);
     int   sendToPod(uint8_t* data, int dataLength);
+    // 把本机时间更新到吊舱
+    void  updateLocalDateTimeToPod();
     float podRoll() const;
     float podPitch() const;
 

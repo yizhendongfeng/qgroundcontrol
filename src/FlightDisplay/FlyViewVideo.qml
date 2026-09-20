@@ -125,8 +125,8 @@ Item {
             // console.log("clicked in video mouse:", mouseX, xInVideo, mouseY, yInVideo, movePoint, videoStreaming.getWidth(), videoStreaming.getHeight() )
             // _gcu.moveToPoint(10000, 10000)
             console.log("clicked", _track_rec_x - mouse.x ,_track_rec_y - mouse.y, xInVideo, yInVideo, movePoint)
+            if (Math.abs(_track_rec_x - mouse.x) < 10 && Math.abs(_track_rec_y - mouse.y) < 10) {
             if (itemPod.pointTrackEnabled) {
-                if (Math.abs(_track_rec_x - mouse.x) < 10 && Math.abs(_track_rec_y - mouse.y) < 10) {
                     // _gcu.moveToPoint(movePoint.x, movePoint.y)
                     _inyyoA102Pro.startTrackToPoint(movePoint.x, movePoint.y)
                 } else {
@@ -148,12 +148,12 @@ Item {
 
             //create a new rectangle at the wanted position
 
-            // if(_gcu.podMode === 0x17) { // 跟踪模式
-                trackingROI = trackingROIComponent.createObject(flyViewVideoMouseArea, {
-                                                                    "x": mouse.x,
-                                                                    "y": mouse.y
-                                                                });
-            // }
+              // if(_gcu.podMode === 0x17) { // 跟踪模式
+              //     trackingROI = trackingROIComponent.createObject(flyViewVideoMouseArea, {
+              //                                                         "x": mouse.x,
+              //                                                         "y": mouse.y
+              //                                                     });
+              // }
               // if(videoStreaming._camera) {
               //     if (videoStreaming._camera.trackingEnabled) {
               //         trackingROI = trackingROIComponent.createObject(flyViewVideoMouseArea, {
