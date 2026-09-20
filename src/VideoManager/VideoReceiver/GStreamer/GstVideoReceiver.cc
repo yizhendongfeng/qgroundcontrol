@@ -83,40 +83,13 @@ void GstVideoReceiver::startStreaming(const QString &streamUrl, StreamType strea
     _streamUrl = streamUrl;
     _streamType = streamType;
 
-    // 创建推流元素链（编码器+封装器+发送端）
-    _streamerSink = _makeStreamSink(streamUrl, streamType);
-    if (!_streamerSink) {
-        qCCritical(GstVideoReceiverLog) << "_makeStreamSink() failed";
+    // 创建推流元素链（编码器+封装器+发送端）并按当前清晰度参数启动
+    if (!_startStreamingBranch(true)) {
+        qCCritical(GstVideoReceiverLog) << "_startStreamingBranch() failed";
         _dispatchSignal([this]() { emit onStartStreamingComplete(STATUS_FAIL); });
         return;
     }
 
-    // 将推流元素加入管道并链接
-    gst_object_ref(_streamerSink);
-    gst_bin_add(GST_BIN(_pipeline), _streamerSink);
-    if (!gst_element_link(_streamerValve, _streamerSink)) {
-        qCCritical(GstVideoReceiverLog) << "Failed to link streamer valve and sink";
-        gst_clear_object(&_streamerSink);
-        _dispatchSignal([this]() { emit onStartStreamingComplete(STATUS_FAIL); });
-        return;
-    }
-
-    // 同步推流元素状态到管道（PLAYING）
-    gst_element_sync_state_with_parent(_streamerSink);
-    // install probe to wait for keyframe (reuse _keyframeWatch)
-    GstPad *probepad = gst_element_get_static_pad(_streamerValve, "src");
-    if (!probepad) {
-        qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad() failed";
-        _dispatchSignal([this]() { emit onStartStreamingComplete(STATUS_FAIL); });
-        return;
-    }
-    (void) gst_pad_add_probe(probepad, GST_PAD_PROBE_TYPE_BUFFER, _keyframeWatch, this, nullptr);
-    gst_clear_object(&probepad);
-
-    // 打开阀，开始推流
-    g_object_set(_streamerValve, "drop", FALSE, nullptr);
-
-    _streamingOut = true;
     _dispatchSignal([this]() {
         emit onStartStreamingComplete(STATUS_OK);
         emit streamingOutChanged(_streamingOut);
@@ -136,29 +109,71 @@ void GstVideoReceiver::setLiveClarity(const LIVE_CLARITY liveClarity)
 
     _liveClarity = liveClarity;
     switch (_liveClarity) {
-    case ADAPTIVE:
+    case ADAPTIVE:      // 自适应：不重编码，直转源流
+        _liveBitRate = 0;
+        _liveResolution = QSize(0, 0);
+        break;
+    case SMOOTH:        // 流畅：960x540 @512Kbps
         _liveBitRate = 512;
         _liveResolution = QSize(960, 540);
         break;
-    case SMOOTH:
-        _liveBitRate = 512;
-        _liveResolution = QSize(960, 540);
-        break;
-    case STANDARD:
+    case STANDARD:      // 标清：1280x720 @1Mbps
         _liveBitRate = 1000;
         _liveResolution = QSize(1280, 720);
         break;
-    case HD:
+    case HD:            // 高清：1280x720 @1.5Mbps
         _liveBitRate = 1500;
         _liveResolution = QSize(1280, 720);
         break;
-    case SUPER_CLEAR:
+    case SUPER_CLEAR:   // 超清：1920x1080 @3Mbps
         _liveBitRate = 3000;
         _liveResolution = QSize(1920, 1080);
         break;
     default:
         break;
     }
+    qCDebug(GstVideoReceiverLog) << "setLiveClarity:" << _liveClarity
+                                 << "bitrate:" << _liveBitRate << "kbps"
+                                 << "resolution:" << _liveResolution;
+
+    // 推流中切换清晰度：重建推流分支（对应设备端重新编码）
+    if (_streamingOut && _streamerValve) {
+        qCDebug(GstVideoReceiverLog) << "Rebuilding streaming branch with new clarity";
+        g_object_set(_streamerValve, "drop", TRUE, nullptr);
+        (void) _unlinkBranch(_streamerValve);
+        _shutdownStreamingBranch();                     // _streamingOut = false, 移除旧 _streamerSink
+        if (_startStreamingBranch(false)) {
+            _dispatchSignal([this]() { emit streamingOutChanged(_streamingOut); });
+        } else {
+            qCWarning(GstVideoReceiverLog) << "Rebuild streaming branch failed";
+        }
+    }
+}
+
+void GstVideoReceiver::setBitrate(int bitrate) // kbps
+{
+    if (_needDispatch()) {
+        _worker->dispatch([this, bitrate]() { setBitrate(bitrate); });
+        return;
+    }
+    _liveBitRate = bitrate;
+    if (_liveClarity == ADAPTIVE) {
+        _liveClarity = SMOOTH;   // 手动设置码率视为非自适应
+    }
+    qCDebug(GstVideoReceiverLog) << "setBitrate:" << bitrate << "kbps";
+}
+
+void GstVideoReceiver::setResolution(QSize res)
+{
+    if (_needDispatch()) {
+        _worker->dispatch([this, res]() { setResolution(res); });
+        return;
+    }
+    _liveResolution = res;
+    if (_liveClarity == ADAPTIVE) {
+        _liveClarity = SMOOTH;   // 手动设置分辨率视为非自适应
+    }
+    qCDebug(GstVideoReceiverLog) << "setResolution:" << res;
 }
 
 void GstVideoReceiver::stopStreaming()
@@ -186,6 +201,53 @@ void GstVideoReceiver::stopStreaming()
     _shutdownStreamingBranch();
 
     _dispatchSignal([this, ret]() { emit onStopStreamingComplete(ret ? STATUS_OK : STATUS_FAIL); });
+}
+
+bool GstVideoReceiver::_startStreamingBranch(bool installKeyframeProbe)
+{
+    if (!_pipeline || !_streamerValve) {
+        qCWarning(GstVideoReceiverLog) << "_startStreamingBranch: pipeline or valve missing";
+        return false;
+    }
+
+    // 创建推流元素链（编码器+封装器+发送端，按当前清晰度参数）
+    _streamerSink = _makeStreamSink(_streamUrl, _streamType);
+    if (!_streamerSink) {
+        qCCritical(GstVideoReceiverLog) << "_makeStreamSink() failed";
+        return false;
+    }
+
+    // 将推流元素加入管道并链接
+    gst_object_ref(_streamerSink);
+    gst_bin_add(GST_BIN(_pipeline), _streamerSink);
+    if (!gst_element_link(_streamerValve, _streamerSink)) {
+        qCCritical(GstVideoReceiverLog) << "Failed to link streamer valve and sink";
+        gst_clear_object(&_streamerSink);
+        return false;
+    }
+
+    // 同步推流元素状态到管道（PLAYING）
+    gst_element_sync_state_with_parent(_streamerSink);
+
+    if (installKeyframeProbe) {
+        // 安装探针等待关键帧（仅首次启动时安装，重建时沿用）
+        GstPad *probepad = gst_element_get_static_pad(_streamerValve, "src");
+        if (!probepad) {
+            qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad() failed";
+            return false;
+        }
+        (void) gst_pad_add_probe(probepad, GST_PAD_PROBE_TYPE_BUFFER, _keyframeWatch, this, nullptr);
+        gst_clear_object(&probepad);
+    }
+
+    // 打开阀，开始推流
+    g_object_set(_streamerValve, "drop", FALSE, nullptr);
+
+    _streamingOut = true;
+    qCDebug(GstVideoReceiverLog) << "Streaming branch started, clarity:" << _liveClarity
+                                 << "bitrate:" << _liveBitRate << "kbps"
+                                 << "resolution:" << _liveResolution;
+    return true;
 }
 
 void GstVideoReceiver::start(uint32_t timeout)
@@ -1128,11 +1190,20 @@ GstElement *GstVideoReceiver::_makeStreamSink(const QString &streamUrl, StreamTy
 {
     GstElement *bin = nullptr;
     GstElement *parse = nullptr;
-    // GstElement *encoder = nullptr;  // H264编码器
     GstElement *muxer = nullptr;    // 封装器（FLV/RTSP）
     GstElement *sink = nullptr;     // 发送端（RTMP/RTSP）
+    // 转码链元素（清晰度非自适应时使用：解码→缩放→重编码）
+    GstElement *decode = nullptr;   // H264 解码器
+    GstElement *conv   = nullptr;   // 颜色空间转换
+    GstElement *scale  = nullptr;   // 分辨率缩放
+    GstElement *capsf  = nullptr;   // 目标分辨率过滤
+    GstElement *enc    = nullptr;   // x264 编码器
     bool releaseElements = true;
-    qCDebug(GstVideoReceiverLog) << "_makeStreamSink:" << streamUrl << streamType;
+    bool addedToBin = false;       // 元素是否已加入 bin（加入后由 bin 统一释放）
+    qCDebug(GstVideoReceiverLog) << "_makeStreamSink:" << streamUrl << streamType
+                                 << "clarity:" << _liveClarity
+                                 << "bitrate:" << _liveBitRate << "kbps"
+                                 << "resolution:" << _liveResolution;
     do {
         // 创建容器封装推流元素链
         bin = gst_bin_new("streamerbin");
@@ -1141,30 +1212,13 @@ GstElement *GstVideoReceiver::_makeStreamSink(const QString &streamUrl, StreamTy
             break;
         }
 
-        // // 1. 视频编码器：x264enc（低延迟配置）
-        // encoder = gst_element_factory_make("x264enc", nullptr);
-        // if (!encoder) {
-        //     qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('x264enc') failed";
-        //     break;
-        // }
-        // g_object_set(encoder,
-        //              "tune", 4,        // zerolatency（零延迟，适配实时推流）
-        //              "speed-preset", 0,// ultrafast（最快编码速度）
-        //              "bitrate", 1000,  // 比特率1Mbps（可根据需求调整）
-        //              "byte-stream", FALSE, // 关键：关闭字节流，输出AVC格式
-        //              // "profile", 1,     // baseline 配置（兼容多数RTSP服务器）
-        //              nullptr);
-
         // 2. 按推流类型构建封装器+发送端
         if (streamType == StreamTypeRTMP) {
             // RTMP：FLV封装 + rtmpsink
-            // H.264 encoded input path: ensure stream-format=avc via h264parse,
-            // then mux with flvmux and push with rtmpsink
-            parse = gst_element_factory_make("h264parse", nullptr);
-            if (!parse) {
-                qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('h264parse') failed";
-                break;
-            }
+            //   自适应(ADAPTIVE)：H.264 直转封装（h264parse → flvmux → rtmpsink）
+            //   其他清晰度：解码 → 缩放 → 重编码 → 封装推送
+            //            （decodebin → videoconvert → videoscale → capsfilter
+            //              → x264enc → h264parse → flvmux → rtmpsink）
             muxer = gst_element_factory_make("flvmux", nullptr);
             if (!muxer) { break; }
             g_object_set(muxer, "streamable", TRUE, nullptr); // 流式输出
@@ -1173,34 +1227,118 @@ GstElement *GstVideoReceiver::_makeStreamSink(const QString &streamUrl, StreamTy
             if (!sink) { break; }
             g_object_set(sink, "location", streamUrl.toUtf8().constData(), nullptr);
 
-            // 加入容器并链接：encoder → flvmux → rtmpsink
-            gst_bin_add_many(GST_BIN(bin), parse, muxer, sink, nullptr);
-            if (!gst_element_link_many(parse, muxer, sink, nullptr)) {
-                qCCritical(GstVideoReceiverLog) << "Link RTMP elements failed";
-                break;
-            }
-            // expose single ghost pad "sink" that upstream (valve) will link to
-            GstPad *parseSinkPad = gst_element_get_static_pad(parse, "sink");
-            if (!parseSinkPad) {
-                qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad(parse, 'sink') failed";
-                break;
-            }
-            GstPad *ghost = gst_ghost_pad_new("sink", parseSinkPad);
-            gst_clear_object(&parseSinkPad);
-            if (!ghost) {
-                qCCritical(GstVideoReceiverLog) << "gst_ghost_pad_new() failed";
-                break;
-            }
-            if (!gst_element_add_pad(bin, ghost)) {
-                qCCritical(GstVideoReceiverLog) << "gst_element_add_pad() failed";
-                break;
+            const bool transcode = (_liveClarity != ADAPTIVE);
+            if (transcode) {
+                // 防御：清晰度参数缺失时按档位补齐（直接 startStreaming 未走 setLiveClarity 时）
+                if (_liveResolution.width() <= 0 || _liveResolution.height() <= 0 || _liveBitRate <= 0) {
+                    switch (_liveClarity) {
+                    case SMOOTH:
+                        _liveBitRate = 512;  _liveResolution = QSize(960, 540); break;
+                    case STANDARD:
+                        _liveBitRate = 1000; _liveResolution = QSize(1280, 720); break;
+                    case SUPER_CLEAR:
+                        _liveBitRate = 3000; _liveResolution = QSize(1920, 1080); break;
+                    case HD:
+                    default:
+                        _liveBitRate = 1500; _liveResolution = QSize(1280, 720); break;
+                    }
+                    qCDebug(GstVideoReceiverLog) << "Live params fallback:" << _liveClarity
+                                                 << _liveBitRate << _liveResolution;
+                }
+                // ===== 转码链：按清晰度档位解码→缩放→重编码 =====
+                decode = gst_element_factory_make("decodebin", nullptr);
+                conv   = gst_element_factory_make("videoconvert", nullptr);
+                scale  = gst_element_factory_make("videoscale", nullptr);
+                capsf  = gst_element_factory_make("capsfilter", nullptr);
+                enc    = gst_element_factory_make("x264enc", nullptr);
+                parse  = gst_element_factory_make("h264parse", nullptr);
+                if (!decode || !conv || !scale || !capsf || !enc || !parse) {
+                    qCCritical(GstVideoReceiverLog) << "gst_element_factory_make() for transcode chain failed";
+                    break;
+                }
+
+                // 目标分辨率 caps（宽高来自清晰度档位）
+                GstCaps *caps = gst_caps_new_simple("video/x-raw",
+                                                    "width",  G_TYPE_INT, _liveResolution.width(),
+                                                    "height", G_TYPE_INT, _liveResolution.height(),
+                                                    nullptr);
+                g_object_set(capsf, "caps", caps, nullptr);
+                gst_caps_unref(caps);
+
+                // x264 低延迟编码：码率(kbps)、zerolatency、ultrafast、GOP 2s、
+                // byte-stream 输出由 h264parse 转 avc 供 flvmux
+                g_object_set(enc,
+                             "bitrate", _liveBitRate,
+                             "key-int-max", 60,
+                             "byte-stream", TRUE,
+                             nullptr);
+                // 此版本 x264enc: tune 为 flags(zerolatency=0x04)、speed-preset 为枚举(ultrafast=1)，
+                // 用字符串参数避免版本差异导致属性设置失败
+                gst_util_set_object_arg(G_OBJECT(enc), "tune", "zerolatency");
+                gst_util_set_object_arg(G_OBJECT(enc), "speed-preset", "ultrafast");
+
+                gst_bin_add_many(GST_BIN(bin), decode, conv, scale, capsf, enc, parse, muxer, sink, nullptr);
+                addedToBin = true;
+
+                // decodebin 动态 pad → videoconvert（回调内仅链接视频流）
+                g_signal_connect(decode, "pad-added", G_CALLBACK(_onStreamDecodePad), conv);
+
+                // 静态链：videoconvert → videoscale → capsfilter → x264enc → h264parse → flvmux → rtmpsink
+                if (!gst_element_link_many(conv, scale, capsf, enc, parse, muxer, sink, nullptr)) {
+                    qCCritical(GstVideoReceiverLog) << "Link transcode chain failed";
+                    break;
+                }
+
+                // expose ghost pad "sink"（decodebin 输入 H.264 流，上游 valve 链接到此）
+                GstPad *decodeSinkPad = gst_element_get_static_pad(decode, "sink");
+                if (!decodeSinkPad) {
+                    qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad(decode, 'sink') failed";
+                    break;
+                }
+                GstPad *ghost = gst_ghost_pad_new("sink", decodeSinkPad);
+                gst_clear_object(&decodeSinkPad);
+                if (!ghost) {
+                    qCCritical(GstVideoReceiverLog) << "gst_ghost_pad_new() failed";
+                    break;
+                }
+                if (!gst_element_add_pad(bin, ghost)) {
+                    qCCritical(GstVideoReceiverLog) << "gst_element_add_pad() failed";
+                    break;
+                }
+            } else {
+                // ===== 自适应：H.264 直转封装（不重编码） =====
+                // H.264 encoded input path: ensure stream-format=avc via h264parse,
+                // then mux with flvmux and push with rtmpsink
+                parse = gst_element_factory_make("h264parse", nullptr);
+                if (!parse) {
+                    qCCritical(GstVideoReceiverLog) << "gst_element_factory_make('h264parse') failed";
+                    break;
+                }
+
+                gst_bin_add_many(GST_BIN(bin), parse, muxer, sink, nullptr);
+                addedToBin = true;
+                if (!gst_element_link_many(parse, muxer, sink, nullptr)) {
+                    qCCritical(GstVideoReceiverLog) << "Link RTMP elements failed";
+                    break;
+                }
+                GstPad *parseSinkPad = gst_element_get_static_pad(parse, "sink");
+                if (!parseSinkPad) {
+                    qCCritical(GstVideoReceiverLog) << "gst_element_get_static_pad(parse, 'sink') failed";
+                    break;
+                }
+                GstPad *ghost = gst_ghost_pad_new("sink", parseSinkPad);
+                gst_clear_object(&parseSinkPad);
+                if (!ghost) {
+                    qCCritical(GstVideoReceiverLog) << "gst_ghost_pad_new() failed";
+                    break;
+                }
+                if (!gst_element_add_pad(bin, ghost)) {
+                    qCCritical(GstVideoReceiverLog) << "gst_element_add_pad() failed";
+                    break;
+                }
             }
 
             releaseElements = false;
-            // gst_clear_object(&parse);
-            // gst_clear_object(&muxer);
-            // gst_clear_object(&sink);
-            // bin will keep refs
 
         } else if (streamType == StreamTypeRTSP) {
             // Try to create rtspclientsink if available – many distros don't ship it.
@@ -1221,6 +1359,7 @@ GstElement *GstVideoReceiver::_makeStreamSink(const QString &streamUrl, StreamTy
             }
 
             gst_bin_add_many(GST_BIN(bin), parse, sink, nullptr);
+            addedToBin = true;
             if (!gst_element_link(parse, sink)) {
                 qCCritical(GstVideoReceiverLog) << "Failed to link parse -> rtspclientsink";
                 break;
@@ -1243,29 +1382,28 @@ GstElement *GstVideoReceiver::_makeStreamSink(const QString &streamUrl, StreamTy
             }
 
             releaseElements = false;
-            // gst_clear_object(&parse);
-            // gst_clear_object(&sink);
         } else {
             qCCritical(GstVideoReceiverLog) << "Unsupported stream type";
             break;
         }
-
-        // 为容器创建Ghost Pad（对外暴露sink接口，方便链接valve）
-        // GstPad *encoderSinkPad = gst_element_get_static_pad(encoder, "sink");
-        // if (!encoderSinkPad) { break; }
-        // GstPad *ghostPad = gst_ghost_pad_new("sink", encoderSinkPad);
-        // gst_element_add_pad(bin, ghostPad);
-        // gst_clear_object(&encoderSinkPad);
-
-        releaseElements = false; // 创建成功，无需释放
     } while (0);
 
     // 失败时清理资源
     if (releaseElements) {
-        gst_clear_object(&sink);
-        gst_clear_object(&muxer);
-        // gst_clear_object(&encoder);
-        gst_clear_object(&bin);
+        if (addedToBin) {
+            // 元素已由 bin 接管：直接释放 bin，由其统一销毁子元素，避免重复 unref
+            gst_clear_object(&bin);
+        } else {
+            gst_clear_object(&sink);
+            gst_clear_object(&muxer);
+            gst_clear_object(&parse);
+            gst_clear_object(&decode);
+            gst_clear_object(&conv);
+            gst_clear_object(&scale);
+            gst_clear_object(&capsf);
+            gst_clear_object(&enc);
+            gst_clear_object(&bin);
+        }
         bin = nullptr;
     }
 
@@ -1720,6 +1858,29 @@ void GstVideoReceiver::_linkPad(GstElement *element, GstPad *pad, gpointer data)
     }
 
     g_clear_pointer(&name, g_free);
+}
+
+void GstVideoReceiver::_onStreamDecodePad(GstElement *element, GstPad *pad, gpointer data)
+{
+    Q_UNUSED(element)
+    GstElement *conv = static_cast<GstElement*>(data);
+    GstPad *sinkPad = gst_element_get_static_pad(conv, "sink");
+    if (!sinkPad) {
+        return;
+    }
+    if (!gst_pad_is_linked(sinkPad)) {
+        GstCaps *caps = gst_pad_get_current_caps(pad);
+        if (caps) {
+            const gchar *name = gst_structure_get_name(gst_caps_get_structure(caps, 0));
+            if (name && g_str_has_prefix(name, "video/")) {
+                if (gst_pad_link(pad, sinkPad) != GST_PAD_LINK_OK) {
+                    qCWarning(GstVideoReceiverLog) << "Failed to link decodebin pad to videoconvert";
+                }
+            }
+            gst_caps_unref(caps);
+        }
+    }
+    gst_clear_object(&sinkPad);
 }
 
 gboolean GstVideoReceiver::_padProbe(GstElement *element, GstPad *pad, gpointer user_data)

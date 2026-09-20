@@ -88,6 +88,11 @@ private:
     GstElement *_makeFileSink(const QString &videoFile, FILE_FORMAT format);
     //创建推流元素链 _makeStreamSink（核心）,根据 RTSP/RTMP 类型构建不同的编码 + 传输链：
     GstElement *_makeStreamSink(const QString &streamUrl, StreamType streamType);
+    /// 按当前清晰度参数启动/重建推流分支（创建 sink → 加入管道 → 链接 → 开阀）。
+    /// installKeyframeProbe: 仅首次启动时安装关键帧探针，重建时沿用已装的探针。
+    bool _startStreamingBranch(bool installKeyframeProbe);
+    /// decodebin 动态 pad → videoconvert 的回调（仅链接视频流）
+    static void _onStreamDecodePad(GstElement *element, GstPad *pad, gpointer data);
     void _onNewSourcePad(GstPad *pad);
     void _onNewDecoderPad(GstPad *pad);
     bool _addDecoder(GstElement *src);

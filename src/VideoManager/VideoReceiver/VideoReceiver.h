@@ -163,8 +163,8 @@ protected:
 
     // 直播清晰度设置
     LIVE_CLARITY _liveClarity = HD;
-    int   _liveBitRate = 1000; // kbps
-    QSize _liveResolution; // 直播分辨率
+    int   _liveBitRate = 1500; // kbps（HD 默认，与 _liveClarity 一致）
+    QSize _liveResolution = QSize(1280, 720); // 直播分辨率（HD 默认）
 };
 
 
