@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "MediaManager.h"
 #include "MediaDownload.h"
 
@@ -26,7 +26,8 @@ public:
         LastModifiedRole,
         SelectedRole,
         UploadStatusRole,
-        UploadProgressRole
+        UploadProgressRole,
+        FileSizeStrRole
     };
 
     enum UploadStatus {
@@ -39,6 +40,7 @@ public:
 
     struct FileItem {
         QString filePath;
+        QString fileSizeStr;
         bool isVideo = false;
         QUrl thumbnailUrl;
         QImage thumbnail;
@@ -60,11 +62,21 @@ public:
     Q_INVOKABLE QStringList listMonths(const QString &rootFolder, const QString &year);
     Q_INVOKABLE QStringList listDays(const QString &rootFolder, const QString &year, const QString &month);
 
+    /// 列出根目录下所有 YYYY-MM-DD 日期子目录
+    Q_INVOKABLE QStringList listDateDirs();
+
     Q_INVOKABLE void changeFolder(const QString &folder);
     Q_INVOKABLE void refreshCurrentFolder(); // 外部触发手动刷新（可选）
     Q_INVOKABLE void clickSelect(int index, int modifiers);
     Q_INVOKABLE QVariantList selectedFilesIndexs() const;
     Q_INVOKABLE void clearAllSelection();
+
+    /// 供 QML 遍历：返回第 row 行的数据 map
+    Q_INVOKABLE QVariantMap get(int row) const;
+    /// 按文件路径查找数据
+    Q_INVOKABLE QVariantMap getByPath(const QString& path) const;
+    /// 文件总数
+    Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 
     Q_INVOKABLE void uploadFilesToMinio();
     void uploadNextFile();
@@ -73,6 +85,7 @@ public:
     void setMediaRootFolder(const QString folder);
 signals:
     void mediaRootFolderChanged();
+    void countChanged();
 private slots:
     void onDirectoryChanged(const QString &path);
     void onFileChanged(const QString &path);

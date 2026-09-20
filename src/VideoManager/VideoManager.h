@@ -69,6 +69,8 @@ public:
     Q_INVOKABLE void stopVideo();
     Q_INVOKABLE void startStreaming();
     Q_INVOKABLE void stopStreaming();
+    // 直播清晰度：0自适应 1流畅 2标清 3高清 4超清（对应大疆 video_quality）
+    Q_INVOKABLE void setLiveClarity(int clarity);
 
     void init(QQuickWindow *rootWindow);
     void cleanup();

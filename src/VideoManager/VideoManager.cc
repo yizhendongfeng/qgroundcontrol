@@ -848,6 +848,18 @@ void VideoManager::stopStreaming()
     }
 }
 
+void VideoManager::setLiveClarity(int clarity)
+{
+    for (VideoReceiver* videoReceiver: _videoReceivers) {
+        if (videoReceiver == nullptr)
+            continue;
+        if (videoReceiver->name() == "videoContent") {
+            videoReceiver->setLiveClarity(static_cast<VideoReceiver::LIVE_CLARITY>(clarity));
+            break;
+        }
+    }
+}
+
 /*===========================================================================*/
 
 FinishVideoInitialization::FinishVideoInitialization()

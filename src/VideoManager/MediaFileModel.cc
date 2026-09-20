@@ -1,17 +1,20 @@
-#include "MediaFileModel.h"
+﻿#include "MediaFileModel.h"
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QMediaPlayer>
+#include <QImageReader>
 #include <QVideoSink>
-#include <QEventLoop>
-#include <QTimer>
+#include <QVideoSink>
 #include <QStandardPaths>
 #include <QDir>
 #include <QCryptographicHash>
 #include <QFile>
 #include <QMetaObject>
 #include <QSet>
+#include <QRegularExpression>
+#include <QProcess>
 #include <QVideoFrame>
+#include <QVideoFrameFormat>
 #include <QDebug>
 
 #include "AppSettings.h"
@@ -52,6 +55,10 @@ MediaFileModel::MediaFileModel(QObject *parent)
     QObject::connect(m_mediaManager, &MediaManager::uploadError, this, [&](const QString& errorMsg) {
         qDebug() << "uploadError:" << errorMsg;
     });
+
+    // 吊舱文件下载完成后，自动刷新本地文件列表
+    connect(m_mediaDownload, &MediaDownload::allDownloadsFinished,
+            this, &MediaFileModel::refreshCurrentFolder);
 }
 
 MediaFileModel::~MediaFileModel()
@@ -79,6 +86,27 @@ QVariant MediaFileModel::data(const QModelIndex &index, int role) const {
     case SelectedRole: return item.selected;
     case UploadStatusRole: return item.uploadStatus;
     case UploadProgressRole: return item.uploadProgress;
+    case FileSizeStrRole: return item.fileSizeStr;
+    }
+    return {};
+}
+
+QVariantMap MediaFileModel::get(int row) const {
+    QVariantMap m;
+    if (row < 0 || row >= m_items.size()) return m;
+    const FileItem& item = m_items[row];
+    m["filePath"] = item.filePath;
+    m["thumbnailUrl"] = item.thumbnailUrl;
+    m["isVideo"] = item.isVideo;
+    m["thumbReady"] = item.thumbReady;
+    m["selected"] = item.selected;
+    m["fileSizeStr"] = item.fileSizeStr;
+    return m;
+}
+
+QVariantMap MediaFileModel::getByPath(const QString& path) const {
+    for (int i = 0; i < m_items.size(); i++) {
+        if (m_items[i].filePath == path) return get(i);
     }
     return {};
 }
@@ -94,6 +122,7 @@ QHash<int, QByteArray> MediaFileModel::roleNames() const {
         { SelectedRole, "selected"},
         { UploadStatusRole, "uploadStatus"},
         { UploadProgressRole, "uploadProgress"},
+        { FileSizeStrRole, "fileSizeStr"},
     };
 }
 
@@ -125,6 +154,20 @@ QStringList MediaFileModel::listDays(const QString &rootFolder, const QString &y
     auto entries = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (const QFileInfo &e : entries) days << e.fileName();
     return days;
+}
+
+QStringList MediaFileModel::listDateDirs() {
+    QStringList result;
+    if (m_rootMediaFolder.isEmpty()) return result;
+    QDir dir(m_rootMediaFolder);
+    auto entries = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name | QDir::Reversed);
+    for (const QFileInfo &e : entries) {
+        QString name = e.fileName();
+        if (name.contains(QRegularExpression("^\\d{4}-\\d{2}-\\d{2}$"))) {
+            result << name;
+        }
+    }
+    return result;
 }
 
 // ----------------------- 切换监听目录（供 QML 调用） -----------------------
@@ -251,8 +294,9 @@ QString MediaFileModel::cacheKey(const QString &path) const {
 
 QString MediaFileModel::cacheFilePath(const QString &path) const {
     return m_cacheDir + "/" + cacheKey(path) + ".png";
-}
 
+
+}
 void MediaFileModel::saveThumbToDisk(const QString &path, const QImage &img) {
     QString file = cacheFilePath(path);
     img.save(file, "PNG");
@@ -278,56 +322,168 @@ QImage MediaFileModel::loadImageThumb(const QString &path) {
     if (img.isNull()) return QImage();
     return img.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
+// 将视频帧转换为 QImage。Qt 的 QVideoFrame::toImage() 对部分 YUV / 硬件加速
+// 格式会返回空图像，这里对常见 YUV 格式做手动转换作为兜底。
+static QImage videoFrameToImage(const QVideoFrame &frame)
+{
+    if (!frame.isValid()) return QImage();
+
+    QImage img = frame.toImage();
+    if (!img.isNull()) return img;
+
+    QVideoFrame f = frame;
+    if (!f.map(QVideoFrame::ReadOnly)) return QImage();
+
+    const int w = f.width();
+    const int h = f.height();
+    QImage out(w, h, QImage::Format_RGB32);
+    const QVideoFrameFormat::PixelFormat fmt = f.pixelFormat();
+
+    auto writePixel = [&out](int x, int y, int yy, int uu, int vv) {
+        const int r = yy + ((359 * vv) >> 8);
+        const int g = yy - ((88 * uu + 183 * vv) >> 8);
+        const int b = yy + ((454 * uu) >> 8);
+        out.setPixel(x, y, qRgb(qBound(0, r, 255), qBound(0, g, 255), qBound(0, b, 255)));
+    };
+
+    switch (fmt) {
+    case QVideoFrameFormat::Format_YUV420P:
+    case QVideoFrameFormat::Format_YV12: {
+        const uchar *Y = f.bits(0);
+        const uchar *U = f.bits(1);
+        const uchar *V = f.bits(2);
+        const bool swapped = (fmt == QVideoFrameFormat::Format_YV12);
+        const uchar *Up = swapped ? V : U;
+        const uchar *Vp = swapped ? U : V;
+        const int yStride = f.bytesPerLine(0);
+        const int uStride = f.bytesPerLine(1);
+        const int vStride = f.bytesPerLine(2);
+        for (int y = 0; y < h; ++y) {
+            const uchar *yLine = Y + y * yStride;
+            for (int x = 0; x < w; ++x) {
+                const int yy = yLine[x];
+                const int uu = Up[(y >> 1) * uStride + (x >> 1)] - 128;
+                const int vv = Vp[(y >> 1) * vStride + (x >> 1)] - 128;
+                writePixel(x, y, yy, uu, vv);
+            }
+        }
+        break;
+    }
+    case QVideoFrameFormat::Format_NV12:
+    case QVideoFrameFormat::Format_NV21: {
+        const uchar *Y = f.bits(0);
+        const uchar *UV = f.bits(1);
+        const bool swapped = (fmt == QVideoFrameFormat::Format_NV21);
+        const int yStride = f.bytesPerLine(0);
+        const int uvStride = f.bytesPerLine(1);
+        for (int y = 0; y < h; ++y) {
+            const uchar *yLine = Y + y * yStride;
+            for (int x = 0; x < w; ++x) {
+                const int yy = yLine[x];
+                const uchar *uv = UV + (y >> 1) * uvStride + (x & ~1);
+                const int uu = uv[swapped ? 1 : 0] - 128;
+                const int vv = uv[swapped ? 0 : 1] - 128;
+                writePixel(x, y, yy, uu, vv);
+            }
+        }
+        break;
+    }
+    case QVideoFrameFormat::Format_YUYV:
+    case QVideoFrameFormat::Format_UYVY: {
+        const uchar *data = f.bits(0);
+        const bool uyvy = (fmt == QVideoFrameFormat::Format_UYVY);
+        const int stride = f.bytesPerLine(0);
+        for (int y = 0; y < h; ++y) {
+            const uchar *line = data + y * stride;
+            for (int x = 0; x < w; x += 2) {
+                const uchar *p = line + x * 2;
+                const int y0 = p[uyvy ? 1 : 0];
+                const int y1 = p[uyvy ? 3 : 2];
+                const int uu = p[uyvy ? 0 : 1] - 128;
+                const int vv = p[uyvy ? 2 : 3] - 128;
+                writePixel(x, y, y0, uu, vv);
+                if (x + 1 < w) writePixel(x + 1, y, y1, uu, vv);
+            }
+        }
+        break;
+    }
+    default:
+        out = QImage();
+        break;
+    }
+
+    f.unmap();
+    return out;
+}
 
 QImage MediaFileModel::loadVideoThumb(const QString &path) {
-    // 注意：在某些平台/Qt版本中，QMediaPlayer 可能要求在主线程使用。如果遇到问题，请改用 FFmpeg 后端。
+    // 切换到 Qt 内置 FFmpeg 后端（Windows Media Foundation 后端无法打开某些文件）
+    static bool backendSet = false;
+    if (!backendSet) {
+        qputenv("QT_MEDIA_BACKEND", "ffmpeg");
+        backendSet = true;
+    }
+
+    // 用 QFile 直接打开并喂给播放器：Qt 的 FFmpeg 后端在 Windows 上对 file://
+    // 形式的本地路径会交给 avformat 的 file 协议打开，后者无法正确打开带盘符、
+    // 空格或中文的路径（报 "Could not open file"）。直接传 QIODevice 可以绕过
+    // 这条路径，QFile 自身能正确处理这些路径。
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        fprintf(stderr, "[THUMB] cannot open QFile: %s\n", file.errorString().toUtf8().constData()); fflush(stderr);
+        return QImage();
+    }
+
     QMediaPlayer player;
     QVideoSink sink;
     player.setVideoSink(&sink);
 
     QEventLoop loop;
-    QObject::connect(&sink, &QVideoSink::videoFrameChanged, &loop, &QEventLoop::quit);
+    QImage result;
 
-    player.setSource(QUrl::fromLocalFile(path));
+    QObject::connect(&sink, &QVideoSink::videoFrameChanged, &loop,
+                     [&](const QVideoFrame &frame) {
+        if (!result.isNull()) return;
+        QImage img = videoFrameToImage(frame);
+        if (img.isNull()) return;
+        result = img.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        loop.quit();
+    });
+
+    QObject::connect(&player, &QMediaPlayer::errorOccurred, &loop,
+                     [&](QMediaPlayer::Error err, const QString &errString) {
+        fprintf(stderr, "[THUMB] error=%d msg=%s\n", (int)err, errString.toUtf8().constData()); fflush(stderr);
+        loop.quit();
+    });
+
+    player.setSourceDevice(&file, QUrl::fromLocalFile(path));
     player.play();
 
-    QTimer::singleShot(300, &loop, &QEventLoop::quit);
+    QTimer::singleShot(3000, &loop, &QEventLoop::quit);
     loop.exec();
+    player.stop();
+    file.close();
 
-    QVideoFrame frame = sink.videoFrame();
-    if (frame.isValid()) {
-        QImage img = frame.toImage();
-        if (!img.isNull()) return img.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    }
-    return QImage();
+    fprintf(stderr, "[THUMB] result null=%d\n", result.isNull()); fflush(stderr);
+    return result;
 }
 
-// ----------------------- 构建路径索引映射 -----------------------
 QHash<QString, int> MediaFileModel::buildPathIndexMap() const {
     QHash<QString,int> map;
     for (int i = 0; i < m_items.size(); ++i) map.insert(m_items[i].filePath, i);
     return map;
 }
-
-// ----------------------- 增量刷新实现（add/remove/modify） -----------------------
 void MediaFileModel::refreshFolderIncremental() {
     if (m_rootMediaFolder.isEmpty()) return;
 
-    // 扫描磁盘当前文件
     QStringList filters = { "*.jpg", "*.png", "*.jpeg", "*.bmp", "*.gif",
                            "*.mp4", "*.avi", "*.mov", "*.mkv", "*.webm" };
     QStringList currentFiles;
-    QDirIterator it(m_rootMediaFolder, filters, QDir::Files);
+    QDirIterator it(m_rootMediaFolder, filters, QDir::Files, QDirIterator::Subdirectories);
     while (it.hasNext()) currentFiles << it.next();
-    qDebug() << "refreshFolderIncremental:" << currentFiles;
     QSet<QString> currentSet(currentFiles.begin(), currentFiles.end());
     QHash<QString,int> oldMap = buildPathIndexMap();
-
-    // 1. 删除不存在的（反向删除保证索引正确）
     QList<int> removeRows;
-    for (int i = 0; i < m_items.size(); ++i) {
-        if (!currentSet.contains(m_items[i].filePath)) removeRows.prepend(i);
-    }
     for (int row : removeRows) {
         QString path = m_items[row].filePath;
         if (m_watcher.files().contains(path)) m_watcher.removePath(path);
@@ -346,6 +502,7 @@ void MediaFileModel::refreshFolderIncremental() {
             item.filePath = path;
             item.isVideo = QStringList({"mp4","avi","mov","mkv","webm"}).contains(info.suffix().toLower());
             item.lastModified = info.lastModified();
+            { qint64 sz = info.size(); if (sz >= 1048576) item.fileSizeStr = QString::number(sz/1048576.0,'f',1)+" MB"; else if (sz >= 1024) item.fileSizeStr = QString::number(sz/1024.0,'f',1)+" KB"; else item.fileSizeStr = QString::number(sz)+" B"; }
             item.thumbReady = false;
 
             // 尝试内存 / 磁盘缓存
@@ -400,6 +557,7 @@ void MediaFileModel::refreshFolderIncremental() {
     for (const QString &path : currentFiles) if (!watchedFiles.contains(path)) toAdd << path;
     if (!toAdd.isEmpty()) m_watcher.addPaths(toAdd);
     watchDirectoryRecursively(m_rootFolderVideo);
+    emit countChanged();
 }
 
 // 递归注册目录（QFileSystemWatcher 不支持递归）
@@ -438,54 +596,39 @@ void MediaFileModel::removeFileItemAt(int row) {
 }
 
 // ----------------------- 异步缩略图请求 -----------------------
+// ----------------------- 异步缩略图请求 -----------------------
+// ----------------------- 异步缩略图请求 -----------------------
 void MediaFileModel::requestThumbnail(int index) {
     if (index < 0 || index >= m_items.size()) return;
     FileItem &item = m_items[index];
     if (item.thumbReady) return;
 
-    // 后台任务
-    QtConcurrent::run([this, index]() {
-        // 复制当前项信息（避免跨线程访问 m_items 直接读取）
-        FileItem local;
-        {
-            QMetaObject::invokeMethod(const_cast<MediaFileModel*>(this), [this, index, &local]() {
-                if (index < 0 || index >= m_items.size()) return;
-                local = m_items[index];
-            }, Qt::BlockingQueuedConnection);
-        }
+    const QString path = item.filePath;
+    const bool isVideo = item.isVideo;
 
+    QtConcurrent::run([this, index, path, isVideo]() {
         QImage thumb;
-        QUrl thumbnailUrl;
-        // 先检查内存缓存
-        if (m_cache.contains(local.filePath)) {
-            thumb = *m_cache[local.filePath];
-            thumbnailUrl = QUrl::fromLocalFile(cacheFilePath(local.filePath));
-        } else {
-            // 再检查磁盘缓存
-            QImage disk = loadThumbFromDisk(local.filePath);
-            if (!disk.isNull()) {
-                thumb = disk;
-                thumbnailUrl = QUrl::fromLocalFile(cacheFilePath(local.filePath));
-                m_cache.insert(local.filePath, new QImage(disk));
-            } else {
-                // 生成缩略图
-                if (local.isVideo) thumb = loadVideoThumb(local.filePath);
-                else thumb = loadImageThumb(local.filePath);
 
-                if (!thumb.isNull()) {
-                    m_cache.insert(local.filePath, new QImage(thumb));
-                    saveThumbToDisk(local.filePath, thumb);
-                    local.thumbnailUrl = QUrl::fromLocalFile(cacheFilePath(local.filePath));
-                    thumbnailUrl = QUrl::fromLocalFile(cacheFilePath(local.filePath));
-                }
-            }
+        if (isVideo) {
+            // QMediaPlayer（FFmpeg 后端）必须在主线程上运行：在后台线程里创建
+            // QMediaPlayer 会导致 avformat_open_input 失败（报 "Could not open file"）。
+            // 这里用阻塞队列调用把抓帧工作切回主线程执行。
+            QMetaObject::invokeMethod(this, [this, path, &thumb]() {
+                thumb = loadVideoThumb(path);
+            }, Qt::BlockingQueuedConnection);
+        } else {
+            thumb = loadImageThumb(path);
         }
 
-        // 更新 UI 线程
-        QMetaObject::invokeMethod(this, [this, index, thumb, thumbnailUrl]() {
+        // 缓存（QCache）与模型更新全部回到主线程，避免跨线程访问
+        QMetaObject::invokeMethod(this, [this, index, path, thumb]() {
             if (index < 0 || index >= m_items.size()) return;
+            if (!thumb.isNull()) {
+                m_cache.insert(path, new QImage(thumb));
+                saveThumbToDisk(path, thumb);
+            }
             m_items[index].thumbnail = thumb;
-            m_items[index].thumbnailUrl = thumbnailUrl;
+            m_items[index].thumbnailUrl = thumb.isNull() ? QUrl() : QUrl::fromLocalFile(cacheFilePath(path));
             m_items[index].thumbReady = !thumb.isNull();
             emit dataChanged(this->index(index), this->index(index),
                              { ThumbnailUrlRole, ThumbnailRole, ThumbReadyRole });
