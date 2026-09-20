@@ -438,9 +438,54 @@ void DjiBridgeServer::_receiveMqttFromServer(const QByteArray &message, const QM
                 else if (urlType == 4)
                     streamingType = 0;
                 _videoSettings->streamingType()->setRawValue(streamingType);
+                // 接上清晰度：live_start_push 携带 video_quality 时一并设置
+                if (videoQuality >= 0 && videoQuality <= 4) {
+                    _videoManager->setLiveClarity(videoQuality);
+                }
                 _videoManager->startStreaming();
-                qDebug() << "startstreaming type:" << urlType << "url:" << url;
+                qDebug() << "startstreaming type:" << urlType << "url:" << url << "quality:" << videoQuality;
                 sendMqttReply("thing", "services_reply", tid, bid, "live_start_push", 0);
+            }
+        } else if (method == "live_set_quality") {
+            QJsonObject jsonObjectData = jsonObjectMsg.contains("data") ? jsonObjectMsg["data"].toObject() : QJsonObject();
+            if (!jsonObjectData.isEmpty()) {
+                int videoQuality = jsonObjectData.contains("video_quality") ? jsonObjectData["video_quality"].toInt() : -1;
+                if (videoQuality >= 0 && videoQuality <= 4) {
+                    _videoManager->setLiveClarity(videoQuality);
+                    qDebug() << "live_set_quality:" << videoQuality;
+                    sendMqttReply("thing", "services_reply", tid, bid, "live_set_quality", 0);
+                } else {
+                    qDebug() << "live_set_quality wrong parameter:" << videoQuality;
+                    sendMqttReply("thing", "services_reply", tid, bid, "live_set_quality", 1);
+                }
+            }
+        } else if (method == "live_stop_push") {
+            _videoManager->stopStreaming();
+            qDebug() << "live_stop_push";
+            sendMqttReply("thing", "services_reply", tid, bid, "live_stop_push", 0);
+        } else if (method == "live_lens_change") {
+            QJsonObject jsonObjectData = jsonObjectMsg.contains("data") ? jsonObjectMsg["data"].toObject() : QJsonObject();
+            if (!jsonObjectData.isEmpty()) {
+                QString videoType = jsonObjectData.contains("video_type") ? jsonObjectData["video_type"].toString() : "";
+                uint8_t mode = 0x02; // 默认可见光
+                if (videoType == "thermal" || videoType == "ir") {
+                    mode = 0x03; // 热成像
+                } else if (videoType == "normal") {
+                    mode = 0x02; // 可见光
+                } else {
+                    qDebug() << "live_lens_change unsupported video_type:" << videoType;
+                    sendMqttReply("thing", "services_reply", tid, bid, "live_lens_change", 1);
+                    return;
+                }
+                if (_videoManager->inyyoA102Pro()) {
+                    _videoManager->inyyoA102Pro()->pictureInPictureSwitch(mode);
+                    qDebug() << "live_lens_change video_type:" << videoType
+                             << "mode: 0x" << QString::number(mode, 16);
+                    sendMqttReply("thing", "services_reply", tid, bid, "live_lens_change", 0);
+                } else {
+                    qDebug() << "live_lens_change: inyyoA102Pro not available";
+                    sendMqttReply("thing", "services_reply", tid, bid, "live_lens_change", 1);
+                }
             }
         }
         // qDebug() << "_receiveMqttFromServer: " << message << "topic:" << topic;
