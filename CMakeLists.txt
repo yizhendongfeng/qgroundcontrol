@@ -200,6 +200,7 @@ find_package(Qt6
         Widgets
         Xml
         Mqtt
+        WebSockets
     OPTIONAL_COMPONENTS
         Bluetooth
         MultimediaQuickPrivate

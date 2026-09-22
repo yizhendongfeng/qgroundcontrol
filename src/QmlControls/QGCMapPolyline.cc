@@ -74,9 +74,21 @@ void QGCMapPolyline::clear(void)
 
 void QGCMapPolyline::adjustVertex(int vertexIndex, const QGeoCoordinate coordinate)
 {
+    // 顶点拖拽手柄是跟着 pathModel 一个 index 一个重建的：几何被整体替换（clear() 再灌点，
+    // 例如云平台推来的元素更新）时，正在销毁的手柄还会回调一次过来，这时的 vertexIndex
+    // 已经是过期值（绑定断开后是 undefined，转 int 成 0），拿去做 _polylinePath[0] 会
+    // 命中空列表触发 QList::operator[] 断言。别的按 index 取点的方法都做了这个检查，
+    // 这里补上，行为对合法索引完全不变。
+    if (vertexIndex < 0 || vertexIndex > _polylinePath.length() - 1) {
+        qWarning() << "Call to adjustVertex with bad vertexIndex:count" << vertexIndex << _polylinePath.length();
+        return;
+    }
+
     _polylinePath[vertexIndex] = QVariant::fromValue(coordinate);
     emit pathChanged();
-    _polylineModel.value<QGCQGeoCoordinate*>(vertexIndex)->setCoordinate(coordinate);
+    if (QGCQGeoCoordinate* coord = _polylineModel.value<QGCQGeoCoordinate*>(vertexIndex)) {
+        coord->setCoordinate(coordinate);
+    }
     setDirty(true);
 }
 
@@ -195,6 +207,14 @@ QList<QGeoCoordinate> QGCMapPolyline::coordinateList(void) const
 
 void QGCMapPolyline::splitSegment(int vertexIndex)
 {
+    // 老代码只挡住了尾部越界，vertexIndex == -1 时 nextIndex 正好是 0（不触发下面的 return），
+    // 却被拿去做 _polylinePath[-1] —— 直接命中 QList::operator[] 断言。
+    // 拆段手柄的 vertexIndex 是从 QML 传回来的，几何被整体替换时会是过期/未定义值。
+    if (vertexIndex < 0 || vertexIndex > _polylinePath.length() - 1) {
+        qWarning() << "Call to splitSegment with bad vertexIndex:count" << vertexIndex << _polylinePath.length();
+        return;
+    }
+
     int nextIndex = vertexIndex + 1;
     if (nextIndex > _polylinePath.length() - 1) {
         return;
@@ -390,6 +410,17 @@ double QGCMapPolyline::length(void) const
 
 void QGCMapPolyline::appendVertices(const QList<QGeoCoordinate>& coordinates)
 {
+    // 空列表必须直接返回：_polylineModel.append(空) 会走到
+    // QmlObjectListModel::insertRows(pos, 0) → beginInsertRows(pos, pos-1)，
+    // 命中 QAbstractItemModel 的 last >= first 断言。断言之后 endInsertRows() 照样执行，
+    // 模型的行记账就和 _polylinePath 错开了，下一个带 index 的回调（拖拽手柄 adjustVertex、
+    // 拆段手柄 splitSegment）就会命中 QList::operator[] 的 index out of range。
+    // 清空几何只有 clear() 一条路，不要用 appendVertices({})。
+    // 注意要放在 _beginResetIfNotActive() 之前，别把 _resetActive 留在打开状态。
+    if (coordinates.isEmpty()) {
+        return;
+    }
+
     _beginResetIfNotActive();
 
     QList<QObject*> objects;

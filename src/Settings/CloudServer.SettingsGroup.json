@@ -60,7 +60,7 @@
     "shortDesc": "server url, must end with '/'",
     "longDesc":  "",
     "type":             "string",
-    "default":     "http://192.168.31.208:8080/pilot-login"
+    "default":     "http://192.168.144.110:8080/pilot-login"
 },
 {
     "name":             "serverIp",
@@ -74,14 +74,14 @@
     "shortDesc": "webSocket access address",
     "longDesc":  "",
     "type":             "string",
-    "default":     "ws://192.168.31.208:6789/api/v1/ws"
+    "default":     "ws://192.168.144.110:6789/api/v1/ws"
 },
 {
     "name":             "rtmURL",
     "shortDesc": "streaming server.",
     "longDesc":  "",
     "type":             "string",
-    "default":     "ws://192.168.31.208:6789/api/v1/ws"
+    "default":     "ws://192.168.144.110:6789/api/v1/ws"
 },
 {
     "name":             "userName",
@@ -131,6 +131,20 @@
     "longDesc":  "workSpaceDesc",
     "type":             "string",
     "default":     "高速公路巡检"
+},
+{
+    "name":             "nativeCloudConnect",
+    "shortDesc": "Native cloud connect",
+    "longDesc":  "Connect to cloud MQTT natively using mqttHost/user/password instead of waiting for web SDK trigger",
+    "type":             "bool",
+    "default":     false
+},
+{
+    "name":             "coordinateTransform",
+    "shortDesc": "GCJ-02 coordinate correction",
+    "longDesc":  "Only for backends that store shapes in GCJ-02 (AMap/Gaode coordinates). Turns it on converts incoming shapes to WGS84 and outgoing ones back to GCJ-02. Our backend stores plain WGS84, so this stays off; turning it on shifts every shape by 300-600m.",
+    "type":             "bool",
+    "default":     false
 }
 ]
 }

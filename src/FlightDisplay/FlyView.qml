@@ -114,6 +114,19 @@ Item {
         property real bottomEdgeLeftInset: visible ? height + anchors.margins : 0
     }
 
+    // 云平台地图元素：图标列嵌在地图右侧，列表/命名从图标列左侧弹出
+    // 不能放进工具栏的 indicatorDrawer 里 —— 那个 Popup 是 modal，标绘时点地图会先把它关掉
+    CloudElementToolBar {
+        anchors.right:       mapHolder.right
+        anchors.rightMargin: ScreenTools.defaultFontPixelWidth
+        anchors.top:         mapHolder.top
+        // 让开顶部工具栏和右侧的状态指示器
+        anchors.topMargin:   ScreenTools.defaultFontPixelHeight * 3
+        map:                 mapControl
+        showElementPanel:    true
+        z:                   QGroundControl.zOrderWidgets
+    }
+
     Rectangle {
         id:              itemLoad   // 负载界面
         anchors.left:    leftPanel.left

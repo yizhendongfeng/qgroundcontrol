@@ -62,12 +62,13 @@ Item {
     property bool   _resetRegisterFlightPlan
     property string _currentPlanFileDir:                    _appSettings.missionSavePath
     property string _currentPlanFileName:                   ""
-    readonly property var       _layers:                    [_layerMission, _layerGeoFence, _layerRallyPoints]
+    readonly property var       _layers:                    [_layerMission, _layerGeoFence, _layerRallyPoints, _layerCloudElements]
     // readonly property var       _layersUTMSP:               [_layerMission, _layerRallyPoints, _layerUTMSP] //Adds additional UTMSP layer
     property var                _itemCurrentWaypoint:      0//_itemCurrentBank ? _itemCurrentBank.itemCurrentWaypoint : null
     readonly property int       _layerMission:              1
     readonly property int       _layerGeoFence:             2
     readonly property int       _layerRallyPoints:          3
+    readonly property int       _layerCloudElements:        4
     // readonly property int       _layerUTMSP:                4 // Additional Tab button when UTMSP is enabled
     readonly property string    _armedVehicleUploadPrompt:  qsTr("Vehicle is currently armed. Do you want to upload the mission to the vehicle?")
     property bool   _modePlanEdit:              false
@@ -575,6 +576,12 @@ Item {
                 opacity:                _editingLayer != _layerRallyPoints ? editorMap._nonInteractiveOpacity : 1
             }
 
+            // 云平台地图元素：非云元素图层时压暗，和围栏/备降点一个观感
+            CloudElementMapLayer {
+                map:                    editorMap
+                opacity:                _editingLayer != _layerCloudElements ? editorMap._nonInteractiveOpacity : 1
+            }
+
             // UTMSPMapVisuals {
             //     id: utmspvisual
             //     enabled:                _utmspEnabled
@@ -944,6 +951,20 @@ Item {
                 }
             }
         }
+
+        // 云元素图标列：贴着右侧面板左缘，面板滑出时跟着一起走
+        // showElementPanel 为 false —— 这边右侧面板本身就是元素编辑器（第 4 个图层 tab），
+        // 再弹一个列表就是两份了
+        CloudElementToolBar {
+            anchors.right:       rightPanel.left
+            anchors.rightMargin: ScreenTools.defaultFontPixelWidth
+            anchors.top:         editorMap.top
+            // 让开右边的图层 tab 栏
+            anchors.topMargin:   ScreenTools.defaultFontPixelHeight * 4
+            map:                 editorMap
+            showElementPanel:    false
+            z:                   QGroundControl.zOrderWidgets
+        }
         //-------------------------------------------------------
         // Right Panel Controls
         Item {
@@ -1122,6 +1143,15 @@ Item {
                         pointSize:  ScreenTools.mediumFontPointSize
                         enabled:    _rallyPointController.supported
                     }
+                    QGCTabButton {
+                        // 别写「云元素」：TabBar 把每个 tab 的宽度统一成最宽那个（89px），
+                        // 4 个 tab 就是 356px，超过右面板的 300px，第 4 个会被窗口边缘裁掉。
+                        // 两个字跟「任务/围栏/集结」一致，也跟云指示器抽屉里那个 tab 同名。
+                        text:       qsTr("元素")
+                        pointSize:  ScreenTools.mediumFontPointSize
+                        // 云平台没连上时没有元素可编，切过去只是个空面板
+                        enabled:    djiBridgeServer.cloudWsConnected
+                    }
                 }
 
                 /*QGCTabBar {
@@ -1202,6 +1232,19 @@ Item {
                 myGeoFenceController:   _geoFenceController
                 flightMap:              editorMap
                 visible:                _editingLayer == _layerGeoFence
+            }
+
+            // Cloud Element Editor（云平台地图元素）
+            CloudElementEditor {
+                anchors.top:            rightControls.bottom
+                anchors.topMargin:      ScreenTools.defaultFontPixelHeight * 0.25
+                anchors.bottom:         parent.bottom
+                anchors.left:           parent.left
+                anchors.leftMargin:      ScreenTools.defaultFontPixelHeight * 0.25
+                anchors.right:          parent.right
+                anchors.rightMargin:      ScreenTools.defaultFontPixelHeight * 0.25
+                flightMap:              editorMap
+                visible:                _editingLayer == _layerCloudElements
             }
 
             // Rally Point Editor

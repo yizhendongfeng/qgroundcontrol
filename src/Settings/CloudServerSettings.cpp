@@ -67,9 +67,16 @@ void CloudServerSettings::setLiveshareConfig(int type, const QString jsonStr)
         QString serverIp = _serverIpFact->rawValueString();
         url = "rtsp://" + userName + ":" + password + "@" + serverIp + ":" + QString::number(port) + "/dgcs";
     }
+    else {
+        // 0=Unknown, 1=Agora, 4=GB28181 暂不支持，不写配置也不启动推流
+        qWarning() << "setLiveshareConfig unsupported type:" << type;
+        return;
+    }
+
+    // 只写入 streaming 配置；真正开启/关闭推流由调用方（网页 liveshareStartLive/StopLive、
+    // MQTT live_start_push/stop_push）通过 VideoManager 触发
     SettingsManager::instance()->videoSettings()->streamingType()->setRawValue(streamingType);
     SettingsManager::instance()->videoSettings()->streamingUrl()->setRawValue(url);
-    VideoManager::instance()->startStreaming();
 }
 
 DECLARE_SETTINGSFACT(CloudServerSettings, mqttHost)
@@ -90,4 +97,6 @@ DECLARE_SETTINGSFACT(CloudServerSettings, gcsSn)
 DECLARE_SETTINGSFACT(CloudServerSettings, droneSn)
 DECLARE_SETTINGSFACT(CloudServerSettings, workSpaceId)
 DECLARE_SETTINGSFACT(CloudServerSettings, workSpaceDesc)
+DECLARE_SETTINGSFACT(CloudServerSettings, nativeCloudConnect)
+DECLARE_SETTINGSFACT(CloudServerSettings, coordinateTransform)
 

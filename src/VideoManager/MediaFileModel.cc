@@ -19,6 +19,7 @@
 
 #include "AppSettings.h"
 #include "SettingsManager.h"
+#include "CloudServerSettings.h"
 
 
 MediaFileModel::MediaFileModel(QObject *parent)
@@ -39,16 +40,43 @@ MediaFileModel::MediaFileModel(QObject *parent)
     // 上传进度更新
     QObject::connect(m_mediaManager, &MediaManager::uploadProgress, this, [&](const int fileIndex, const int progress) {
         m_items[fileIndex].uploadProgress = progress;
-        emit dataChanged(this->index(fileIndex), this->index(fileIndex), {UploadProgressRole});
+        // 首个进度回调即代表进入上传状态，UI 据此显示"上传中"角标
+        const bool statusChanged = m_items[fileIndex].uploadStatus != Uploading;
+        m_items[fileIndex].uploadStatus = Uploading;
+        emit dataChanged(this->index(fileIndex), this->index(fileIndex),
+                         statusChanged ? QVector<int>{UploadProgressRole, UploadStatusRole}
+                                       : QVector<int>{UploadProgressRole});
         qDebug() << QString("索引：1%, 进度：%2%").arg(fileIndex).arg(progress);
     });
 
     // 上传结果
     QObject::connect(m_mediaManager, &MediaManager::uploadFinished, this, [&](const int fileIndex, const bool success, const QString& message) {
         m_items[fileIndex].uploadStatus = success ? Uploaded : UploadFailed;
-        emit dataChanged(this->index(fileIndex), this->index(fileIndex), {UploadStatusRole});
+        if (success) m_items[fileIndex].uploadProgress = 100;
+        emit dataChanged(this->index(fileIndex), this->index(fileIndex), {UploadStatusRole, UploadProgressRole});
         uploadNextFile();
-        qDebug() << "upload finished: " << success;
+        qDebug() << "upload finished: " << success << message;
+    });
+
+    // 服务器已有文件核对结果：命中的本地文件标记为已上传
+    QObject::connect(m_mediaManager, &MediaManager::tinyFingerprintsChecked, this, [&](const QStringList& existing) {
+        m_serverCheckInFlight = false;
+        if (existing.isEmpty()) {
+            m_pendingTinyFingerprints.clear();
+            return;
+        }
+        const QHash<QString,int> pathIndex = buildPathIndexMap();
+        for (const QString& fp : existing) {
+            const QString path = m_pendingTinyFingerprints.value(fp);
+            if (path.isEmpty()) continue;
+            const int row = pathIndex.value(path, -1);
+            // 只回填本地尚未知状态的条目，不覆盖本次上传刚得到的成功/失败结果
+            if (row >= 0 && m_items[row].uploadStatus == NotUploaded) {
+                m_items[row].uploadStatus = Uploaded;
+                emit dataChanged(this->index(row), this->index(row), {UploadStatusRole});
+            }
+        }
+        m_pendingTinyFingerprints.clear();
     });
 
     // 上传错误
@@ -101,6 +129,8 @@ QVariantMap MediaFileModel::get(int row) const {
     m["thumbReady"] = item.thumbReady;
     m["selected"] = item.selected;
     m["fileSizeStr"] = item.fileSizeStr;
+    m["uploadStatus"] = item.uploadStatus;
+    m["uploadProgress"] = item.uploadProgress;
     return m;
 }
 
@@ -196,6 +226,9 @@ void MediaFileModel::changeFolder(const QString &folder) {
 }
 
 void MediaFileModel::refreshCurrentFolder() {
+    // 显式刷新（点"刷新"按钮 / 切页 / 下载完成）时重新向服务器核对已有文件，
+    // 允许把上一次核对之后才被其他端上传的文件也标出来
+    m_serverCheckedPaths.clear();
     refreshFolderIncremental();
 }
 
@@ -557,7 +590,52 @@ void MediaFileModel::refreshFolderIncremental() {
     for (const QString &path : currentFiles) if (!watchedFiles.contains(path)) toAdd << path;
     if (!toAdd.isEmpty()) m_watcher.addPaths(toAdd);
     watchDirectoryRecursively(m_rootFolderVideo);
+
+    // 向服务器核对本地文件是否已存在（小指纹匹配），命中者打上"已上传"云图标
+    checkFilesOnServer();
+
     emit countChanged();
+}
+
+// 批量核对本地文件在服务器上是否已存在：先算小指纹，再调 obtain-exited-tiny-fingerprint。
+// 指纹计算放后台线程（要读每个文件的前 10KB），网络请求回主线程发起。
+void MediaFileModel::checkFilesOnServer()
+{
+    if (m_serverCheckInFlight) return;
+
+    // 没配置云后台地址就不用查（否则每次刷新都会发一个注定失败的请求）
+    if (SettingsManager::instance()->cloudServerSettings()->serverIp()->rawValueString().isEmpty()) {
+        return;
+    }
+
+    QStringList pathsToCheck;
+    for (const FileItem& item : m_items) {
+        // 只核对状态未知的条目，并跳过本轮已核对过的路径（目录 watcher 会频繁触发增量刷新）
+        if (item.uploadStatus == NotUploaded && !m_serverCheckedPaths.contains(item.filePath)) {
+            pathsToCheck << item.filePath;
+        }
+    }
+    if (pathsToCheck.isEmpty()) return;
+
+    for (const QString& path : pathsToCheck) m_serverCheckedPaths.insert(path);
+
+    m_serverCheckInFlight = true;
+    QtConcurrent::run([this, pathsToCheck]() {
+        QHash<QString, QString> fpToPath;
+        for (const QString& path : pathsToCheck) {
+            const QString fp = MediaManager::calculateTinyFingerprint(path);
+            if (!fp.isEmpty()) fpToPath.insert(fp, path);
+        }
+
+        QMetaObject::invokeMethod(this, [this, fpToPath]() {
+            if (fpToPath.isEmpty()) {
+                m_serverCheckInFlight = false;
+                return;
+            }
+            m_pendingTinyFingerprints = fpToPath;
+            m_mediaManager->checkTinyFingerprints(fpToPath.keys());
+        }, Qt::QueuedConnection);
+    });
 }
 
 // 递归注册目录（QFileSystemWatcher 不支持递归）

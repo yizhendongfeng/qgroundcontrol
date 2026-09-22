@@ -5,6 +5,8 @@
 #include <QAbstractListModel>
 #include <QImage>
 #include <QCache>
+#include <QHash>
+#include <QSet>
 #include <QtConcurrent>
 #include <QFileSystemWatcher>
 #include <QDateTime>
@@ -80,6 +82,9 @@ public:
 
     Q_INVOKABLE void uploadFilesToMinio();
     void uploadNextFile();
+
+    /// 批量核对本地文件在服务器上是否已存在（小指纹匹配），命中的条目置为 Uploaded
+    void checkFilesOnServer();
     QString mediaRootFolder();
     MediaDownload* mediaDownload() {return m_mediaDownload;};
     void setMediaRootFolder(const QString folder);
@@ -104,6 +109,11 @@ private:
 
     QVariantList m_fileIndexsToUpload;
     int m_uploadIndex = -1;
+
+    // 服务器已有文件核对（小指纹）状态
+    QHash<QString, QString> m_pendingTinyFingerprints;   // 本次请求：小指纹 -> 本地文件路径
+    QSet<QString> m_serverCheckedPaths;                  // 已核对过的文件路径，避免 watcher 频繁刷新时重复请求
+    bool m_serverCheckInFlight = false;
     // 磁盘缓存
     QString cacheKey(const QString &path) const;
     QString cacheFilePath(const QString &path) const;

@@ -33,6 +33,8 @@ Item {
     property real   interiorOpacity:    1
     property int    borderWidth:        0
     property color  borderColor:        "black"
+    /// false = 不出 Basic/Circular/Trace/Load KML 那排工具条（云元素用它，编辑入口在自己的面板里）
+    property bool   showEditToolbar:    true
 
     property bool   _circleMode:                false
     property real   _circleRadius
@@ -156,7 +158,9 @@ Item {
     function _handleInteractiveChanged() {
         if (interactive) {
             addEditingVisuals()
-            addToolbarVisuals()
+            if (showEditToolbar) {
+                addToolbarVisuals()
+            }
         } else {
             mapPolygon.traceMode = false
             removeEditingVisuals()
@@ -639,15 +643,19 @@ Item {
             z:                  QGroundControl.zOrderMapItems + 1   // Over item indicators
 
             onClicked: (mouse) => {
-                if(_utmspEnabled){
-                    if (mouse.button === Qt.LeftButton) {
+                // 这里原本判的是 _utmspEnabled —— 这个标识符全仓库都没有定义
+                // （PlanView.qml:58 里定义它的那一行是注释掉的），QML 求值到它就抛
+                // ReferenceError，整个 onClicked 当场中断，于是标绘时点地图一个顶点都不会加。
+                // 「区域点了地图没反应」就是这么来的：线段那边没有这个判断，所以一直是好的。
+                // 按 PlanView.qml 那条注释保留的本意换成 QGroundControl.utmspSupported
+                // （非 QGC_UTM_ADAPTER 构建下恒为 false，走下面那条 interactive 分支）。
+                const leftClick = mouse.button === Qt.LeftButton
+                if (QGroundControl.utmspSupported) {
+                    if (leftClick) {
                         mapPolygon.appendVertex(mapControl.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */))
                     }
-                }
-                else{
-                    if (mouse.button === Qt.LeftButton && _root.interactive) {
-                        mapPolygon.appendVertex(mapControl.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */))
-                    }
+                } else if (leftClick && _root.interactive) {
+                    mapPolygon.appendVertex(mapControl.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */))
                 }
             }
         }

@@ -11,6 +11,8 @@ CameraCalcCamera                        1.0 CameraCalcCamera.qml
 CameraCalcGrid                          1.0 CameraCalcGrid.qml
 CameraSection                           1.0 CameraSection.qml
 ClickableColor                          1.0 ClickableColor.qml
+CloudIndicator                          1.0 CloudIndicator.qml
+CloudElementEditor                      1.0 CloudElementEditor.qml
 ConfigButton                            1.0 ConfigButton.qml
 DeadMouseArea                           1.0 DeadMouseArea.qml
 DropButton                              1.0 DropButton.qml

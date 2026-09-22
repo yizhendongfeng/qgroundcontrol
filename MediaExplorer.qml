@@ -95,7 +95,8 @@ Item {
                         filePath: f.filePath, thumbReady: f.thumbReady,
                         thumbnailUrl: f.thumbnailUrl, isVideo: f.isVideo,
                         selected: f.selected, rowIndex: i,
-                        fileSizeStr: f.fileSizeStr
+                        fileSizeStr: f.fileSizeStr,
+                        uploadStatus: f.uploadStatus, uploadProgress: f.uploadProgress
                     })
                 }
                 order.sort().reverse()
@@ -125,6 +126,8 @@ Item {
                                 lm.setProperty(r, "thumbReady", ff.thumbReady)
                                 lm.setProperty(r, "thumbnailUrl", ff.thumbnailUrl)
                                 lm.setProperty(r, "selected", ff.selected)
+                                lm.setProperty(r, "uploadStatus", ff.uploadStatus)
+                                lm.setProperty(r, "uploadProgress", ff.uploadProgress)
                             }
                         }
                     }
@@ -241,6 +244,33 @@ Item {
                                                         source: "qrc:/InstrumentValueIcons/play.svg"
                                                         color: qgcPal.buttonText
                                                         opacity: 0.9
+                                                    }
+
+                                                    // 上传状态角标（0=未上传 1=上传中 2=已上传 3=上传失败，
+                                                    // 与 MediaFileModel::UploadStatus 对应）。直接压在缩略图上，不加底色。
+                                                    QGCColoredImage {
+                                                        id: uploadBadgeIcon
+                                                        visible: uploadStatus !== 0
+                                                        width: 18
+                                                        height: 18
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.margins: 4
+                                                        source: uploadStatus === 2
+                                                                ? "qrc:/InstrumentValueIcons/cloud.svg"
+                                                                : "qrc:/InstrumentValueIcons/cloud-upload.svg"
+                                                        color: uploadStatus === 3 ? "#ff5555"
+                                                                                  : (uploadStatus === 2 ? "#00c853" : "#ffb300")
+                                                    }
+
+                                                    QGCLabel {
+                                                        visible: uploadStatus === 1
+                                                        anchors.verticalCenter: uploadBadgeIcon.verticalCenter
+                                                        anchors.right: uploadBadgeIcon.left
+                                                        anchors.rightMargin: 2
+                                                        text: uploadProgress + "%"
+                                                        color: "#ffb300"
+                                                        font.pointSize: ScreenTools.smallFontPointSize
                                                     }
                                                 }
                                                 Rectangle {

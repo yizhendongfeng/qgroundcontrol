@@ -29,6 +29,8 @@ Item {
     property bool   interactive:    mapPolyline.interactive
     property int    lineWidth:      3
     property color  lineColor:      "#be781c"
+    /// false = 不出 Basic/Trace/Load KML 那排工具条（云元素用它，编辑入口在自己的面板里）
+    property bool   showEditToolbar: true
 
     property var    _dragHandlesComponent
     property var    _splitHandlesComponent
@@ -48,7 +50,11 @@ Item {
 
     function _addInteractiveVisuals() {
         if (_objMgrInteractiveVisuals.empty) {
-            _objMgrInteractiveVisuals.createObjects([ dragHandlesComponent, splitHandlesComponent, toolbarComponent ], mapControl)
+            if (showEditToolbar) {
+                _objMgrInteractiveVisuals.createObjects([ dragHandlesComponent, splitHandlesComponent, toolbarComponent ], mapControl)
+            } else {
+                _objMgrInteractiveVisuals.createObjects([ dragHandlesComponent, splitHandlesComponent ], mapControl)
+            }
         }
     }
 

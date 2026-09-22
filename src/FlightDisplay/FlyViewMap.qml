@@ -332,6 +332,11 @@ FlightMap {
         largeMapView:   !pipMode
     }
 
+    // 云平台地图元素（Pilot 地图标注）：平台画的线与面，也接受本机绘制
+    CloudElementMapLayer {
+        map:            _root
+    }
+
     GeoFenceMapVisuals {
         map:                    _root
         myGeoFenceController:   _geoFenceController

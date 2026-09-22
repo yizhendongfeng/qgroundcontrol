@@ -90,8 +90,17 @@ void QGCMapPolygon::clear(void)
 
 void QGCMapPolygon::adjustVertex(int vertexIndex, const QGeoCoordinate coordinate)
 {
+    // 同 QGCMapPolyline::adjustVertex：整体换几何时正在销毁的拖拽手柄会带过期 index 回调，
+    // 空的 _polygonPath[0] 会命中 QList::operator[] 断言。这里补上边界检查。
+    if (vertexIndex < 0 || vertexIndex > _polygonPath.length() - 1) {
+        qWarning() << "Call to adjustVertex with bad vertexIndex:count" << vertexIndex << _polygonPath.length();
+        return;
+    }
+
     _polygonPath[vertexIndex] = QVariant::fromValue(coordinate);
-    _polygonModel.value<QGCQGeoCoordinate*>(vertexIndex)->setCoordinate(coordinate);
+    if (QGCQGeoCoordinate* coord = _polygonModel.value<QGCQGeoCoordinate*>(vertexIndex)) {
+        coord->setCoordinate(coordinate);
+    }
     if (!_centerDrag) {
         // When dragging center we don't signal path changed until all vertices are updated
         emit pathChanged();
@@ -232,6 +241,15 @@ QList<QGeoCoordinate> QGCMapPolygon::coordinateList(void) const
 
 void QGCMapPolygon::splitPolygonSegment(int vertexIndex)
 {
+    // 环是闭合的：最后一个顶点要接到第 0 个，所以 nextIndex 会绕回 0。
+    // 但 vertexIndex 本身没挡 —— 空的 _polygonPath 会走到 _polygonPath[0]，
+    // vertexIndex == -1（QML 传回的过期/未定义值）会走到 _polygonPath[-1]，
+    // 都是 QList::operator[] 断言。补上，合法索引行为不变。
+    if (vertexIndex < 0 || vertexIndex > _polygonPath.length() - 1) {
+        qWarning() << "Call to splitPolygonSegment with bad vertexIndex:count" << vertexIndex << _polygonPath.length();
+        return;
+    }
+
     int nextIndex = vertexIndex + 1;
     if (nextIndex > _polygonPath.length() - 1) {
         nextIndex = 0;
@@ -265,6 +283,14 @@ void QGCMapPolygon::appendVertex(const QGeoCoordinate& coordinate)
 
 void QGCMapPolygon::appendVertices(const QList<QGeoCoordinate>& coordinates)
 {
+    // 同 QGCMapPolyline::appendVertices：空列表走到 _polygonModel.append(空) 会
+    // beginInsertRows(pos, pos-1) → last >= first 断言，之后模型行记账就和 _polygonPath
+    // 错开，下一个带 index 的回调会命中 QList::operator[] 的 index out of range。
+    // 必须在 _beginResetIfNotActive() 之前返回。
+    if (coordinates.isEmpty()) {
+        return;
+    }
+
     QList<QObject*> objects;
 
     _beginResetIfNotActive();
@@ -296,7 +322,9 @@ void QGCMapPolygon::_polygonModelDirtyChanged(bool dirty)
 
 void QGCMapPolygon::removeVertex(int vertexIndex)
 {
-    if (vertexIndex < 0 && vertexIndex > _polygonPath.length() - 1) {
+    // 这里原本是 &&（负数索引反而能过），应为 || —— 否则 vertexIndex == -1 会一路
+    // 走到 _polygonModel.removeAt(-1) 的 _objectList[-1]，正是 QList::operator[] 断言。
+    if (vertexIndex < 0 || vertexIndex > _polygonPath.length() - 1) {
         qWarning() << "Call to removePolygonCoordinate with bad vertexIndex:count" << vertexIndex << _polygonPath.length();
         return;
     }

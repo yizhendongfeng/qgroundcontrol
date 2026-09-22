@@ -39,4 +39,8 @@ class CloudServerSettings : public SettingsGroup
     DEFINE_SETTINGFACT(droneSn)
     DEFINE_SETTINGFACT(workSpaceId)
     DEFINE_SETTINGFACT(workSpaceDesc)
+    DEFINE_SETTINGFACT(nativeCloudConnect)
+    /// 后端图形是 GCJ-02（高德）时开启：进来转 WGS84、出去转回 GCJ-02。
+    /// 默认关：本项目的后台存的就是 WGS84，开着反而整体偏 300~600 米（实机验证过）。
+    DEFINE_SETTINGFACT(coordinateTransform)
 };

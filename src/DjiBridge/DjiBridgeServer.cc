@@ -8,55 +8,39 @@
  ****************************************************************************/
 
 /// @file
-/// @brief DjiBridge 本地模拟服务实现
+/// @brief DjiBridge 本地模拟服务实现（纯 JS 桥 + WebEngine 注入）
 ///
 /// 通过本地 HTTP 服务接收网页同步 XHR 请求，模拟 window.djiBridge 全部方法。
-/// 管理 QWebEngineProfile 注入脚本，以及 MQTT 5.0 连接和 C++→JS 回调。
+/// 管理 QWebEngineProfile 注入脚本。上云 MQTT 逻辑已拆至 DjiCloudClient / DjiDrcClient。
 
 #include "DjiBridgeServer.h"
+#include "DjiCloudClient.h"
+#include "DjiCloudMapClient.h"
+#include "DjiDrcClient.h"
+#include "DjiWsClient.h"
 
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
 #include <QtCore/QDir>
 #include <QtCore/QDebug>
-#include <QtCore/QCoreApplication>
-#include <QtCore/QTimer>
 #include <QtWebEngineCore/QWebEngineScriptCollection>
+
 #include "SettingsManager.h"
 #include "CloudServerSettings.h"
-
-#include "Vehicle.h"
 #include "VideoSettings.h"
 #include "VideoManager.h"
-#include "GPSManager.h"
-#include "GPSRtk.h"
-#include "VehicleBatteryFactGroup.h"
 
 DjiBridgeServer::DjiBridgeServer(QObject* parent) :
     QObject(parent),
     _server(new QTcpServer(this)),
-    _port(0),
-    _timerSendOsd(new QTimer(this)),
-    _mqttClient(new QMqttClient(this))
+    _port(0)
 {
     connect(_server, &QTcpServer::newConnection,
             this, &DjiBridgeServer::onNewConnection);
-
-    connect(_mqttClient, &QMqttClient::stateChanged,
-            this, &DjiBridgeServer::onMqttStateChanged);
-    connect(_mqttClient, &QMqttClient::errorChanged,
-            this, &DjiBridgeServer::onMqttErrorChanged);
-    connect(_mqttClient, &QMqttClient::messageReceived,
-            this, &DjiBridgeServer::_receiveMqttFromServer);
-    _timerSendOsd->setInterval(500);
-    connect(_timerSendOsd, &QTimer::timeout, this, &DjiBridgeServer::_sendOsdToServer);
 }
 
 DjiBridgeServer::~DjiBridgeServer()
 {
-    if (_mqttClient->state() == QMqttClient::Connected) {
-        _mqttClient->disconnectFromHost();
-    }
     if (_server->isListening()) {
         _server->close();
     }
@@ -69,9 +53,66 @@ void DjiBridgeServer::init()
     }
     _initialized = true;
 
-    // 初始化管理器引用（此时 SettingsManager、VideoManager 已在 _initForNormalAppBoot 中就绪）
-    _videoSettings = SettingsManager::instance()->videoSettings();
-    _videoManager = VideoManager::instance();
+    // 创建上云客户端：主连接 + DRC 独立连接
+    _cloudClient = new DjiCloudClient(this);
+    _drcClient   = new DjiDrcClient(this);
+    _cloudClient->setDrcClient(_drcClient);
+    connect(_cloudClient, &DjiCloudClient::jsCallbackRequested,
+            this, &DjiBridgeServer::onCloudJsCallback);
+
+    // ws 客户端必须在这里就创建：对 QML 暴露的 Q_PROPERTY 是 CONSTANT，只求值一次，
+    // 晚于 QML 引擎创建就会让 cloudDevices 永久为 null。
+    _wsClient = new DjiWsClient(this);
+    _wsClient->seedLocalDevices();  // 先用本机 SN 占位，抽屉打开不是空表
+    connect(_wsClient, &DjiWsClient::jsCallbackRequested,
+            this, &DjiBridgeServer::onCloudWsJsCallback);
+    connect(_wsClient, &DjiWsClient::connectedChanged,
+            this, &DjiBridgeServer::cloudWsStateChanged);
+    connect(_wsClient, &DjiWsClient::urlChanged,
+            this, &DjiBridgeServer::cloudWsStateChanged);
+    connect(_wsClient, &DjiWsClient::countsChanged,
+            this, &DjiBridgeServer::cloudWsCountsChanged);
+
+    // 地图元素：ws 推送 + REST 都在 DjiCloudMapClient 里，这里只接线与转发 Q_PROPERTY
+    _mapClient = new DjiCloudMapClient(this);
+    connect(_wsClient, &DjiWsClient::mapElementMessage,
+            _mapClient, &DjiCloudMapClient::onWsMapElement);
+    // 连上就要一次全量：ws 只推增量，首连时平台已有的元素只能靠 HTTP 拉
+    connect(_wsClient, &DjiWsClient::connectedChanged, this, [this]() {
+        if (_wsClient->connected()) {
+            _mapClient->refresh();
+            // 飞行区域也先拉一次：图层默认关着，但拉过一次之后点按钮就能立刻出图，
+            // 而且按钮上的提示能直接显示"平台上有几个"。后端没实现这个接口时
+            // 只会在日志和状态行里留一条 404，不影响元素那条链路。
+            _mapClient->refreshFlightAreas();
+        } else {
+            _mapClient->clearAll();   // 断开上云：元素与飞行区域都属于平台，本地不留
+        }
+    });
+    connect(_mapClient, &DjiCloudMapClient::countChanged,
+            this, &DjiBridgeServer::cloudMapStateChanged);
+    connect(_mapClient, &DjiCloudMapClient::editingChanged,
+            this, &DjiBridgeServer::cloudMapStateChanged);
+    connect(_mapClient, &DjiCloudMapClient::statusChanged,
+            this, &DjiBridgeServer::cloudMapStateChanged);
+
+    // 飞行区域：同一套 HTTP/鉴权，独立模型与开关。ws 只推"某一条变了"，
+    // 客户端收到后整表重拉，所以这里只接线，解析全在 DjiCloudMapClient 里。
+    connect(_wsClient, &DjiWsClient::flightAreaMessage,
+            _mapClient, &DjiCloudMapClient::onWsFlightArea);
+    connect(_mapClient, &DjiCloudMapClient::flightAreasChanged,
+            this, &DjiBridgeServer::cloudFlightAreaChanged);
+
+    CloudServerSettings* cloudSettings = SettingsManager::instance()->cloudServerSettings();
+    qInfo() << "[DjiBridge] nativeCloudConnect:" << cloudSettings->nativeCloudConnect()->rawValue()
+            << "websocketUrl:" << cloudSettings->websocketUrl()->rawValueString()
+            << "token set:" << !cloudSettings->serverToken()->rawValueString().isEmpty();
+
+    // 原生直连：若开关打开则启动即连云（"两者兼容"；否则等 web SDK 触发）
+    if (cloudSettings->nativeCloudConnect()->rawValue().toBool()) {
+        _cloudClient->nativeConnect();
+        _wsClient->connectNative();  // token 为空时内部会拒绝连接并告警
+    }
 
     // 1. 启动本地 HTTP 服务
     if (!start()) {
@@ -79,15 +120,8 @@ void DjiBridgeServer::init()
         return;
     }
 
-    // 2. 创建 WebEngineProfile（无痕模式，不含 storageName 即无痕）
-    // ---------- 向默认 WebEngineProfile 注入脚本 ----------
-    // 注意1：QML 中 WebEngineScript 是不可创建类型（uncreatable type），
-    //        必须在 C++ 端创建 QWebEngineScript 并插入 profile 的 script collection。
-    // 注意2：直接使用 defaultProfile()，WebEngineView 默认就用它，避免自定义 profile
-    //        作为 context property 传入 QML 后绑定失败导致脚本不生效的问题。
-    _profile = QWebEngineProfile::defaultProfile();// new QWebEngineProfile(QStringLiteral("DjiBridgeProfile"), this);
-    // _profile->setPersistentStoragePath(QDir::tempPath() + "/qgc_dji_webengine");
-    // _profile->setPersistentCookiesPolicy(QWebEngineProfile::ForcePersistentCookies);
+    // 2. 创建 WebEngineProfile（直接使用 defaultProfile，WebEngineView 默认就用它）
+    _profile = QWebEngineProfile::defaultProfile();
 
     // 3. 创建注入脚本，在 DocumentCreation 阶段执行
     QWebEngineScript script;
@@ -132,366 +166,257 @@ QString DjiBridgeServer::injectionScript() const
     return script;
 }
 
-void DjiBridgeServer::updateDevicesInCloudServer()
+void DjiBridgeServer::nativeConnectCloud()
 {
-    if (!_thingConnected) {
-        _timerSendOsd->stop();
-        return;
+    if (_cloudClient) {
+        _cloudClient->nativeConnect();
     }
-    QJsonObject jsonDevices;
-    jsonDevices["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    jsonDevices["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    jsonDevices["timestamp"] = QDateTime::currentMSecsSinceEpoch();
-    jsonDevices["method"] = "update_topo";
-    // jsonDevices["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
-    QJsonObject jsonData;
-    jsonData["domain"] = 2;
-    jsonData["type"] = 144;
-    jsonData["sub_type"] = 0;
-    jsonData["device_secret"] = "device_secret";
-    jsonData["nonce"] = "nonce";
-    jsonData["version"] = 1;
-    jsonData["workspace_id"] = _workspaceId;//SettingsManager::instance()->cloudServerSettings()->workSpaceId()->rawValueString();
-    QJsonArray jsonArraySubDevices;
-    if (_activeVehicle) {
-        QJsonObject jsonObjSubDevice;
-        jsonObjSubDevice["sn"] = SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString();
-        jsonObjSubDevice["domain"] = 0;
-        jsonObjSubDevice["type"] = 77;
-        jsonObjSubDevice["sub_type"] = 0;
-        jsonObjSubDevice["index"] = "A";
-        jsonObjSubDevice["device_secret"] = "secret";
-        jsonArraySubDevices.append(jsonObjSubDevice);
-    }
-    jsonData["nonce"] = "nonce";
-    jsonData["version"] = 1;
-    jsonData["sub_devices"] = jsonArraySubDevices;
-    jsonDevices["data"] = jsonData;
-    QJsonDocument jsonDoc{jsonDevices};
-    QString topic = "sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status";
-    _mqttClient->subscribe("sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status_reply");
-    _mqttClient->subscribe("thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/services");
-    qint32 result = _mqttClient->publish(QMqttTopicName(topic), jsonDoc.toJson(QJsonDocument::Compact));
-    qDebug() << "updateDevicesInCloudServer() topic:" << topic << ", json:" << jsonDoc.toJson(QJsonDocument::Compact);
 }
 
-void DjiBridgeServer::sendMqttReply(const QString &topicPrefix, const QString &topicSuffix, const QString &tid, const QString &bid, const QString &method, const int &result)
+bool DjiBridgeServer::cloudConnected() const
 {
-    if (!_thingConnected) {
-        qDebug() << "sendMqttReply mqtt not connected";
-        return;
-    }
-    QJsonObject jsonObjectReply;
-    jsonObjectReply["tid"] = tid;
-    jsonObjectReply["bid"] = bid;
-    jsonObjectReply["timestamp"] = QDateTime::currentMSecsSinceEpoch();
-    jsonObjectReply["method"] = method;
-    QJsonObject jsonObjectData;
-    jsonObjectData["result"] = result;
-    jsonObjectReply["data"] = jsonObjectData;
-    QString topic = topicPrefix + "/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/" + topicSuffix;
-    QJsonDocument jsonDoc(jsonObjectReply);
-    qint32 writeCount = _mqttClient->publish(QMqttTopicName(topic), jsonDoc.toJson(QJsonDocument::Compact), 1);
-    qDebug() << "sendMqttReply() topic" << topic << jsonDoc.toJson(QJsonDocument::Compact) << "writeCount:" << writeCount;
+    return _cloudClient ? _cloudClient->connected() : false;
 }
 
-void DjiBridgeServer::_sendOsdToServer()
+// ---------------------------------------------------------------------------
+// 上云 WebSocket（ws 组件）状态转发
+// ---------------------------------------------------------------------------
+
+QmlObjectListModel* DjiBridgeServer::cloudDevices() const
 {
-    if (!_thingConnected) {
-        return;
-    }
-    // 发送地面站状态信息
-    QJsonObject jsonGcsOsd;
-    jsonGcsOsd["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    jsonGcsOsd["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    jsonGcsOsd["timestamp"] = QDateTime::currentMSecsSinceEpoch();
-    jsonGcsOsd["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
-    QJsonObject jsonObjGcsData;
-    // // 直播能力
-    // QJsonObject liveCapacity;
-    // liveCapacity["available_video_number"] = 1;
-    // liveCapacity["coexist_video_number_max"] = 1;
-    // QJsonArray deviceList;
-    // QJsonObject device;
-    // device["sn"] = "D80-pro";
-    // device["available_video_number"] = 1;
-    // device["coexist_video_number_max"] = 1;
-
-    // QJsonArray cameraList;
-    // QJsonObject camera;
-    // camera["camera_index"] = "66-0-0";
-    // camera["available_video_number"] = 1;
-    // camera["coexist_video_number_max"] = 1;
-
-    // QJsonArray videoList;
-    // QJsonObject video;
-    // video["video_index"] = "1";
-    // video["video_type"] = "HD";
-    // video["switchable_video_types"] = QJsonArray{"visual light", "infrared camera"};
-    // videoList.append(video);
-    // camera["video_list"] = videoList;
-    // cameraList.append(camera);
-    // device["camera_list"] = cameraList;
-    // deviceList.append(device);
-    // liveCapacity["device_list"] = deviceList;
-    // jsonObjGcsData["live_capacity"] = liveCapacity;
-
-    jsonObjGcsData["capacity_percent"] = 100;
-
-    // 直播信息
-    QJsonArray liveStatus;
-    QJsonObject videoLive;
-    //{sn}/{camera_index}/{video_index}
-    videoLive["video_id"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/66-0-0/" + "normal-0" ;
-    videoLive["video_type"] = "normal"; // 表明视频镜头的类型，如normal/wide/zoom/infrared等
-    videoLive["video_quality"] = 3;     //{"0":"自适应","1":"流畅","2":"标清","3":"高清","4":"超清"}
-    videoLive["status"] = _videoSettings->streamingOut();            //{"0":"未直播","1":"在直播"}
-    videoLive["error_status"] = 0;      // 错误码{"length":6}
-    liveStatus.append(videoLive);
-    jsonObjGcsData["live_status"] = liveStatus;
-    jsonObjGcsData["capacity_percent"] = 100;
-    jsonObjGcsData["drc_state"] = 0;    // 远程遥控链路状态{"0":"未连接","1":"连接中","2":"已连接"}
-
-
-    // 发送无人机状态信息
-    if (_activeVehicle) {
-        QJsonObject jsonDrone;
-        jsonDrone["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        jsonDrone["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        jsonDrone["timestamp"] = QDateTime::currentMSecsSinceEpoch();
-        jsonDrone["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
-        QJsonObject jsonObjDroneData;
-        if (!_activeVehicle->flying()) {
-            // {"0":"待机","1":"起飞准备","2":"起飞准备完毕","3":"手动飞行","4":"自动起飞","5":"航线飞行","6":"全景拍照","7":"智能跟随","8":"ADS-B 躲避","9":"自动返航","10":"自动降落","11":"强制降落","12":"三桨叶降落","13":"升级中","14":"未连接","15":"APAS","16":"虚拟摇杆状态","17":"指令飞行","18":"空中 RTK 收敛模式"}
-            jsonObjDroneData["mode_code"] = 0;
-
-        } else {
-            if (_activeVehicle->flightMode() == "Ready") {
-                jsonObjDroneData["mode_code"] = 2;
-            } else if (_activeVehicle->flightMode() == "Takeoff") {
-                jsonObjDroneData["mode_code"] = 3;
-            } else if (_activeVehicle->flightMode() == "Position") {
-                jsonObjDroneData["mode_code"] = 4;
-            } else if (_activeVehicle->flightMode() == "Mission") {
-                jsonObjDroneData["mode_code"] = 5;
-            } else if (_activeVehicle->flightMode() == "Return") {
-                jsonObjDroneData["mode_code"] = 9;
-            } else if (_activeVehicle->flightMode() == "Land") {
-                jsonObjDroneData["mode_code"] = 10;
-            } else {
-                jsonObjDroneData["mode_code"] = 0;
-            }
-        }
-        QJsonObject jsonPositionState;
-        switch (_activeVehicle->gpsFactGroup()->getFact("lock")->enumIndex()) {
-        //"None,None,2D Lock,3D Lock,3D DGPS Lock,3D RTK GPS Lock (float),3D RTK GPS Lock (fixed),Static (fixed)",
-        case 0:
-        case 1:
-            jsonPositionState["is_fixed"] = 0;
-            break;
-        case 2:
-            jsonPositionState["is_fixed"] = 1;
-            break;
-        case 3:
-        case 4:
-        case 5:
-            jsonPositionState["is_fixed"] = 2;
-            break;
-        }
-        jsonPositionState["gps_number"] = _activeVehicle->gpsFactGroup()->getFact("count")->rawValue().toInt();
-        GPSRtk * gpsRtk = GPSManager::instance()->gpsRtk();
-        jsonPositionState["rtk_number"] = gpsRtk->connected() ? gpsRtk->gpsRtkFactGroup()->getFact("numSatellites")->rawValue().toInt() : 0;
-        jsonObjDroneData["position_state"] = jsonPositionState;
-        QJsonObject jsonObjBattery;
-        VehicleBatteryFactGroup *batteryFactGroup;
-        if (_activeVehicle->batteries()->count() > 0) { // 获取第一个电池组
-            batteryFactGroup = qobject_cast<VehicleBatteryFactGroup *>(_activeVehicle->batteries()->get(0));
-            jsonObjBattery["capacity_percent"] = batteryFactGroup->percentRemaining()->rawValue().toDouble();
-            jsonObjBattery["remain_flight_time"] = batteryFactGroup->timeRemaining()->rawValue().toDouble();
-        }
-        jsonObjDroneData["battery"] = jsonObjBattery;
-        jsonObjDroneData["home_distance"] = _activeVehicle->distanceToHome()->rawValue().toDouble();
-        jsonObjDroneData["home_latitude"] = _activeVehicle->homePosition().latitude();
-        jsonObjDroneData["home_longitude"] = _activeVehicle->homePosition().longitude();
-        jsonObjDroneData["attitude_head"] = _activeVehicle->heading()->rawValue().toInt();
-        jsonObjDroneData["attitude_roll"] = _activeVehicle->roll()->rawValue().toDouble();
-        jsonObjDroneData["attitude_pitch"] = _activeVehicle->pitch()->rawValue().toDouble();
-        jsonObjDroneData["elevation"] = _activeVehicle->altitudeRelative()->rawValue().toDouble();
-        jsonObjDroneData["height"] = _activeVehicle->altitudeAMSL()->rawValue().toDouble();
-        jsonObjDroneData["latitude"] = _activeVehicle->latitude();
-        jsonObjDroneData["longitude"] = _activeVehicle->longitude();
-        jsonObjDroneData["vertical_speed"] = _activeVehicle->climbRate()->rawValue().toDouble();
-        jsonObjDroneData["horizontal_speed"] = _activeVehicle->groundSpeed()->rawValue().toDouble();
-        jsonObjDroneData["firmware_version"] = QString::number(_activeVehicle->firmwareMajorVersion()) + "." +
-                                               QString::number(_activeVehicle->firmwareMinorVersion()) + "." +
-                                               QString::number(_activeVehicle->firmwarePatchVersion()) + ".";
-        jsonObjDroneData["wind_direction"] = _activeVehicle->windFactGroup()->getFact("direction")->rawValue().toDouble();
-        jsonObjDroneData["wind_speed"] = _activeVehicle->windFactGroup()->getFact("speed")->rawValue().toDouble();
-        jsonObjGcsData["latitude"] = _activeVehicle->homePosition().latitude();
-        jsonObjGcsData["longitude"] = _activeVehicle->homePosition().longitude();
-        jsonObjGcsData["height"] = _activeVehicle->homePosition().altitude();
-
-        jsonDrone["data"] = jsonObjDroneData;
-        QJsonDocument jsonDocDrone{jsonDrone};
-        QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString() + "/osd";
-        int result = _mqttClient->publish(QMqttTopicName(topic),
-                                          // R"(
-                                          //     {
-                                          //         "bid": "df43a2cf-cc8c-4634-a958-ee808c260f23",
-                                          //         "data": {
-                                          //             "battery": {
-                                          //                 "capacity_percent": 1
-                                          //             },
-                                          //             "mode_code": 0,
-                                          //             "position_state": {
-                                          //                 "gps_number": 8,
-                                          //                 "is_fixed": 2
-                                          //             }
-                                          //         },
-                                          //         "gateway": "dgcs001",
-                                          //         "tid": "b5382804-e04f-4c7c-8517-62b381301080",
-                                          //         "timestamp": 1762187092880
-                                          //     }
-                                          // )"); //
-                                          jsonDocDrone.toJson(QJsonDocument::Compact));
-        // qDebug() << "drone publish result: " << result << "topic:" << topic << jsonDocDrone.toJson();
-    }
-
-    jsonGcsOsd["data"] = jsonObjGcsData;
-    QJsonDocument jsonDocGcs{jsonGcsOsd};
-    QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/osd";
-    _mqttClient->publish(QMqttTopicName(topic), jsonDocGcs.toJson());
-    // qDebug() << "dgcs: " << topic << jsonDocGcs.toJson();
+    return _wsClient ? _wsClient->devices() : nullptr;
 }
 
-void DjiBridgeServer::_sendStateLiveCapacityToServer()
+QmlObjectListModel* DjiBridgeServer::cloudHms() const
 {
-    qDebug() << "_sendStateLiveCapacityToServer()";
-    QJsonObject jsonGcsState;
-    jsonGcsState["tid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    jsonGcsState["bid"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    jsonGcsState["timestamp"] = QDateTime::currentMSecsSinceEpoch();
-    jsonGcsState["gateway"] = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
-    QJsonObject jsonObjGcsData;
-    // 直播能力
-    QJsonObject liveCapacity;
-    liveCapacity["available_video_number"] = 1;
-    liveCapacity["coexist_video_number_max"] = 1;
-    QJsonArray deviceList;
-    QJsonObject device;
-    device["sn"] = SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString();
-    device["available_video_number"] = 1;
-    device["coexist_video_number_max"] = 1;
-
-    QJsonArray cameraList;
-    QJsonObject camera;
-    camera["camera_index"] = "66-0-0";
-    camera["available_video_number"] = 1;
-    camera["coexist_video_number_max"] = 1;
-
-    QJsonArray videoList;
-    QJsonObject video;
-    video["video_index"] = "1";
-    video["video_type"] = "normal";
-    video["switchable_video_types"] = QJsonArray{"zoom", "wide", "thermal", "normal", "ir"};
-    videoList.append(video);
-    camera["video_list"] = videoList;
-    cameraList.append(camera);
-    device["camera_list"] = cameraList;
-    deviceList.append(device);
-    liveCapacity["device_list"] = deviceList;
-    jsonObjGcsData["live_capacity"] = liveCapacity;
-    jsonGcsState["data"] = jsonObjGcsData;
-    QJsonDocument jsonDocGcs{jsonGcsState};
-    QString topic = "thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/state";
-    _mqttClient->publish(QMqttTopicName(topic), jsonDocGcs.toJson(), 1);
+    return _wsClient ? _wsClient->hms() : nullptr;
 }
 
-void DjiBridgeServer::_receiveMqttFromServer(const QByteArray &message, const QMqttTopicName &topic)
+QmlObjectListModel* DjiBridgeServer::cloudProgress() const
 {
-    QJsonDocument jsonDocMsg = QJsonDocument::fromJson(message);
-    QJsonObject jsonObjectMsg = jsonDocMsg.object();
-    qDebug() << "_receiveMqttFromServer topic: " << topic << "message:" << jsonObjectMsg;
-    QString tid = jsonObjectMsg["tid"].toString();
-    QString bid = jsonObjectMsg["bid"].toString();
-    if (topic == "sys/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/status_reply") {
-        // 收到拓扑更新成功信息
-        _timerSendOsd->start();
-    } else if (topic == "thing/product/" + SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString() + "/services") { // 服务器下发指令
+    return _wsClient ? _wsClient->progress() : nullptr;
+}
 
-        QString method = jsonObjectMsg.contains("method") ? jsonObjectMsg["method"].toString() : "";
-        if (method == "live_start_push") {
-            QJsonObject jsonObjectData = jsonObjectMsg.contains("data") ? jsonObjectMsg["data"].toObject() : QJsonObject();
-            if (!jsonObjectData.isEmpty()) {
-                int urlType = jsonObjectData.contains("url_type") ? jsonObjectData["url_type"].toInt() : -1;
-                QString url = jsonObjectData.contains("url") ? jsonObjectData["url"].toString() : "";
-                QString videoId = jsonObjectData.contains("video_id") ? jsonObjectData["video_id"].toString() : "";
-                int videoQuality = jsonObjectData.contains("video_quality") ? jsonObjectData["video_quality"].toInt() : -1;
-                if (urlType == -1 || url.isEmpty()) {
-                    qDebug() << "live_start_push wrong parameter";
-                    return;
-                }
-                _videoSettings->streamingUrl()->setRawValue(url);
-                int streamingType = -1;
-                if (urlType == 1)
-                    streamingType = 1;
-                else if (urlType == 4)
-                    streamingType = 0;
-                _videoSettings->streamingType()->setRawValue(streamingType);
-                // 接上清晰度：live_start_push 携带 video_quality 时一并设置
-                if (videoQuality >= 0 && videoQuality <= 4) {
-                    _videoManager->setLiveClarity(videoQuality);
-                }
-                _videoManager->startStreaming();
-                qDebug() << "startstreaming type:" << urlType << "url:" << url << "quality:" << videoQuality;
-                sendMqttReply("thing", "services_reply", tid, bid, "live_start_push", 0);
-            }
-        } else if (method == "live_set_quality") {
-            QJsonObject jsonObjectData = jsonObjectMsg.contains("data") ? jsonObjectMsg["data"].toObject() : QJsonObject();
-            if (!jsonObjectData.isEmpty()) {
-                int videoQuality = jsonObjectData.contains("video_quality") ? jsonObjectData["video_quality"].toInt() : -1;
-                if (videoQuality >= 0 && videoQuality <= 4) {
-                    _videoManager->setLiveClarity(videoQuality);
-                    qDebug() << "live_set_quality:" << videoQuality;
-                    sendMqttReply("thing", "services_reply", tid, bid, "live_set_quality", 0);
-                } else {
-                    qDebug() << "live_set_quality wrong parameter:" << videoQuality;
-                    sendMqttReply("thing", "services_reply", tid, bid, "live_set_quality", 1);
-                }
-            }
-        } else if (method == "live_stop_push") {
-            _videoManager->stopStreaming();
-            qDebug() << "live_stop_push";
-            sendMqttReply("thing", "services_reply", tid, bid, "live_stop_push", 0);
-        } else if (method == "live_lens_change") {
-            QJsonObject jsonObjectData = jsonObjectMsg.contains("data") ? jsonObjectMsg["data"].toObject() : QJsonObject();
-            if (!jsonObjectData.isEmpty()) {
-                QString videoType = jsonObjectData.contains("video_type") ? jsonObjectData["video_type"].toString() : "";
-                uint8_t mode = 0x02; // 默认可见光
-                if (videoType == "thermal" || videoType == "ir") {
-                    mode = 0x03; // 热成像
-                } else if (videoType == "normal") {
-                    mode = 0x02; // 可见光
-                } else {
-                    qDebug() << "live_lens_change unsupported video_type:" << videoType;
-                    sendMqttReply("thing", "services_reply", tid, bid, "live_lens_change", 1);
-                    return;
-                }
-                if (_videoManager->inyyoA102Pro()) {
-                    _videoManager->inyyoA102Pro()->pictureInPictureSwitch(mode);
-                    qDebug() << "live_lens_change video_type:" << videoType
-                             << "mode: 0x" << QString::number(mode, 16);
-                    sendMqttReply("thing", "services_reply", tid, bid, "live_lens_change", 0);
-                } else {
-                    qDebug() << "live_lens_change: inyyoA102Pro not available";
-                    sendMqttReply("thing", "services_reply", tid, bid, "live_lens_change", 1);
-                }
-            }
-        }
-        // qDebug() << "_receiveMqttFromServer: " << message << "topic:" << topic;
+QmlObjectListModel* DjiBridgeServer::cloudMessages() const
+{
+    return _wsClient ? _wsClient->messages() : nullptr;
+}
 
+bool DjiBridgeServer::cloudWsConnected() const
+{
+    return _wsClient ? _wsClient->connected() : false;
+}
 
+QString DjiBridgeServer::cloudWsUrl() const
+{
+    return _wsClient ? _wsClient->url() : QString();
+}
 
+int DjiBridgeServer::cloudDeviceCount() const
+{
+    return _wsClient ? _wsClient->deviceCount() : 0;
+}
+
+int DjiBridgeServer::cloudOnlineCount() const
+{
+    return _wsClient ? _wsClient->onlineCount() : 0;
+}
+
+int DjiBridgeServer::cloudHmsCount() const
+{
+    return _wsClient ? _wsClient->hmsCount() : 0;
+}
+
+void DjiBridgeServer::wsConnectNative()
+{
+    if (_wsClient) {
+        _wsClient->connectNative();
+    }
+}
+
+void DjiBridgeServer::wsDisconnectNow()
+{
+    if (_wsClient) {
+        _wsClient->disconnectNow();
+    }
+}
+
+void DjiBridgeServer::clearCloudHms()
+{
+    if (_wsClient) {
+        _wsClient->clearHms();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 云平台地图元素转发
+// ---------------------------------------------------------------------------
+
+QmlObjectListModel* DjiBridgeServer::cloudMapLines() const
+{
+    return _mapClient ? _mapClient->lines() : nullptr;
+}
+
+QmlObjectListModel* DjiBridgeServer::cloudMapAreas() const
+{
+    return _mapClient ? _mapClient->areas() : nullptr;
+}
+
+QmlObjectListModel* DjiBridgeServer::cloudMapPoints() const
+{
+    return _mapClient ? _mapClient->points() : nullptr;
+}
+
+QObject* DjiBridgeServer::cloudMapEditing() const
+{
+    return _mapClient ? _mapClient->editing() : nullptr;
+}
+
+int DjiBridgeServer::cloudMapCount() const
+{
+    return _mapClient ? _mapClient->count() : 0;
+}
+
+QString DjiBridgeServer::cloudMapStatus() const
+{
+    return _mapClient ? _mapClient->status() : QString();
+}
+
+void DjiBridgeServer::cloudMapRefresh()
+{
+    if (_mapClient) {
+        _mapClient->refresh();
+    }
+}
+
+void DjiBridgeServer::cloudMapBeginCreate(int type)
+{
+    if (_mapClient) {
+        _mapClient->beginCreate(type);
+    }
+}
+
+void DjiBridgeServer::cloudMapPlacePoint(double latitude, double longitude)
+{
+    if (_mapClient) {
+        _mapClient->placePoint(latitude, longitude);
+    }
+}
+
+void DjiBridgeServer::cloudMapBeginEdit(const QString& id)
+{
+    if (_mapClient) {
+        _mapClient->beginEdit(id);
+    }
+}
+
+void DjiBridgeServer::cloudMapCancelEdit()
+{
+    if (_mapClient) {
+        _mapClient->cancelEdit();
+    }
+}
+
+void DjiBridgeServer::cloudMapSaveEdit(const QString& name, const QString& color)
+{
+    if (_mapClient) {
+        _mapClient->saveEdit(name, color);
+    }
+}
+
+void DjiBridgeServer::cloudMapRemoveElement(const QString& id)
+{
+    if (_mapClient) {
+        _mapClient->removeElement(id);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 云平台飞行区域转发（任务区域 / GEO 区域，只读）
+// ---------------------------------------------------------------------------
+
+QmlObjectListModel* DjiBridgeServer::cloudFlightAreas() const
+{
+    return _mapClient ? _mapClient->flightAreas() : nullptr;
+}
+
+int DjiBridgeServer::cloudTaskAreaCount() const
+{
+    return _mapClient ? _mapClient->taskAreaCount() : 0;
+}
+
+int DjiBridgeServer::cloudGeoZoneCount() const
+{
+    return _mapClient ? _mapClient->geoZoneCount() : 0;
+}
+
+bool DjiBridgeServer::cloudShowTaskAreas() const
+{
+    return _mapClient ? _mapClient->showTaskAreas() : false;
+}
+
+bool DjiBridgeServer::cloudShowGeoZones() const
+{
+    return _mapClient ? _mapClient->showGeoZones() : false;
+}
+
+QString DjiBridgeServer::cloudFlightAreaStatus() const
+{
+    return _mapClient ? _mapClient->flightAreaStatus() : QString();
+}
+
+void DjiBridgeServer::cloudToggleTaskAreas()
+{
+    if (_mapClient) {
+        _mapClient->toggleTaskAreas();
+    }
+}
+
+void DjiBridgeServer::cloudToggleGeoZones()
+{
+    if (_mapClient) {
+        _mapClient->toggleGeoZones();
+    }
+}
+
+void DjiBridgeServer::cloudRefreshFlightAreas()
+{
+    if (_mapClient) {
+        _mapClient->refreshFlightAreas();
+    }
+}
+
+QString DjiBridgeServer::jsCallbackScript(const QString& fn, const QJsonValue& data)
+{
+    if (fn.isEmpty()) {
+        return QString();
+    }
+
+    // 借 QJsonDocument 做序列化：字符串里的引号/反斜杠/换行都会被正确转义。
+    // QJsonDocument 顶层只接受数组或对象，这里塞进单元素数组再剥掉方括号。
+    QString payload = QStringLiteral("null");
+    if (!data.isUndefined() && !data.isNull()) {
+        QByteArray json = QJsonDocument(QJsonArray{data}).toJson(QJsonDocument::Compact);
+        json = json.mid(1, json.size() - 2);
+        payload = QString::fromUtf8(json);
+    }
+
+    // 网页可能还没注册回调（或已随页面卸载），包一层判定，避免注入脚本抛异常
+    return QStringLiteral(
+        "(function(){"
+        "  try{"
+        "    var fn = window.%1;"
+        "    if (typeof fn === 'function') { fn(%2); }"
+        "    else { console.warn('[DjiBridge] callback %1 is not a function'); }"
+        "  }catch(e){ console.error('[DjiBridge] callback error:', e); }"
+        "})()").arg(fn, payload);
+}
+
+void DjiBridgeServer::onCloudWsJsCallback(const QString& callback, const QJsonValue& value)
+{
+    const QString script = jsCallbackScript(callback, value);
+    if (!script.isEmpty()) {
+        emit jsCallbackRequested(script);
     }
 }
 
@@ -592,11 +517,17 @@ void DjiBridgeServer::onDisconnected()
     }
 }
 
+void DjiBridgeServer::onCloudJsCallback(const QString& script)
+{
+    emit jsCallbackRequested(script);
+}
+
 void DjiBridgeServer::activeVehicleChanged(Vehicle *vehicle)
 {
     if (_activeVehicle != vehicle) {
         _activeVehicle = vehicle;
-        updateDevicesInCloudServer();
+        if (_cloudClient) _cloudClient->setActiveVehicle(vehicle);
+        if (_drcClient)   _drcClient->setActiveVehicle(vehicle);
     }
 }
 
@@ -660,7 +591,7 @@ QByteArray DjiBridgeServer::handleRequest(const QString& method, const QJsonArra
     else
         result = makeResponse(-1, "Unknown method: " + method, QJsonValue::Null);
 
-    qDebug() << "handleRequest: " << method << ", " << result;
+    // qDebug() << "handleRequest: " << method << ", " << result;
     return QJsonDocument(result).toJson(QJsonDocument::Compact);
 }
 
@@ -689,18 +620,49 @@ QJsonObject DjiBridgeServer::platformLoadComponent(const QJsonArray& args)
         QJsonDocument doc = QJsonDocument::fromJson(param.toUtf8(), &err);
         if (err.error == QJsonParseError::NoError && doc.isObject()) {
             QJsonObject obj = doc.object();
-            _thingHost = obj.value("host").toString();
-            _thingUsername = obj.value("username").toString();
-            _thingPassword = obj.value("password").toString();
-            _thingCallback = obj.value("connectCallback").toString();
+            const QString host = obj.value("host").toString();
+            const QString username = obj.value("username").toString();
+            const QString password = obj.value("password").toString();
+            const QString callback = obj.value("connectCallback").toString();
 
-            qInfo() << "[DjiBridge]   -> thing MQTT host:" << _thingHost
-                    << "user:" << _thingUsername
-                    << "callback:" << _thingCallback;
-
-            startMqttConnection();
+            qInfo() << "[DjiBridge]   -> thing MQTT host:" << host
+                    << "user:" << username
+                    << "callback:" << callback;
+            if (_cloudClient) {
+                _cloudClient->connectToCloud(host, username, password, callback);
+            }
         } else {
             qWarning() << "[DjiBridge]   -> thing param parse error:" << err.errorString();
+        }
+    } else if (name == "ws") {
+        // 真实的上云 WebSocket：DJI Pilot 是由原生 SDK 在加载组件时自己建连的，
+        // 桥这边必须替它建连，否则网页的 wsGetConnectState 永远是 false。
+        QJsonParseError err;
+        const QJsonDocument doc = QJsonDocument::fromJson(param.toUtf8(), &err);
+        if (err.error == QJsonParseError::NoError && doc.isObject()) {
+            const QJsonObject obj = doc.object();
+            QString host = obj.value("host").toString();
+            const QString token = obj.value("token").toString();
+            const QString callback = obj.value("connectCallback").toString();
+
+            if (host.isEmpty()) {
+                host = SettingsManager::instance()->cloudServerSettings()->websocketUrl()->rawValueString();
+            } else if (!host.startsWith("ws://") && !host.startsWith("wss://")) {
+                host = "ws://" + host;
+            }
+            if (!host.contains("/api/v1/ws")) {
+                host = host.endsWith('/') ? host + "api/v1/ws" : host + "/api/v1/ws";
+            }
+
+            qInfo() << "[DjiBridge]   -> ws url:" << host
+                    << "token:" << (token.isEmpty() ? "<empty>" : "<set>")
+                    << "callback:" << callback;
+            if (_wsClient) {
+                // 这条路径不受 nativeCloudConnect 开关限制：网页要连就必须连
+                _wsClient->connectToWebSocket(host, token, callback);
+            }
+        } else {
+            qWarning() << "[DjiBridge]   -> ws param parse error:" << err.errorString();
         }
     }
 
@@ -711,6 +673,12 @@ QJsonObject DjiBridgeServer::platformUnloadComponent(const QJsonArray& args)
 {
     QString name = args.size() > 0 ? args[0].toString() : "";
     _loadedComponents.remove(name);
+
+    // 组件卸载时同步断开，避免网页已经卸载而桥这边还在收推送
+    if (name == "ws" && _wsClient) {
+        _wsClient->disconnectNow();
+    }
+
     return makeResponse(0, "success", name);
 }
 
@@ -723,24 +691,33 @@ QJsonObject DjiBridgeServer::platformIsComponentLoaded(const QJsonArray& args)
 QJsonObject DjiBridgeServer::platformSetWorkspaceId(const QJsonArray& args)
 {
     _workspaceId = args.size() > 0 ? args[0].toString() : "";
+    if (_cloudClient) {
+        _cloudClient->setWorkspaceId(_workspaceId);
+    }
+    SettingsManager::instance()->cloudServerSettings()->workSpaceId()->setRawValue(_workspaceId);
     return makeResponse(0, "success", _workspaceId);
 }
 
 QJsonObject DjiBridgeServer::platformSetInformation(const QJsonArray& args)
 {
+    //示例：["Cloud Api Platform","",""]
+    //platformName: 平台名称
+    //workspaceName: DJI Pilot 2上云入口显示工作空间名称
+    //desc: DJI Pilot 2上云入口显示工作空间描述
+    qDebug() << "DjiBridgeServer::platformSetInformation: " << args;
     return makeResponse(0, "success", true);
 }
 
 QJsonObject DjiBridgeServer::platformGetRemoteControllerSN(const QJsonArray& args)
 {
-    // TODO: 对接 QGC 遥控器 SN，当前返回 mock
-    return makeResponse(0, "success", "dgcs001");
+    return makeResponse(0, "success",
+        SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString());
 }
 
 QJsonObject DjiBridgeServer::platformGetAircraftSN(const QJsonArray& args)
 {
-    // TODO: 对接 MultiVehicleManager::activeVehicle() 的真实飞机 SN
-    return makeResponse(0, "success", "drone001");
+    return makeResponse(0, "success",
+        SettingsManager::instance()->cloudServerSettings()->droneSn()->rawValueString());
 }
 
 QJsonObject DjiBridgeServer::platformStopSelf(const QJsonArray& args)
@@ -786,229 +763,48 @@ QJsonObject DjiBridgeServer::platformIsAppInstalled(const QJsonArray& args)
 }
 
 // ---------------------------------------------------------------------------
-// Thing
+// Thing（转发 DjiCloudClient）
 // ---------------------------------------------------------------------------
 
 QJsonObject DjiBridgeServer::thingGetConnectState(const QJsonArray& args)
 {
-    bool connected = (_mqttClient->state() == QMqttClient::Connected);
-    _thingConnected = connected;
-    return makeResponse(0, "success", connected);
+    return makeResponse(0, "success", _cloudClient ? _cloudClient->connected() : false);
 }
 
 QJsonObject DjiBridgeServer::thingGetConfigs(const QJsonArray& args)
 {
-    QJsonObject config;
-    config["host"] = _thingHost;
-    config["username"] = _thingUsername;
-    config["password"] = _thingPassword;
-    config["connectCallback"] = _thingCallback;
-    QString configStr = QString::fromUtf8(
-        QJsonDocument(config).toJson(QJsonDocument::Compact));
+    QJsonObject config = _cloudClient ? _cloudClient->config() : QJsonObject();
+    QString configStr = QString::fromUtf8(QJsonDocument(config).toJson(QJsonDocument::Compact));
     return makeResponse(0, "success", configStr);
 }
 
 QJsonObject DjiBridgeServer::thingConnect(const QJsonArray& args)
 {
-    if (args.size() >= 2) {
-        _thingUsername = args[0].toString();
-        _thingPassword = args[1].toString();
+    QString username = args.size() > 0 ? args[0].toString() : "";
+    QString password = args.size() > 1 ? args[1].toString() : "";
+    QString callback = args.size() > 2 ? args[2].toString() : "";
+    if (_cloudClient) {
+        _cloudClient->thingConnect(username, password, callback);
     }
-    if (args.size() >= 3) {
-        _thingCallback = args[2].toString();
-    }
-    startMqttConnection();
     return makeResponse(0, "success", true);
 }
 
 QJsonObject DjiBridgeServer::thingDisconnect(const QJsonArray& args)
 {
-    if (_mqttClient->state() == QMqttClient::Connected) {
-        _mqttClient->disconnectFromHost();
+    if (_cloudClient) {
+        _cloudClient->disconnectFromCloud();
     }
     return makeResponse(0, "success", true);
 }
 
 QJsonObject DjiBridgeServer::thingSetConnectCallback(const QJsonArray& args)
 {
-    _thingCallback = args.size() > 0 ? args[0].toString() : "";
-    qInfo() << "[DjiBridge]   -> thing callback set to:" << _thingCallback;
-    return makeResponse(0, "success", _thingCallback);
-}
-
-// ---------------------------------------------------------------------------
-// MQTT 内部实现
-// ---------------------------------------------------------------------------
-
-void DjiBridgeServer::parseMqttUrl(const QString& url)
-{
-    _useWebSocket = false;
-    _websocketUrl.clear();
-
-    if (url.startsWith("ws://", Qt::CaseInsensitive) ||
-        url.startsWith("wss://", Qt::CaseInsensitive)) {
-        _useWebSocket = true;
-        _websocketUrl = url;
-        QString clean = url;
-        if (clean.startsWith("wss://", Qt::CaseInsensitive)) clean = clean.mid(6);
-        else if (clean.startsWith("ws://", Qt::CaseInsensitive)) clean = clean.mid(5);
-        int slashIdx = clean.indexOf('/');
-        if (slashIdx > 0) clean = clean.left(slashIdx);
-        int colonIdx = clean.lastIndexOf(':');
-        if (colonIdx > 0) {
-            _mqttClient->setHostname(clean.left(colonIdx));
-            _mqttClient->setPort(clean.mid(colonIdx + 1).toUShort());
-        }
-        qInfo() << "[DjiBridge]   -> MQTT parsed (WebSocket):" << url;
-        return;
+    QString callback = args.size() > 0 ? args[0].toString() : "";
+    if (_cloudClient) {
+        _cloudClient->setConnectCallback(callback);
     }
-
-    QString clean = url;
-    if (clean.startsWith("tcp://", Qt::CaseInsensitive)) {
-        clean = clean.mid(6);
-    }
-
-    int colonIdx = clean.lastIndexOf(':');
-    if (colonIdx > 0) {
-        QString host = clean.left(colonIdx);
-        quint16 port = clean.mid(colonIdx + 1).toUShort();
-        _mqttClient->setHostname(host);
-        _mqttClient->setPort(port);
-        qInfo() << "[DjiBridge]   -> MQTT parsed (TCP):" << host << "port" << port;
-    } else {
-        _mqttClient->setHostname(clean);
-        _mqttClient->setPort(1883);
-        qInfo() << "[DjiBridge]   -> MQTT parsed (TCP):" << clean << "port 1883 (default)";
-    }
-}
-
-void DjiBridgeServer::startMqttConnection()
-{
-    if (_thingHost.isEmpty()) {
-        qWarning() << "[DjiBridge]   -> MQTT host is empty, skip connect";
-        return;
-    }
-
-    parseMqttUrl(_thingHost);
-
-    if (_useWebSocket) {
-        qWarning() << "[DjiBridge]   -> WebSocket transport not yet implemented,"
-                   << "falling back to TCP. URL:" << _websocketUrl;
-    }
-
-    _mqttClient->setUsername(_thingUsername);
-    _mqttClient->setPassword(_thingPassword);
-    _mqttClient->setClientId("QGCDjiBridge-" + QString::number(QCoreApplication::applicationPid()));
-    _mqttClient->setKeepAlive(60);
-    _mqttClient->setAutoKeepAlive(true);
-    _mqttClient->setProtocolVersion(QMqttClient::MQTT_5_0);
-
-    if (_mqttClient->state() == QMqttClient::Connected) {
-        _mqttClient->disconnectFromHost();
-    }
-
-    qInfo() << "[DjiBridge]   -> MQTT connect details:"
-            << "\n      host:" << _mqttClient->hostname()
-            << "\n      port:" << _mqttClient->port()
-            << "\n      username:" << _mqttClient->username()
-            << "\n      clientId:" << _mqttClient->clientId()
-            << "\n      protocol: MQTT 5.0"
-            << "\n      keepAlive:" << _mqttClient->keepAlive();
-
-    _mqttClient->connectToHost();
-    qInfo() << "[DjiBridge]   -> MQTT connecting... (TCP)";
-
-    QTimer::singleShot(10000, this, [this]() {
-        if (_mqttClient->state() != QMqttClient::Connected) {
-            qWarning() << "[DjiBridge]   -> MQTT connect TIMEOUT after 10s."
-                       << "Current state:" << static_cast<int>(_mqttClient->state())
-                       << "(0=Disconnected, 1=Connecting, 2=Connected)";
-        }
-    });
-}
-
-void DjiBridgeServer::onMqttStateChanged(QMqttClient::ClientState state)
-{
-    QString stateStr;
-    switch (state) {
-    case QMqttClient::Disconnected:
-        stateStr = "Disconnected";
-        _thingConnected = false;
-        break;
-    case QMqttClient::Connecting:
-        stateStr = "Connecting";
-        break;
-    case QMqttClient::Connected:
-        stateStr = "Connected";
-        _thingConnected = true;
-        // 发送更新拓扑信息：地面站→无人机
-        updateDevicesInCloudServer();
-        _sendStateLiveCapacityToServer();
-        if (!_thingCallback.isEmpty()) {
-            invokeJsCallback(_thingCallback, QJsonValue(true));
-        }
-        break;
-    }
-    qInfo() << "[DjiBridge]   -> MQTT state changed:" << stateStr;
-}
-
-void DjiBridgeServer::onMqttErrorChanged(QMqttClient::ClientError error)
-{
-    if (error == QMqttClient::NoError) {
-        return;
-    }
-
-    QString errStr;
-    switch (error) {
-    case QMqttClient::NoError:              errStr = "NoError"; break;
-    case QMqttClient::InvalidProtocolVersion: errStr = "InvalidProtocolVersion"; break;
-    case QMqttClient::IdRejected:           errStr = "IdRejected"; break;
-    case QMqttClient::ServerUnavailable:    errStr = "ServerUnavailable"; break;
-    case QMqttClient::BadUsernameOrPassword: errStr = "BadUsernameOrPassword"; break;
-    case QMqttClient::NotAuthorized:        errStr = "NotAuthorized"; break;
-    case QMqttClient::TransportInvalid:     errStr = "TransportInvalid"; break;
-    case QMqttClient::ProtocolViolation:    errStr = "ProtocolViolation"; break;
-    case QMqttClient::UnknownError:         errStr = "UnknownError"; break;
-    default:                                 errStr = "Unknown(" + QString::number(static_cast<int>(error)) + ")"; break;
-    }
-    qWarning() << "[DjiBridge]   -> MQTT error:" << errStr
-               << "transport:" << (_useWebSocket ? "WebSocket" : "TCP")
-               << "host:" << _thingHost;
-}
-
-void DjiBridgeServer::invokeJsCallback(const QString& callbackName, const QJsonValue& data)
-{
-    if (callbackName.isEmpty()) {
-        return;
-    }
-
-    QString dataStr;
-    if (data.isBool()) {
-        dataStr = data.toBool() ? "true" : "false";
-    } else if (data.isDouble()) {
-        dataStr = QString::number(data.toDouble());
-    } else if (data.isString()) {
-        dataStr = "\"" + data.toString() + "\"";
-    } else if (data.isObject()) {
-        dataStr = QString::fromUtf8(QJsonDocument(data.toObject()).toJson(QJsonDocument::Compact));
-    } else if (data.isArray()) {
-        dataStr = QString::fromUtf8(QJsonDocument(data.toArray()).toJson(QJsonDocument::Compact));
-    } else {
-        dataStr = "null";
-    }
-
-    QString script = QStringLiteral(
-        "(function(){"
-        "  try{"
-        "    var fn = window.%1;"
-        "    if (typeof fn === 'function') { fn(%2); }"
-        "    else { console.warn('[DjiBridge] callback %1 is not a function'); }"
-        "  }catch(e){ console.error('[DjiBridge] callback error:', e); }"
-        "})()").arg(callbackName, dataStr);
-
-    qInfo() << "[DjiBridge]   -> invoke JS callback:" << callbackName
-            << "arg:" << dataStr;
-    emit jsCallbackRequested(script);
+    qInfo() << "[DjiBridge]   -> thing callback set to:" << callback;
+    return makeResponse(0, "success", callback);
 }
 
 // ---------------------------------------------------------------------------
@@ -1022,8 +818,25 @@ QJsonObject DjiBridgeServer::apiGetToken(const QJsonArray& args)
 
 QJsonObject DjiBridgeServer::apiSetToken(const QJsonArray& args)
 {
+    // 返回了新token说明已经成功登陆
     _token = args.size() > 0 ? args[0].toString() : "";
+
+    // _mqttHostFact->setRawValue(jsonObj["mqtt_addr"].toString());
+    // _serverTokenFact->setRawValue(jsonObj["access_token"].toString());
+    // _userNameFact->setRawValue(jsonObj["username"].toString());
+    // _userPasswordFact->setRawValue(jsonObj["mqtt_password"].toString());
+    // _workSpaceIdFact->setRawValue(jsonObj["workspace_id"].toString());
+    QString serverIp = QUrl(SettingsManager::instance()->cloudServerSettings()->serverUrl()->rawValueString()).host();
+    SettingsManager::instance()->cloudServerSettings()->serverIp()->setRawValue(serverIp);
+    SettingsManager::instance()->cloudServerSettings()->serverToken()->setRawValue(_token);
     qInfo() << "[DjiBridge]   -> token set, len:" << _token.length();
+
+    // 原生直连模式下，token 是登录之后才有的：若此前因缺 token 没能连上 ws，这里补一次
+    if (_wsClient && !_wsClient->connected() && !_token.isEmpty() &&
+        SettingsManager::instance()->cloudServerSettings()->nativeCloudConnect()->rawValue().toBool()) {
+        _wsClient->connectNative();
+    }
+
     return makeResponse(0, "success", _token);
 }
 
@@ -1044,8 +857,6 @@ QJsonObject DjiBridgeServer::liveshareSetVideoPublishType(const QJsonArray& args
 
 QJsonObject DjiBridgeServer::liveshareGetConfig(const QJsonArray& args)
 {
-    // 网页端会 JSON.parse() 返回值，期望 LiveConfigParam 格式: {"params":0,"type":1}
-    // type: 0=Unknown, 1=Agora, 2=RTMP, 3=RTSP, 4=GB28181
     QJsonObject config;
     config["params"] = _liveConfigParams;
     config["type"] = _liveConfigType;
@@ -1055,21 +866,23 @@ QJsonObject DjiBridgeServer::liveshareGetConfig(const QJsonArray& args)
 
 QJsonObject DjiBridgeServer::liveshareSetConfig(const QJsonArray& args)
 {
-    if (args.size() >= 1) {
-        _liveConfigType = args[0].toInt();
-    }
-    if (args.size() >= 2) {
-        // params 可能是数字或 JSON 字符串，统一存为数字
-        if (args[1].isDouble()) {
-            _liveConfigParams = args[1].toInt();
-        } else if (args[1].isString()) {
-            bool ok = false;
-            int val = args[1].toString().toInt(&ok);
-            if (ok) {
-                _liveConfigParams = val;
-            }
+    int type = args.size() > 0 ? args[0].toInt() : -1;
+    _liveConfigType = type;
+
+    // params 可能是 JSON 字符串或对象，统一规整为 JSON 字符串交给 CloudServerSettings 解析
+    QString params;
+    if (args.size() > 1) {
+        if (args[1].isString()) {
+            params = args[1].toString();
+        } else if (args[1].isObject()) {
+            params = QString::fromUtf8(QJsonDocument(args[1].toObject()).toJson(QJsonDocument::Compact));
         }
     }
+
+    qInfo() << "[DjiBridge]   -> liveshareSetConfig type:" << type << "params:" << params;
+
+    // 复用 CloudServerSettings::setLiveshareConfig 解析并写入 streamingType/streamingUrl
+    SettingsManager::instance()->cloudServerSettings()->setLiveshareConfig(type, params);
     return makeResponse(0, "success", "ok");
 }
 
@@ -1081,9 +894,11 @@ QJsonObject DjiBridgeServer::liveshareSetStatusCallback(const QJsonArray& args)
 
 QJsonObject DjiBridgeServer::liveshareGetStatus(const QJsonArray& args)
 {
+    // 返回真实直播状态（以 VideoSettings::streamingOut 为准，由推流结果异步回写）
+    bool streaming = SettingsManager::instance()->videoSettings()->streamingOut();
     QJsonObject status;
     status["type"] = 0;
-    status["status"] = _liveshareActive ? 1 : 0;
+    status["status"] = streaming ? 1 : 0;
     QString statusStr = QString::fromUtf8(
         QJsonDocument(status).toJson(QJsonDocument::Compact));
     return makeResponse(0, "success", statusStr);
@@ -1091,12 +906,16 @@ QJsonObject DjiBridgeServer::liveshareGetStatus(const QJsonArray& args)
 
 QJsonObject DjiBridgeServer::liveshareStartLive(const QJsonArray& args)
 {
+    qInfo() << "[DjiBridge]   -> liveshareStartLive args:" << args;
+    VideoManager::instance()->startStreaming();
     _liveshareActive = true;
     return makeResponse(0, "success", true);
 }
 
 QJsonObject DjiBridgeServer::liveshareStopLive(const QJsonArray& args)
 {
+    qInfo() << "[DjiBridge]   -> liveshareStopLive";
+    VideoManager::instance()->stopStreaming();
     _liveshareActive = false;
     return makeResponse(0, "success", true);
 }
@@ -1107,7 +926,8 @@ QJsonObject DjiBridgeServer::liveshareStopLive(const QJsonArray& args)
 
 QJsonObject DjiBridgeServer::wsGetConnectState(const QJsonArray& args)
 {
-    return makeResponse(0, "success", _wsConnected);
+    // 必须反映真实 socket 状态：网页整套模块状态都挂在这个返回值上
+    return makeResponse(0, "success", _wsClient && _wsClient->connected());
 }
 
 QJsonObject DjiBridgeServer::wsConnect(const QJsonArray& args)
@@ -1115,22 +935,36 @@ QJsonObject DjiBridgeServer::wsConnect(const QJsonArray& args)
     QString host = args.size() > 0 ? args[0].toString() : "";
     QString token = args.size() > 1 ? args[1].toString() : "";
     QString callback = args.size() > 2 ? args[2].toString() : "";
-    _wsCallback = callback;
-    _wsConnected = true;
-    qInfo() << "[DjiBridge]   -> WS connect host:" << host << "callback:" << callback;
-    return makeResponse(0, "success", "connected");
+    if (host.isEmpty()) {
+        host = SettingsManager::instance()->cloudServerSettings()->websocketUrl()->rawValueString();
+    }
+    if (token.isEmpty()) {
+        token = _token;
+    }
+    qInfo() << "[DjiBridge]   -> WS connect host:" << host
+            << "token:" << (token.isEmpty() ? "<empty>" : "<set>")
+            << "callback:" << callback;
+    if (_wsClient) {
+        _wsClient->connectToWebSocket(host, token, callback);
+    }
+    return makeResponse(0, "success", _wsClient && _wsClient->connected() ? "connected" : "connecting");
 }
 
 QJsonObject DjiBridgeServer::wsDisconnect(const QJsonArray& args)
 {
-    _wsConnected = false;
+    qInfo() << "[DjiBridge]   -> WS disconnect";
+    if (_wsClient) {
+        _wsClient->disconnectNow();
+    }
     return makeResponse(0, "success", "disconnected");
 }
 
 QJsonObject DjiBridgeServer::wsSend(const QJsonArray& args)
 {
     QString message = args.size() > 0 ? args[0].toString() : "";
-    qInfo() << "[DjiBridge]   -> WS send, len:" << message.length();
+    if (_wsClient) {
+        _wsClient->sendText(message);
+    }
     return makeResponse(0, "success", "sent");
 }
 

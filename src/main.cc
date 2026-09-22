@@ -181,6 +181,12 @@ int main(int argc, char *argv[])
     }
 #endif // Q_OS_WIN
 #endif // QT_DEBUG
+
+    // 强制 Qt FFmpeg 多媒体后端使用软件解码：吊舱录制的 HEVC 视频在部分
+    // 硬件解码（D3D11VA/VAAPI 等）下会产出不可读的帧，导致视频缩略图抓取失败。
+    // 值设为 ","（空列表），表示禁用所有硬件解码后端。
+    qputenv("QT_FFMPEG_DECODING_HW_DEVICE_TYPES", ",");
+
     QtWebEngineQuick::initialize();
     // // 获取默认配置文件并进行配置
     // QQuickWebEngineProfile* defaultProfile = QQuickWebEngineProfile::defaultProfile();

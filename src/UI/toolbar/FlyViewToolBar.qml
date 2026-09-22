@@ -104,11 +104,20 @@ Rectangle {
         anchors.bottomMargin:   1
         anchors.top:            parent.top
         anchors.bottom:         parent.bottom
-        anchors.right:          parent.right
+        anchors.right:          cloudIndicator.left
         contentWidth:           toolIndicators.width
         flickableDirection:     Flickable.HorizontalFlick
 
         FlyViewToolBarIndicators { id: toolIndicators }
+    }
+
+    // 上云 WebSocket 状态（云平台实时消息）
+    // 固定在工具栏最右侧：放进 toolsFlickable 里的话，车辆指示器一多就会被横向滚动推出去，
+    // 抽屉的 x 是按指示器位置算的，指示器跑到可视区外抽屉也会跟着跑偏。
+    CloudIndicator {
+        id:                     cloudIndicator
+        anchors.right:          parent.right
+        anchors.rightMargin:    ScreenTools.defaultFontPixelWidth
     }
 
     //-------------------------------------------------------------------------

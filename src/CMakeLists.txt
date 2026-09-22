@@ -46,6 +46,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         Qt6::Widgets
         Qt6::Xml
         Qt6::Mqtt
+        Qt6::WebSockets
         Qt6::WebEngineQuick
         Qt6::WebEngineCore
         Qt6::Concurrent

@@ -85,6 +85,8 @@
         <file alias="QGroundControl/Controls/CameraCalcGrid.qml">src/PlanView/CameraCalcGrid.qml</file>
         <file alias="QGroundControl/Controls/CameraSection.qml">src/PlanView/CameraSection.qml</file>
         <file alias="QGroundControl/Controls/ClickableColor.qml">src/QmlControls/ClickableColor.qml</file>
+        <file alias="QGroundControl/Controls/CloudIndicator.qml">src/UI/toolbar/CloudIndicator.qml</file>
+        <file alias="QGroundControl/Controls/CloudElementEditor.qml">src/UI/toolbar/CloudElementEditor.qml</file>
         <file alias="QGroundControl/Controls/ConfigButton.qml">src/QmlControls/ConfigButton.qml</file>
         <file alias="QGroundControl/Controls/CorridorScanMapVisual.qml">src/PlanView/CorridorScanMapVisual.qml</file>
         <file alias="QGroundControl/Controls/DeadMouseArea.qml">src/QmlControls/DeadMouseArea.qml</file>
@@ -272,6 +274,9 @@
         <file alias="QGroundControl/FlightDisplay/ObstacleDistanceOverlayVideo.qml">src/FlightDisplay/ObstacleDistanceOverlayVideo.qml</file>
         <file alias="QGroundControl/FlightDisplay/qmldir">src/QmlControls/QGroundControl/FlightDisplay/qmldir</file>
         <file alias="QGroundControl/FlightMap/CameraTriggerIndicator.qml">src/FlightMap/MapItems/CameraTriggerIndicator.qml</file>
+        <file alias="QGroundControl/FlightMap/CloudElementMapLayer.qml">src/FlightMap/MapItems/CloudElementMapLayer.qml</file>
+        <file alias="QGroundControl/FlightMap/CloudElementMarker.qml">src/FlightMap/MapItems/CloudElementMarker.qml</file>
+        <file alias="QGroundControl/FlightMap/CloudElementToolBar.qml">src/FlightMap/MapItems/CloudElementToolBar.qml</file>
         <file alias="QGroundControl/FlightMap/CenterMapDropButton.qml">src/FlightMap/Widgets/CenterMapDropButton.qml</file>
         <file alias="QGroundControl/FlightMap/CenterMapDropPanel.qml">src/FlightMap/Widgets/CenterMapDropPanel.qml</file>
         <file alias="QGroundControl/FlightMap/CompassDial.qml">src/FlightMap/Widgets/CompassDial.qml</file>

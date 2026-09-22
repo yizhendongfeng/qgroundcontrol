@@ -88,11 +88,20 @@ bool QmlObjectListModel::setData(const QModelIndex& index, const QVariant& value
 bool QmlObjectListModel::insertRows(int position, int rows, const QModelIndex& parent)
 {
     Q_UNUSED(parent);
-    
+
+    // rows == 0 时 beginInsertRows(pos, pos-1) 会直接命中 QAbstractItemModel 的
+    // "last >= first" 断言（append(QList<QObject*>) 传空列表就会走到这里）。
+    // 断言之后 endInsertRows() 照样执行，模型的行记账和 _objectList 就错开了，
+    // 后面任何按 index 的回调都会命中 QList::operator[] 的 index out of range。
+    if (rows <= 0) {
+        qWarning() << "QmlObjectListModel::insertRows invalid rows:position" << rows << position;
+        return false;
+    }
+
     if (position < 0 || position > _objectList.count() + 1) {
         qWarning() << "Invalid position position:count" << position << _objectList.count();
     }
-    
+
     beginInsertRows(QModelIndex(), position, position + rows - 1);
     endInsertRows();
     
@@ -104,13 +113,20 @@ bool QmlObjectListModel::insertRows(int position, int rows, const QModelIndex& p
 bool QmlObjectListModel::removeRows(int position, int rows, const QModelIndex& parent)
 {
     Q_UNUSED(parent);
-    
+
+    // 和 insertRows 同理：rows == 0 时 beginRemoveRows(pos, pos-1) 命中
+    // QAbstractItemModel 的 "last >= first" 断言。
+    if (rows <= 0) {
+        qWarning() << "QmlObjectListModel::removeRows invalid rows:position" << rows << position;
+        return false;
+    }
+
     if (position < 0 || position >= _objectList.count()) {
         qWarning() << "Invalid position position:count" << position << _objectList.count();
     } else if (position + rows > _objectList.count()) {
         qWarning() << "Invalid rows position:rows:count" << position << rows << _objectList.count();
     }
-    
+
     beginRemoveRows(QModelIndex(), position, position + rows - 1);
     for (int row=0; row<rows; row++) {
         _objectList.removeAt(position);
@@ -168,6 +184,14 @@ void QmlObjectListModel::clear()
 
 QObject* QmlObjectListModel::removeAt(int i)
 {
+    // 唯一的裸下标访问：operator[]/get()/insert()/move() 都做了范围检查，漏了这里。
+    // 调用方拿到的 index 常常来自 QML（拖拽手柄、右键菜单），几何被整体替换时
+    // 回调过来的是过期值，_objectList[i] 会直接命中 QList::operator[] 的断言。
+    if (i < 0 || i >= _objectList.count()) {
+        qWarning() << "QmlObjectListModel::removeAt invalid index:count" << i << _objectList.count();
+        return nullptr;
+    }
+
     QObject* removedObject = _objectList[i];
     if(removedObject) {
         // Look for a dirtyChanged signal on the object

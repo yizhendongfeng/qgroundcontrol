@@ -119,4 +119,25 @@ SettingsPage {
             visible:                    fact.visible
         }
     }
+
+    SettingsGroupLayout {
+        Layout.fillWidth:   true
+        heading:            qsTr("Cloud Map")
+
+        FactCheckBox {
+            Layout.fillWidth:   true
+            text:               qsTr("Coordinate correction (GCJ-02)")
+            fact:               _cloudServerSettings.coordinateTransform
+            visible:            fact.visible
+        }
+
+        QGCLabel {
+            Layout.fillWidth:   true
+            Layout.maximumWidth: ScreenTools.defaultFontPixelWidth * 40
+            wrapMode:           Text.WordWrap
+            font.pointSize:     ScreenTools.smallFontPointSize
+            color:              qgcPal.colorGrey
+            text:               qsTr("Leave this OFF. It is only for backends that store shapes in GCJ-02 (AMap/Gaode) coordinates: turning it on converts incoming shapes to WGS84 and outgoing ones back to GCJ-02. Our backend stores plain WGS84, so enabling it shifts every cloud shape by 300-600m.")
+        }
+    }
 }
