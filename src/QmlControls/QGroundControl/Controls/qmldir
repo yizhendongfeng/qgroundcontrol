@@ -15,6 +15,9 @@ CloudIndicator                          1.0 CloudIndicator.qml
 CloudElementEditor                      1.0 CloudElementEditor.qml
 ConfigButton                            1.0 ConfigButton.qml
 DeadMouseArea                           1.0 DeadMouseArea.qml
+DrcControlPanel                         1.0 DrcControlPanel.qml
+DrcIndicator                            1.0 DrcIndicator.qml
+DrcRequestDialogs                       1.0 DrcRequestDialogs.qml
 DropButton                              1.0 DropButton.qml
 DropPanel                               1.0 DropPanel.qml
 EditPositionDialog                      1.0 EditPositionDialog.qml

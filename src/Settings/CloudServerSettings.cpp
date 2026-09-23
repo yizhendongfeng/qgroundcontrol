@@ -100,3 +100,11 @@ DECLARE_SETTINGSFACT(CloudServerSettings, workSpaceDesc)
 DECLARE_SETTINGSFACT(CloudServerSettings, nativeCloudConnect)
 DECLARE_SETTINGSFACT(CloudServerSettings, coordinateTransform)
 
+// 指令飞行 / 远程控制（DRC）
+DECLARE_SETTINGSFACT(CloudServerSettings, drcInvertX)
+DECLARE_SETTINGSFACT(CloudServerSettings, drcInvertY)
+DECLARE_SETTINGSFACT(CloudServerSettings, drcInvertW)
+DECLARE_SETTINGSFACT(CloudServerSettings, drcCameraHFov)
+DECLARE_SETTINGSFACT(CloudServerSettings, drcRequireLocalConsent)
+DECLARE_SETTINGSFACT(CloudServerSettings, drcEmergencyStopEnabled)
+

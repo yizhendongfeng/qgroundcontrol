@@ -592,7 +592,10 @@ void Joystick::_handleAxis()
         emit rawAxisValueChanged(axisIndex, newAxisValue);
     }
 
-    if (!_activeVehicle->joystickEnabled() || _calibrationMode || !_calibrated) {
+    // cloudStickLock：云端 DRC 持权期间停发。这一路在旧设计里被漏掉了 ——
+    // 插着真实手柄时，手柄的 25Hz 同样会盖掉云端的 10Hz。
+    if (!_activeVehicle->joystickEnabled() || _activeVehicle->cloudStickLock()
+        || _calibrationMode || !_calibrated) {
         return;
     }
 

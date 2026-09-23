@@ -104,7 +104,7 @@ Rectangle {
         anchors.bottomMargin:   1
         anchors.top:            parent.top
         anchors.bottom:         parent.bottom
-        anchors.right:          cloudIndicator.left
+        anchors.right:          drcIndicator.left
         contentWidth:           toolIndicators.width
         flickableDirection:     Flickable.HorizontalFlick
 
@@ -118,6 +118,16 @@ Rectangle {
         id:                     cloudIndicator
         anchors.right:          parent.right
         anchors.rightMargin:    ScreenTools.defaultFontPixelWidth
+    }
+
+    // 指令飞行（云端控制）状态。紧挨云服务图标左侧，同样是固定位、不进 toolsFlickable。
+    // 宽度会随 CloudIndicator 的在线设备数变化而微动 —— 那不是抖动 bug。
+    DrcIndicator {
+        id:                     drcIndicator
+        anchors.right:          cloudIndicator.left
+        // 两块图标贴在一起会读成"一个控件两个色块"。留出一条明显的缝：
+        // 云图标是实心块，指令飞行那颗是人形，挨着放看不出边界在哪。
+        anchors.rightMargin:    ScreenTools.defaultFontPixelWidth * 1.5
     }
 
     //-------------------------------------------------------------------------

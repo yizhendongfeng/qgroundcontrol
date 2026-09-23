@@ -90,6 +90,9 @@
         <file alias="QGroundControl/Controls/ConfigButton.qml">src/QmlControls/ConfigButton.qml</file>
         <file alias="QGroundControl/Controls/CorridorScanMapVisual.qml">src/PlanView/CorridorScanMapVisual.qml</file>
         <file alias="QGroundControl/Controls/DeadMouseArea.qml">src/QmlControls/DeadMouseArea.qml</file>
+        <file alias="QGroundControl/Controls/DrcControlPanel.qml">src/UI/toolbar/DrcControlPanel.qml</file>
+        <file alias="QGroundControl/Controls/DrcIndicator.qml">src/UI/toolbar/DrcIndicator.qml</file>
+        <file alias="QGroundControl/Controls/DrcRequestDialogs.qml">src/UI/toolbar/DrcRequestDialogs.qml</file>
         <file alias="QGroundControl/Controls/DropButton.qml">src/QmlControls/DropButton.qml</file>
         <file alias="QGroundControl/Controls/DropPanel.qml">src/QmlControls/DropPanel.qml</file>
         <file alias="QGroundControl/Controls/EditPositionDialog.qml">src/QmlControls/EditPositionDialog.qml</file>
@@ -228,6 +231,7 @@
         <file alias="QGroundControl/FactControls/qmldir">src/QmlControls/QGroundControl/FactControls/qmldir</file>
         <file alias="QGroundControl/FlightDisplay/CustomGuidedActionsController.qml">src/FlightDisplay/CustomGuidedActionsController.qml</file>
         <file alias="QGroundControl/FlightDisplay/FlightDisplayViewVideo.qml">src/FlightDisplay/FlightDisplayViewVideo.qml</file>
+        <file alias="QGroundControl/FlightDisplay/DrcVirtualJoystick.qml">src/FlightDisplay/DrcVirtualJoystick.qml</file>
         <file alias="QGroundControl/FlightDisplay/FlyView.qml">src/FlightDisplay/FlyView.qml</file>
         <file alias="QGroundControl/FlightDisplay/FlyViewBottomRightRowLayout.qml">src/FlightDisplay/FlyViewBottomRightRowLayout.qml</file>
         <file alias="QGroundControl/FlightDisplay/FlyViewCustomLayer.qml">src/FlightDisplay/FlyViewCustomLayer.qml</file>
@@ -360,6 +364,10 @@
         <file alias="Viewer3D/Models3D/Viewer3DVehicleItems.qml">src/Viewer3D/Viewer3DQml/Models3D/Viewer3DVehicleItems.qml</file>
         <file alias="Viewer3D/Viewer3DProgressBar.qml">src/Viewer3D/Viewer3DQml/Viewer3DProgressBar.qml</file>
         <file alias="PlanListView.qml">src/PlanView/PlanListView.qml</file>
+        <!-- 本地任务 / 云端航线库 两页共用的行样式 -->
+        <file alias="MissionListRow.qml">src/PlanView/MissionListRow.qml</file>
+        <file alias="WaylineLibraryView.qml">src/PlanView/WaylineLibraryView.qml</file>
+        <file alias="WaylineUploadDialog.qml">src/PlanView/WaylineUploadDialog.qml</file>
         <file alias="QGroundControl/Controls/QGCIconButton.qml">src/QmlControls/QGCIconButton.qml</file>
         <file alias="MainToolStrip.qml">src/UI/MainToolStrip.qml</file>
         <file alias="QGroundControl/Controls/ToolStripColumn.qml">src/QmlControls/ToolStripColumn.qml</file>

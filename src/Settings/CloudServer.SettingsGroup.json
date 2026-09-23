@@ -145,6 +145,48 @@
     "longDesc":  "Only for backends that store shapes in GCJ-02 (AMap/Gaode coordinates). Turns it on converts incoming shapes to WGS84 and outgoing ones back to GCJ-02. Our backend stores plain WGS84, so this stays off; turning it on shifts every shape by 300-600m.",
     "type":             "bool",
     "default":     false
+},
+{
+    "name":             "drcInvertX",
+    "shortDesc": "DRC invert left/right axis",
+    "longDesc":  "Flip the sign of the x axis of drone_control (left/right). The Cloud API docs and some backends disagree about which way x>0 moves the aircraft; flip this if it goes right when the joystick is pushed left.",
+    "type":             "bool",
+    "default":     false
+},
+{
+    "name":             "drcInvertY",
+    "shortDesc": "DRC invert forward/back axis",
+    "longDesc":  "Flip the sign of the y axis of drone_control (forward/back). Same reasoning as drcInvertX: only a bench test settles the direction.",
+    "type":             "bool",
+    "default":     false
+},
+{
+    "name":             "drcInvertW",
+    "shortDesc": "DRC invert yaw axis",
+    "longDesc":  "Flip the sign of the w axis of drone_control (yaw rate, clockwise positive).",
+    "type":             "bool",
+    "default":     false
+},
+{
+    "name":             "drcCameraHFov",
+    "shortDesc": "DRC camera horizontal FOV (deg)",
+    "longDesc":  "Horizontal field of view of the camera, used to convert the normalized screen coordinates of camera_aim into gimbal angles. QGC cannot read lens FOV from the camera, so set this per lens (wide angle, zoom and IR all differ).",
+    "type":             "double",
+    "default":     73.0
+},
+{
+    "name":             "drcRequireLocalConsent",
+    "shortDesc": "DRC require local operator consent",
+    "longDesc":  "When on, a cloud control request (cloud_control_auth_request or the two *_authority_grab calls) pops a dialog on this ground station and drone_control is refused with 327002 until the operator agrees. On by default: handing the sticks to somebody else's web panel is exactly the moment a local operator should get a say. Turn it off for unattended operation, where nobody is at the ground station to answer the dialog.",
+    "type":             "bool",
+    "default":     true
+},
+{
+    "name":             "drcEmergencyStopEnabled",
+    "shortDesc": "DRC allow cloud emergency stop",
+    "longDesc":  "Allow a cloud drone_emergency_stop through to the aircraft. It maps to MAV_CMD_DO_FLIGHTTERMINATION, which stops the motors in flight and cannot be undone. Even with this on, the operator still has to confirm every request in the dialog.",
+    "type":             "bool",
+    "default":     false
 }
 ]
 }

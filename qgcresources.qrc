@@ -61,7 +61,8 @@
         <file alias="GripperRelease.svg">resources/GripperRelease.svg</file>
         <file alias="GripperGrab.svg">resources/GripperGrab.svg</file>
         <file alias="qgroundcontrol.ico">resources/icons/qgroundcontrol.ico</file>
-        <file>resources/ArrowDownload.svg</file>
+        <file alias="ArrowDownload.svg">resources/ArrowDownload.svg</file>
+        <file alias="ArrowUpload.svg">resources/ArrowUpload.svg</file>
         <file alias="TrafficPolice.png">resources/TrafficPolice.png</file>
     </qresource>
     <qresource prefix="/res/firmware">

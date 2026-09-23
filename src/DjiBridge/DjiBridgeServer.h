@@ -21,11 +21,17 @@
 #include <QtWebEngineCore/QWebEngineScript>
 
 #include "QmlObjectListModel.h"
+// djiWayline 这个 Q_PROPERTY 的指针类型必须完整定义：moc 生成元对象时对
+// "指向不完整类型的指针" 会直接 static_assert 报错（C2338）。其余几个客户端
+// 没有这个问题，是因为它们只经 QmlObjectListModel*/QObject* 暴露，不出现在
+// Q_PROPERTY 的类型位置上。
+#include "DjiWaylineManager.h"
+// 同理，djiDrc 这个 Q_PROPERTY 也要求 DjiDrcClient 是完整类型
+#include "DjiDrcClient.h"
 
 class Vehicle;
 class DjiCloudClient;
 class DjiCloudMapClient;
-class DjiDrcClient;
 class DjiWsClient;
 
 /// DjiBridge 本地模拟服务（纯 JS 桥 + WebEngine 注入 facade）
@@ -80,6 +86,13 @@ class DjiBridgeServer : public QObject
     Q_PROPERTY(bool cloudShowGeoZones  READ cloudShowGeoZones  NOTIFY cloudFlightAreaChanged)
     Q_PROPERTY(QString cloudFlightAreaStatus READ cloudFlightAreaStatus NOTIFY cloudFlightAreaChanged)
 
+    // ---------- 云平台航线库（列表/收藏/上传/下载 + 本地 .plan 双向转换）暴露给 QML ----------
+    Q_PROPERTY(DjiWaylineManager* djiWayline READ djiWayline CONSTANT)
+
+    // ---------- 指令飞行 / 远程控制（DRC）暴露给 QML ----------
+    /// 状态、控制权、上行统计都在这里，UI 见 DrcControlPanel.qml
+    Q_PROPERTY(DjiDrcClient* djiDrc READ drcClient CONSTANT)
+
 public:
     explicit DjiBridgeServer(QObject* parent = nullptr);
     ~DjiBridgeServer();
@@ -105,6 +118,7 @@ public:
     DjiDrcClient*      drcClient()   const { return _drcClient; }
     DjiWsClient*       wsClient()    const { return _wsClient; }
     DjiCloudMapClient* mapClient()   const { return _mapClient; }
+    DjiWaylineManager* djiWayline()  const { return _waylineManager; }
 
     // ---------- 上云 WebSocket 状态转发 ----------
     QmlObjectListModel* cloudDevices()  const;
@@ -191,6 +205,7 @@ private:
     DjiDrcClient*      _drcClient   = nullptr;
     DjiWsClient*       _wsClient    = nullptr;
     DjiCloudMapClient* _mapClient   = nullptr;
+    DjiWaylineManager* _waylineManager = nullptr;
 
     QHash<QString, QVariant> _loadedComponents;
 

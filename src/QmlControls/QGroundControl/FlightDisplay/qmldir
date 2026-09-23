@@ -1,6 +1,7 @@
 Module QGroundControl.FlightDisplay
 
 CustomGuidedActionsController   1.0 CustomGuidedActionsController.qml
+DrcVirtualJoystick              1.0 DrcVirtualJoystick.qml
 FlightDisplayViewGStreamer      1.0 FlightDisplayViewGStreamer.qml
 FlightDisplayViewQtMultimedia   1.0 FlightDisplayViewQtMultimedia.qml
 FlyView                         1.0 FlyView.qml

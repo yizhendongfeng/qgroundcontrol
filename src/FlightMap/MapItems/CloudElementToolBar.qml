@@ -44,11 +44,17 @@ Item {
     property var    map
     /// 是否自带元素面板；规划视图为 false
     property bool   showElementPanel: true
+    /// 是否显示 DRC（指令飞行）那颗键与其面板；只有飞行视图为 true。
+    /// 规划视图不显示 —— 远程控制是飞的事，规划页上摆一颗能发摇杆的键是祸不是福。
+    property bool   showDrc: false
 
     /// DJI 控制台配色（和地图上实际用的颜色是同一组）
     readonly property color _accentBlue:  "#2D8CF0"
     readonly property color _accentGreen: "#19BE6B"   ///< 任务区域
-    readonly property color _accentRed:   "#E23C39"   ///< GEO 区域
+    readonly property color _accentRed:   "#E23C39"   ///< GEO 区域 / DRC 待确认告警
+    /// DRC 常态色。故意不用上面那三个：它不是地图工具，是控制链路，
+    /// 混进那组颜色里会被当成"又一种画图工具"。
+    readonly property color _accentPurple: "#7E57C2"
 
     readonly property real _btnSize:    ScreenTools.defaultFontPixelHeight * 1.9
     readonly property real _margin:     ScreenTools.defaultFontPixelWidth / 2
@@ -56,6 +62,9 @@ Item {
 
     readonly property bool _connected:  djiBridgeServer.cloudWsConnected
     readonly property var  _editing:    djiBridgeServer.cloudMapEditing
+    readonly property var  _drc:        djiBridgeServer.djiDrc
+    /// 云端在等本地确认（接管或停桨）—— 这时候那颗键要变色，面板收起也要看得出来
+    readonly property bool _drcAttention: _drc && (_drc.authPending || _drc.emergencyStopPending)
 
     /// 图标列的内容。三档：
     ///   type  != undefined —— 可绘制的地图元素（端点 0 / 线段 1 / 区域 2）
@@ -71,7 +80,8 @@ Item {
         { kind: "list",     type: undefined, layer: undefined,  glyph: "list",    tint: _accentBlue,  tip: qsTr("元素列表") }
     ]
 
-    property bool   _panelVisible: false
+    property bool   _panelVisible:    false
+    property bool   _drcPanelVisible: false
     property string _hint: ""
 
     implicitWidth:  _btnSize
@@ -82,6 +92,20 @@ Item {
     // 断开上云后本地元素会被清空，面板再留着就是个空壳
     on_ConnectedChanged: {
         if (!_connected) {
+            _panelVisible = false
+        }
+    }
+
+    // 两个面板都从图标列左侧弹出，同一块地方。同时开会叠在一起，
+    // 所以开一个就关另一个（和地图工具那组互斥是同一个理由）。
+    on_PanelVisibleChanged: {
+        if (_panelVisible) {
+            _drcPanelVisible = false
+        }
+    }
+
+    on_DrcPanelVisibleChanged: {
+        if (_drcPanelVisible) {
             _panelVisible = false
         }
     }
@@ -334,6 +358,86 @@ Item {
             model:    root._buttons
             delegate: iconButtonComponent
         }
+
+        // DRC（指令飞行）开关。单独一颗、不属于上面那组互斥的地图工具 ——
+        // 它开的是一个链路面板，不是标绘模式。放在 Repeater 之后，
+        // Column 里的次序就是「六颗地图工具 + 这一颗」。
+        Rectangle {
+            id:      drcButton
+            visible: root.showDrc
+            width:   root._btnSize
+            height:  root._btnSize
+            radius:  3
+
+            /// 待确认时用告警红，平时用紫色
+            readonly property color _tint: root._drcAttention ? root._accentRed : root._accentPurple
+            readonly property bool  _active: root._drcPanelVisible || root._drcAttention
+
+            color:        _active ? Qt.rgba(_tint.r, _tint.g, _tint.b, 0.3)
+                                  : (drcMouseArea.pressed ? qgcPal.buttonHighlight : qgcPal.windowShade)
+            border.width: _active ? 2 : 1
+            border.color: _active ? _tint : qgcPal.text
+
+            MouseArea {
+                id:           drcMouseArea
+                anchors.fill: parent
+                onClicked:    root._drcPanelVisible = !root._drcPanelVisible
+            }
+
+            // 图标：一根摇杆（底圈 + 杆）。不引 svg，和这一列其余图标一个做法。
+            Item {
+                anchors.centerIn: parent
+                width:            parent.width * 0.55
+                height:           parent.height * 0.55
+
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width:  parent.width
+                    height: 2
+                    color:  drcButton._tint
+                }
+
+                Rectangle {
+                    anchors.bottom:   parent.bottom
+                    anchors.left:     parent.horizontalCenter
+                    width:            2
+                    height:           parent.height * 0.85
+                    rotation:         -25
+                    transformOrigin:  Item.Bottom
+                    color:            drcButton._tint
+                }
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: -parent.height * 0.3
+                    width:            parent.width * 0.5
+                    height:           width
+                    radius:           width / 2
+                    color:            "transparent"
+                    border.width:     2
+                    border.color:     drcButton._tint
+                }
+            }
+
+            // 待确认时闪一下，别让操作员漏掉弹窗。
+            // 用 target 写法而不是 `on opacity`：动画停下时要把不透明度显式复位，
+            // 否则会停在闪烁的中间值上，看上去像颗半透明的禁用键。
+            SequentialAnimation {
+                id:      blinkAnim
+                running: root._drcAttention
+                loops:   Animation.Infinite
+
+                onRunningChanged: {
+                    if (!running) {
+                        drcButton.opacity = 1.0
+                    }
+                }
+
+                NumberAnimation { target: drcButton; property: "opacity"; to: 0.45; duration: 500 }
+                NumberAnimation { target: drcButton; property: "opacity"; to: 1.0;  duration: 500 }
+            }
+        }
     }
 
     /// 元素面板：从图标列左侧弹出，只有飞行视图用
@@ -373,15 +477,57 @@ Item {
         }
     }
 
+    /// DRC 面板：和元素面板同一块地方（互斥）。
+    ///
+    /// 以前这里是常驻实例化的（理由是"云端的接管/停桨请求是信号驱动的，没实例化就收不到"）——
+    /// 那个理由已经不成立了：请求弹窗搬去了 DrcRequestDialogs，本面板不再连任何信号。
+    /// 而常驻是有代价的：FlyView 和 PlanView 各实例化一份这个工具条，于是规划视图里
+    /// 白养着一个看不见的 DRC 面板（还是它和其它东西一起把弹窗变成两个的）。现在照元素面板
+    /// 一样用 Loader 门控。
+    ///
+    /// 外面套一层 QGCFlickable：面板内容会随展开项变高，超出地图高度时能滚。
+    QGCFlickable {
+        id:                     drcFlick
+        visible:                root.showDrc && root._drcPanelVisible
+        anchors.right:          _column.left
+        anchors.rightMargin:    root._margin
+        anchors.top:             _column.top
+        width:                  ScreenTools.defaultFontPixelWidth * 25
+        height:                 Math.min(drcLoader.item ? drcLoader.item.implicitHeight : 0, root._maxPanelHeight)
+        contentHeight:          drcLoader.item ? drcLoader.item.implicitHeight : 0
+
+        Loader {
+            id:              drcLoader
+            width:           parent.width
+            active:          root.showDrc
+            sourceComponent: drcControlPanelComponent
+        }
+    }
+
+    Component {
+        id: drcControlPanelComponent
+
+        DrcControlPanel {
+            id:     drcPanel
+            width:  parent.width
+            height: implicitHeight
+        }
+    }
+
     /// 提示行贴在图标列下方；比图标列宽，往左溢出，不遮地图中间。
-    /// 元素面板弹出来的时候要再往左让一让 —— 面板占的正是这一片，压在面板上就成了一行
-    /// 被挡住一半、谁也读不出来的橙字。
+    /// 有面板弹出来的时候要再往左让一让 —— 面板占的正是这一片，压在面板上就成了一行
+    /// 被挡住一半、谁也读不出来的橙字。两个面板互斥，取那个开着的。
+    readonly property bool _anyPanelVisible: elementPanel.visible || drcFlick.visible
+    readonly property real _hintRightEdge:   elementPanel.visible ? elementPanel.left
+                                           : drcFlick.visible    ? drcFlick.left
+                                           : root.width
+
     QGCLabel {
         id:                  hintLabel
         anchors.top:         _column.bottom
         anchors.topMargin:   root._margin
-        anchors.right:       elementPanel.visible ? elementPanel.left : parent.right
-        anchors.rightMargin: elementPanel.visible ? root._margin : 0
+        anchors.right:       root._hintRightEdge
+        anchors.rightMargin: root._anyPanelVisible ? root._margin : 0
         width:               ScreenTools.defaultFontPixelWidth * 15
         horizontalAlignment: Text.AlignRight
         wrapMode:            Text.WordWrap
@@ -396,8 +542,8 @@ Item {
     QGCLabel {
         anchors.top:         hintLabel.visible ? hintLabel.bottom : _column.bottom
         anchors.topMargin:   root._margin
-        anchors.right:       elementPanel.visible ? elementPanel.left : parent.right
-        anchors.rightMargin: elementPanel.visible ? root._margin : 0
+        anchors.right:       root._hintRightEdge
+        anchors.rightMargin: root._anyPanelVisible ? root._margin : 0
         width:               ScreenTools.defaultFontPixelWidth * 15
         horizontalAlignment: Text.AlignRight
         wrapMode:            Text.WordWrap

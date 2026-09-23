@@ -155,18 +155,21 @@ Item {
         property real rootWidth:            _root.width
         property var  itemX:                virtualJoystickMultiTouch.x   // real X on screen
 
-        onRootWidthChanged: virtualJoystickMultiTouch.status == Loader.Ready && visible ? virtualJoystickMultiTouch.item.uiTotalWidth = rootWidth : undefined
-        onItemXChanged:     virtualJoystickMultiTouch.status == Loader.Ready && visible ? virtualJoystickMultiTouch.item.uiRealX = itemX : undefined
+        // 几何量（uiTotalWidth / uiRealX）是 JoystickThumbPad.thumbDown 判断"这次触摸算不算数"
+        // 的输入。原版只在**可见**时才注入 —— 就绪那一刻若恰好不可见（全屏视频，或当时
+        // usingHighLatencyLink 为真），这两个值就永久是 undefined；而补写的两个处理器要等值
+        // **变化**才动手，窗口尺寸不再变就再也补不上。后果是两块摇杆都看得见却拖不动
+        // （细节见 JoystickThumbPad.thumbDown 里的说明）。
+        // 它们只是几何量，跟可见性无关，所以去掉那个条件；calibration 仍只在可见时置位，
+        // 它影响的是 resize 之后的把手位置，跟可见性有关。
+        onRootWidthChanged: if (virtualJoystickMultiTouch.status == Loader.Ready) { virtualJoystickMultiTouch.item.uiTotalWidth = rootWidth }
+        onItemXChanged:     if (virtualJoystickMultiTouch.status == Loader.Ready) { virtualJoystickMultiTouch.item.uiRealX = itemX }
 
         //Loader status logic
         onLoaded: {
-            if (virtualJoystickMultiTouch.visible) {
-                virtualJoystickMultiTouch.item.calibration = true 
-                virtualJoystickMultiTouch.item.uiTotalWidth = rootWidth
-                virtualJoystickMultiTouch.item.uiRealX = itemX
-            } else {
-                virtualJoystickMultiTouch.item.calibration = false
-            }
+            virtualJoystickMultiTouch.item.uiTotalWidth = rootWidth
+            virtualJoystickMultiTouch.item.uiRealX = itemX
+            virtualJoystickMultiTouch.item.calibration = virtualJoystickMultiTouch.visible
         }
     }
 

@@ -13,6 +13,7 @@
 #include "DjiBridgeServer.h"
 
 #include <QtCore/QTimer>
+#include <QtCore/QtGlobal>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
 #include <QtCore/QJsonDocument>
@@ -26,11 +27,25 @@
 #include "VideoManager.h"
 #include "Vehicle.h"
 
+namespace {
+// 断线重连退避：首试 5 秒，逐次翻倍，封顶 60 秒。
+// 不设重试上限是有意的 —— 这是地面站与云端的唯一链路，断了就该一直试到通，
+// 操作员不需要（也不应该）为此重启程序。
+constexpr int kReconnectInitialMs = 5000;
+constexpr int kReconnectMaxMs     = 60000;
+// update_topo 周期重播。后台在设备"掉线"时会**永久退订**该设备的 osd/state 主题
+// （见下方 onMqttStateChanged 的注释），退订之后我们发什么都进不去，
+// 只有重播 update_topo 才能让后台重新订阅。这是唯一的自愈入口。
+constexpr int kTopoReannounceMs   = 60000;
+} // namespace
+
 DjiCloudClient::DjiCloudClient(QObject* parent) :
     QObject(parent),
     _mqttClient(new QMqttClient(this)),
     _osdTimer(new QTimer(this)),
-    _stateTimer(new QTimer(this))
+    _stateTimer(new QTimer(this)),
+    _reconnectTimer(new QTimer(this)),
+    _topoTimer(new QTimer(this))
 {
     connect(_mqttClient, &QMqttClient::stateChanged, this, &DjiCloudClient::onMqttStateChanged);
     connect(_mqttClient, &QMqttClient::errorChanged,  this, &DjiCloudClient::onMqttErrorChanged);
@@ -43,6 +58,15 @@ DjiCloudClient::DjiCloudClient(QObject* parent) :
     // 补发时机见 status_reply 处理；这里定期重发防止任何丢失导致网页相机下拉框为空。
     _stateTimer->setInterval(10000);
     connect(_stateTimer, &QTimer::timeout, this, &DjiCloudClient::stateTimerTick);
+
+    // 重连：单发，延时由 _reconnectDelayMs 决定（退避），触发即重连一次；
+    // 失败会再次走 Disconnected 分支重新排期，成功则在 Connected 分支复位。
+    _reconnectTimer->setSingleShot(true);
+    connect(_reconnectTimer, &QTimer::timeout, this, &DjiCloudClient::startMqttConnection);
+
+    // update_topo 周期重播：让后台在"忘记"我们之后能自己重新订阅（详见常量注释）。
+    _topoTimer->setInterval(kTopoReannounceMs);
+    connect(_topoTimer, &QTimer::timeout, this, &DjiCloudClient::updateTopo);
 }
 
 DjiCloudClient::~DjiCloudClient()
@@ -86,11 +110,17 @@ void DjiCloudClient::connectToCloud(const QString& host, const QString& username
     _username = username;
     _password = password;
     _callback = callback;
+    _userDisconnect = false;
     startMqttConnection();
 }
 
 void DjiCloudClient::disconnectFromCloud()
 {
+    // 主动断开要能"断干净"：置位后所有断线路径都不再排重连，
+    // 否则用户点了断开，5 秒后自己又连回来。
+    _userDisconnect = true;
+    _reconnectTimer->stop();
+    _topoTimer->stop();
     if (_mqttClient->state() == QMqttClient::Connected) {
         _mqttClient->disconnectFromHost();
     }
@@ -111,6 +141,7 @@ void DjiCloudClient::thingConnect(const QString& username, const QString& passwo
     _username = username;
     _password = password;
     _callback = callback;
+    _userDisconnect = false;
     startMqttConnection(); // 沿用已有 _host
 }
 
@@ -178,6 +209,8 @@ void DjiCloudClient::startMqttConnection()
         return;
     }
 
+    _reconnectTimer->stop(); // 无论从哪条路径进来，都已经在连了
+
     parseMqttUrl(_host);
 
     if (_useWebSocket) {
@@ -215,11 +248,21 @@ void DjiCloudClient::onMqttStateChanged(QMqttClient::ClientState state)
         _connected = false;
         _osdTimer->stop();
         _stateTimer->stop();
-        // TODO 添加设置按钮
-        // SettingsManager::instance()->cloudServerSettings().connect
+        _topoTimer->stop();
+        // 断线必须自己连回来 —— 这是本条链路上唯一会自愈的地方。
+        // 后台的判在线模型是 Redis 里 online:<sn> 的 60 秒 TTL，而它的
+        // GlobalScheduleService 每 30 秒扫一次：谁剩不到 30 秒，就当成掉线，
+        // **删掉在线键、退订该设备的 osd/state 主题、从 SDKManager 里注销**。
+        // 退订之后就再没有东西能让它重新订阅了 —— 我们发出去的 osd 会被 broker
+        // 直接丢掉，表现为"地面站在云端怎么都不上线，而且永远不恢复"，
+        // 只有重启 DGCS 或重播 update_topo 才能救回来。所以这里一旦断开就重连，
+        // 重连成功后会重新 publish update_topo，后台才会把我们重新登记上。
+        scheduleReconnect(QStringLiteral("连接断开"));
         break;
     case QMqttClient::Connected:
         _connected = true;
+        _reconnectTimer->stop();
+        _reconnectDelayMs = kReconnectInitialMs; // 连上了就把退避复位
         subscribeTopics();
         updateTopo();
         // 注意：这里不立即发 state。后台只有在处理完 update_topo 后才会订阅
@@ -227,6 +270,14 @@ void DjiCloudClient::onMqttStateChanged(QMqttClient::ClientState state)
         // status_reply 时补发（见 onMqttMessage），并靠 _stateTimer 周期兜底。
         sendState(); //实际情况是服务器一直在运行，已经订阅了相关主题
         _stateTimer->start();
+        // osd 在这里就开始跑，不再等 status_reply。
+        // 原先的链路是"收到 status_reply 才 _osdTimer->start()"，一旦那条应答丢了
+        // （后台还没起来、订阅晚了一步、broker 抖一下），osd 就永远不开始 ——
+        // 而 _connected 还是 true，界面上一切正常，60 秒后云端却把地面站标成掉线。
+        // 早发出去的 osd 顶多被 broker 丢掉（后台还没订阅），不会有副作用；
+        // status_reply 的处理保持不变，它只是把同一个定时器再 start 一次。
+        _osdTimer->start();
+        _topoTimer->start();
         if (!_callback.isEmpty()) {
             invokeJsCallback(_callback, QJsonValue(true));
         }
@@ -238,12 +289,32 @@ void DjiCloudClient::onMqttStateChanged(QMqttClient::ClientState state)
     emit connectStateChanged(_connected);
 }
 
+/// 排一次重连（幂等：已经在排就什么都不做，避免同一时刻被 stateChanged 与
+/// errorChanged 各排一次）。延时按退避增长，连上后由 Connected 分支复位。
+void DjiCloudClient::scheduleReconnect(const QString& why)
+{
+    if (_userDisconnect) {
+        qInfo() << "[DjiCloud] 用户已主动断开，不重连。原因:" << why;
+        return;
+    }
+    if (_reconnectTimer->isActive()) {
+        return;
+    }
+    const int delay = _reconnectDelayMs;
+    qWarning() << "[DjiCloud] MQTT 连接丢失，将在" << delay << "ms 后重连。原因:" << why;
+    _reconnectTimer->start(delay);
+    _reconnectDelayMs = qMin(_reconnectDelayMs * 2, kReconnectMaxMs);
+}
+
 void DjiCloudClient::onMqttErrorChanged(QMqttClient::ClientError error)
 {
     if (error == QMqttClient::NoError) {
         return;
     }
     qWarning() << "[DjiCloud] MQTT error:" << static_cast<int>(error) << "host:" << _host;
+    // broker 没起来时 connectToHost 可能只报 error 而不走 Disconnected 分支
+    // （state 本来就已经是 Disconnected），补一条重连排期，两条路径都盖住。
+    scheduleReconnect(QStringLiteral("MQTT error ") + QString::number(static_cast<int>(error)));
 }
 
 void DjiCloudClient::subscribeTopics()
@@ -332,8 +403,8 @@ void DjiCloudClient::sendOsd()
                          QJsonDocument(gcsMsg).toJson(QJsonDocument::Compact));
 
     // 无人机 osd
+    QJsonObject droneMsg;
     if (_activeVehicle) {
-        QJsonObject droneMsg;
         droneMsg["tid"]       = QUuid::createUuid().toString(QUuid::WithoutBraces);
         droneMsg["bid"]       = QUuid::createUuid().toString(QUuid::WithoutBraces);
         droneMsg["timestamp"] = QDateTime::currentMSecsSinceEpoch();
@@ -434,6 +505,9 @@ void DjiCloudClient::onMqttMessage(const QByteArray& message, const QMqttTopicNa
             _osdTimer->start();
             _stateTimer->stop();
             sendState();
+            // 后台收下并处理了这条 update_topo（Redis 里 online:<gcsSn> 因此续了期），
+            // 对设备侧来说这就是"地面站在后台在线"的证据，点亮抽屉里那台本机地面站。
+            emit topologyAcked();
         }
     } else if (topic.name() == QStringLiteral("thing/product/") + gcsSn + QStringLiteral("/services")) {
         handleServices(msg);
@@ -469,12 +543,33 @@ void DjiCloudClient::handleServices(const QJsonObject& msg)
         return;
     }
     if (method == QStringLiteral("drc_mode_enter")) {
-        if (_drcClient) _drcClient->enterDrcMode(tid, bid, data);
+        if (_drcClient) _drcClient->handleDrcModeEnter(tid, bid, data);
+        else sendServicesReply(tid, bid, method, 1, QJsonObject());
+        return;
+    }
+    if (method == QStringLiteral("drc_mode_exit")) {
+        if (_drcClient) _drcClient->handleDrcModeExit(tid, bid, data);
+        else sendServicesReply(tid, bid, method, 1, QJsonObject());
+        return;
+    }
+    if (method == QStringLiteral("flight_authority_grab")) {
+        if (_drcClient) _drcClient->handleFlightAuthorityGrab(tid, bid, data);
+        else sendServicesReply(tid, bid, method, 1, QJsonObject());
+        return;
+    }
+    if (method == QStringLiteral("payload_authority_grab")) {
+        if (_drcClient) _drcClient->handlePayloadAuthorityGrab(tid, bid, data);
         else sendServicesReply(tid, bid, method, 1, QJsonObject());
         return;
     }
 
-    // 其余 services 一律回"不支持"（相机/云台/红外 payload 服务属 Phase 2）
+    // 负载控制：相机 / 云台。DRC 未接管时这些方法也走主连接的 services，
+    // 所以放在这里而不是 drc/down 里。
+    if (_drcClient && _drcClient->handlePayloadControl(method, tid, bid, data)) {
+        return;
+    }
+
+    // 其余 services 一律回"不支持"（红外、日志、升级等属后续阶段）
     qWarning() << "[DjiCloud] unsupported service:" << method;
     sendServicesReply(tid, bid, method, 1, QJsonObject());
 }

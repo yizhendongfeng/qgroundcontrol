@@ -229,6 +229,10 @@ public:
     /// 用 CloudServerSettings 的 gcsSn / droneSn 预置"本机"条目，避免抽屉打开是空的
     void seedLocalDevices();
 
+    /// 后台受理了本机地面站的拓扑上报（收到 sys/product/<gcsSn>/status_reply，result=0）。
+    /// 这是"地面站在后台眼里已上线"的一条直接证据 —— 见 .cc 里的长注释。
+    void noteGatewayAck();
+
 signals:
     void connectedChanged();
     void urlChanged();
@@ -248,6 +252,7 @@ private slots:
     void onTextMessageReceived(const QString& message);
     void onReconnectTimeout();
     void onOsdFlushTimeout();
+    void onOnlineSweepTimeout();
 
 private:
     // 连接
@@ -266,6 +271,8 @@ private:
     void _appendMessage(const QString& bizCode, const QJsonObject& data);
 
     DjiCloudDeviceInfo* _deviceFor(const QString& sn, bool createIfMissing);
+    /// 记一次"后台还认这台设备"的证据：置在线 + 刷新时间戳（宽限窗口见 BackendEvidenceTimeoutMs）
+    void _noteBackendEvidence(const QString& sn);
     void _refreshCounts();
     static QString _summarize(const QString& bizCode, const QJsonObject& data);
 
@@ -273,6 +280,12 @@ private:
     static constexpr int ReconnectMaxDelayMs     = 20000;
     static constexpr int ReconnectMaxAttempts    = 5;
     static constexpr int OsdFlushIntervalMs      = 250;     ///< OSD 合流刷新间隔
+    /// 「后台还认这台设备」的宽限窗口。证据有三条，取最慢那条做上限：
+    /// osd 回推（我们 2 秒发一条，后台每条都回推）、device_online 推送、
+    /// status_reply（后台对我们每 60 秒重播的 update_topo 回一条）。
+    /// 150 秒 = 2.5 个 topo 周期，丢一两条、重连退避 60 秒都不会误判掉线。
+    static constexpr int BackendEvidenceTimeoutMs = 150000;
+    static constexpr int OnlineSweepIntervalMs    = 5000;   ///< 掉线扫描周期
     static constexpr int MaxMessages             = 200;
     static constexpr int MaxHms                  = 200;
     static constexpr int MaxProgress             = 50;
@@ -280,6 +293,7 @@ private:
     QWebSocket* _socket = nullptr;
     QTimer*     _reconnectTimer = nullptr;
     QTimer*     _osdFlushTimer = nullptr;
+    QTimer*     _onlineSweepTimer = nullptr;
 
     QmlObjectListModel* _devices = nullptr;
     QmlObjectListModel* _hms = nullptr;
@@ -296,4 +310,5 @@ private:
 
     QHash<QString, QJsonObject> _pendingOsd;   ///< sn -> host（等待合流刷新）
     QSet<QString>               _dirtyOsdSn;
+    QHash<QString, qint64>      _lastEvidenceMs;  ///< sn -> 最近一次"后台还认它"的时刻
 };

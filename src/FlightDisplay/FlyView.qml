@@ -124,8 +124,14 @@ Item {
         anchors.topMargin:   ScreenTools.defaultFontPixelHeight * 3
         map:                 mapControl
         showElementPanel:    true
+        // 指令飞行（DRC）那颗键与面板只在飞行视图给 —— 规划页上摆一颗能发摇杆的键是祸不是福
+        showDrc:             true
         z:                   QGroundControl.zOrderWidgets
     }
+
+    // 云端遥控中的状态条曾经摆在这里（地图底部居中，内容 = "云端遥控中 · 呼号" +
+    // "摇杆由云端驱动，本机输入已锁定"）。现在并进了工具栏那颗云端控制图标的抽屉 ——
+    // 地图上少一块常驻浮层，两处状态也不再各说各话。
 
     Rectangle {
         id:              itemLoad   // 负载界面

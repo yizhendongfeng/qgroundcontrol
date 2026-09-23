@@ -33,6 +33,9 @@
 // Comms
 #include "QGCSerialPortInfoTest.h"
 
+// DjiBridge
+#include "DjiDrcControlMapperTest.h"
+
 // FactSystem
 #include "FactSystemTestGeneric.h"
 #include "FactSystemTestPX4.h"
@@ -137,6 +140,9 @@ int runTests(bool stress, QStringView unitTestOptions)
 
     // Comms
     UT_REGISTER_TEST(QGCSerialPortInfoTest)
+
+    // DjiBridge
+    UT_REGISTER_TEST(DjiDrcControlMapperTest)
 
     // FactSystem
     UT_REGISTER_TEST(FactSystemTestGeneric)

@@ -1908,17 +1908,29 @@ void Vehicle::_remoteControlRSSIChanged(uint8_t rssi)
     }
 }
 
+void Vehicle::setCloudStickLock(bool locked)
+{
+    if (_cloudStickLock == locked) {
+        return;
+    }
+    _cloudStickLock = locked;
+}
+
 void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust)
 {
-    // The following if statement prevents the virtualTabletJoystick from sending values if the standard joystick is enabled
-    if (!_joystickEnabled) {
-        sendJoystickDataThreadSafe(
-                    static_cast<float>(roll),
-                    static_cast<float>(pitch),
-                    static_cast<float>(yaw),
-                    static_cast<float>(thrust),
-                    0);
+    // 两个停发条件：
+    //  - _joystickEnabled：插了真实手柄时不理会屏幕摇杆（原有行为）
+    //  - _cloudStickLock：云端 DRC 持权期间本地的 25Hz 流会盖掉云端的 10Hz 指令。
+    //    实测云端指令因此只有正确幅度的 ~1/30（航向 0.2°/s、升降 0.032 m/s）。
+    if (_joystickEnabled || _cloudStickLock) {
+        return;
     }
+    sendJoystickDataThreadSafe(
+                static_cast<float>(roll),
+                static_cast<float>(pitch),
+                static_cast<float>(yaw),
+                static_cast<float>(thrust),
+                0);
 }
 
 void Vehicle::_say(const QString& text)
@@ -3890,7 +3902,10 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
 
     mavlink_message_t message;
 
-    // Incoming values are in the range -1:1
+    // roll/pitch/yaw 传进来是 [-1,1]，thrust 是 **[0,1]，0.5 = 悬停** —— 四路并非同一值域。
+    // PX4 把 MANUAL_CONTROL.z 读作 [0,1000]（500 = 悬停），QGC 的手柄路径与屏幕虚拟摇杆
+    // 都按 [0,1] 送；thrust 写成 [-1,1] 的调用方会被飞控读成"中立即全速下降"。
+    // 详见 DjiDrcControlMapper.cc 的 kThrottleNeutral。
     float axesScaling =         1.0 * 1000.0;
     float newRollCommand =      roll * axesScaling;
     float newPitchCommand  =    pitch * axesScaling;    // Joystick data is reverse of mavlink values

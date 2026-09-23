@@ -191,6 +191,12 @@ ApplicationWindow {
         window: mainWindow
     }
 
+    /// 云端接管 / 停桨弹窗的宿主。**只许有这一个实例** —— 那些请求是全局信号，
+    /// 多一个实例就是多弹一个窗（FlyView 与 PlanView 各一份面板的旧结构就是这么弹两次的）。
+    /// 详见 DrcRequestDialogs.qml 的头注释。
+    DrcRequestDialogs {
+    }
+
     property bool _forceClose: false
 
     function finishCloseProcess() {
@@ -739,9 +745,13 @@ ApplicationWindow {
     //-------------------------------------------------------------------------
     //-- Indicator Drawer
 
-    function showIndicatorDrawer(drawerComponent, indicatorItem) {
+    /// @param alignRightEdge true 时抽屉的**右边缘**贴住指示器的右边缘，而不是默认的
+    ///        居中对齐。工具栏右端那几个指示器（云服务、指令飞行）离窗口边只剩几十像素，
+    ///        居中对齐会被下面的 clamp 推到窗口内侧，跟指示器差开一大截。
+    function showIndicatorDrawer(drawerComponent, indicatorItem, alignRightEdge) {
         indicatorDrawer.sourceComponent = drawerComponent
         indicatorDrawer.indicatorItem = indicatorItem
+        indicatorDrawer.alignRightEdge = !!alignRightEdge
         indicatorDrawer.open()
     }
 
@@ -769,12 +779,21 @@ ApplicationWindow {
 
         property var sourceComponent
         property var indicatorItem
+        /// 见 showIndicatorDrawer：右边缘对齐指示器，而不是居中对齐
+        property bool alignRightEdge: false
 
         property bool _expanded:    false
         property real _margins:     ScreenTools.defaultFontPixelHeight / 4
 
         function calcXPosition() {
             if (indicatorItem) {
+                // Popup 的外宽 = 内容宽 + 两侧 padding，所以"右边缘落在哪儿"就是
+                // x + contentWidth + padding*2 —— 下面两条分支都按这个反推 x。
+                if (alignRightEdge) {
+                    var xRight = indicatorItem.mapToItem(mainWindow.contentItem, indicatorItem.width, 0).x
+                    return Math.max(_margins, Math.min(xRight - contentItem.implicitWidth - (indicatorDrawer.padding * 2),
+                                                       mainWindow.contentItem.width - contentItem.implicitWidth - _margins - (indicatorDrawer.padding * 2)))
+                }
                 var xCenter = indicatorItem.mapToItem(mainWindow.contentItem, indicatorItem.width / 2, 0).x
                 // console.log("min:", xCenter - (contentItem.implicitWidth / 2), ", ", mainWindow.contentItem.width - contentItem.implicitWidth - _margins - (indicatorDrawer.padding * 2) - (ScreenTools.defaultFontPixelHeight / 2))
                 return Math.max(_margins, Math.min(xCenter - (contentItem.implicitWidth / 2), mainWindow.contentItem.width - contentItem.implicitWidth - _margins - (indicatorDrawer.padding * 2) - (ScreenTools.defaultFontPixelHeight / 2)))
@@ -791,6 +810,7 @@ ApplicationWindow {
         onClosed: {
             _expanded                               = false
             indicatorItem                           = undefined
+            alignRightEdge                          = false
             indicatorDrawerLoader.sourceComponent   = undefined
         }
 

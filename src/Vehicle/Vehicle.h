@@ -292,6 +292,18 @@ public:
 
     Q_INVOKABLE void virtualTabletJoystickValue(double roll, double pitch, double yaw, double thrust);
 
+    /// 云端 DRC 持权期间锁住本地杆量入口（屏幕虚拟摇杆 + 真实手柄）。
+    ///
+    /// 不复用 _joystickEnabled 那个标志：它会被 saveJoystickSettings() 持久化进
+    /// QSettings、会在手柄热插拔时由 _loadJoystickSettings() 从磁盘重新推导
+    /// （云端这把锁会被无声抹掉），而且它还通过 JoystickIndicator.qml 显示给用户。
+    /// 锁必须是一个只活在内存里、只由 DRC 控制权驱动的独立状态。
+    ///
+    /// 注意 sendJoystickDataThreadSafe 本身**不能**挡 —— 云端那条路径正是走它出去的。
+    /// 挡的是两个本地入口：virtualTabletJoystickValue 与 Joystick::_handleAxis。
+    void setCloudStickLock(bool locked);
+    bool cloudStickLock() const { return _cloudStickLock; }
+
     /// Command vehicle to return to launch
     Q_INVOKABLE void guidedModeRTL(bool smartRTL);
 
@@ -1016,6 +1028,9 @@ private:
     QFile               _csvLogFile;
 
     bool            _joystickEnabled = false;
+    /// 云端 DRC 持权期间为 true：本地两个杆量入口都据此停发。
+    /// 见 setCloudStickLock() 的说明（为什么不复用 _joystickEnabled）。
+    bool            _cloudStickLock = false;
     bool _isActiveVehicle = false;
 
     QGeoCoordinate  _coordinate;

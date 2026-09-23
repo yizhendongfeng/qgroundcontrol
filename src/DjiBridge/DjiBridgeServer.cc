@@ -18,6 +18,7 @@
 #include "DjiCloudMapClient.h"
 #include "DjiDrcClient.h"
 #include "DjiWsClient.h"
+#include "DjiWaylineManager.h"
 
 #include <QtCore/QFile>
 #include <QtCore/QTextStream>
@@ -72,6 +73,11 @@ void DjiBridgeServer::init()
             this, &DjiBridgeServer::cloudWsStateChanged);
     connect(_wsClient, &DjiWsClient::countsChanged,
             this, &DjiBridgeServer::cloudWsCountsChanged);
+    // 后台受理了我们的拓扑上报（status_reply）—— 设备侧能证明"地面站在后台在线"的
+    // 主连接证据。ws 那条链路上后台几乎不发本机地面站的 device_online（见 DjiWsClient.cc），
+    // 所以这条必须接上，否则抽屉里本机地面站永远是灰的。
+    connect(_cloudClient, &DjiCloudClient::topologyAcked,
+            _wsClient, &DjiWsClient::noteGatewayAck);
 
     // 地图元素：ws 推送 + REST 都在 DjiCloudMapClient 里，这里只接线与转发 Q_PROPERTY
     _mapClient = new DjiCloudMapClient(this);
@@ -102,6 +108,10 @@ void DjiBridgeServer::init()
             _mapClient, &DjiCloudMapClient::onWsFlightArea);
     connect(_mapClient, &DjiCloudMapClient::flightAreasChanged,
             this, &DjiBridgeServer::cloudFlightAreaChanged);
+
+    // 航线库：列表/收藏/上传/下载 + 本地 .plan 双向转换。
+    // 同 _wsClient，必须建在 QML 引擎之前 —— djiWayline 是 CONSTANT 属性，只求值一次。
+    _waylineManager = new DjiWaylineManager(this);
 
     CloudServerSettings* cloudSettings = SettingsManager::instance()->cloudServerSettings();
     qInfo() << "[DjiBridge] nativeCloudConnect:" << cloudSettings->nativeCloudConnect()->rawValue()

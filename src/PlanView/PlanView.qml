@@ -511,6 +511,16 @@ Item {
                 }
             }
 
+            // 云端航线的航迹。只在云端那页显示 —— 这页看的是库里那条航线，
+            // 和编辑器里当前的任务不是一回事，混着画会让人以为任务被改了
+            MapPolyline {
+                path:       _root._cloudRouteCoords
+                line.width: 3
+                line.color: "#2f7fd1"
+                visible:    planTabBar.currentIndex === 1 && _root._cloudRouteCoords.length > 1
+                z:          QGroundControl.zOrderWaypointLines
+            }
+
             // UI for splitting the current segment
             MapQuickItem {
                 id:             splitSegmentItem
@@ -644,6 +654,13 @@ Item {
                     Layout.alignment: Qt.AlignHCenter
                     visible:    QGroundControl.corePlugin.options.enablePlanViewSelector/*  && !_utmspEnabled*/
                     Component.onCompleted: currentIndex = 0
+                    // 切到云端航线库那一页才拉列表。见 WaylineLibraryView 末尾的注释：
+                    // 启动时自动拉会在云端没连的情况下显示「获取航线列表失败」。
+                    onCurrentIndexChanged: {
+                        if (currentIndex === 1) {
+                            waylineLibrary.refresh(1)
+                        }
+                    }
                     QGCTabButton {
                         text:       qsTr("Local Mission")
                     }
@@ -678,6 +695,41 @@ Item {
                             placeholderText: qsTr("Search plans...")
                             onTextChanged:   newPlanList.model.nameFilters = ["*" + text + "*.plan"]
                         }
+
+                        // 多选条。勾了才能一次传多条到云端（云端没有批量接口，
+                        // 是客户端排队一条条传，见 WaylineUploadDialog）
+                        RowLayout {
+                            Layout.fillWidth:   true
+                            Layout.leftMargin:  _margin * 2
+                            Layout.rightMargin: _margin * 2
+                            spacing:            _margin
+                            visible:            newPlanList.count > 0
+
+                            QGCCheckBox {
+                                text:     qsTr("全选")
+                                checked:  newPlanList.count > 0
+                                          && newPlanList.checkedMissions().length === newPlanList.count
+                                onClicked: {
+                                    newPlanList.setAllChecked(!(newPlanList.checkedMissions().length === newPlanList.count
+                                                                && newPlanList.count > 0))
+                                    // 点击会命令式写 checked，把上面的绑定顶掉，这里装回去
+                                    checked = Qt.binding(function () {
+                                        return newPlanList.count > 0
+                                               && newPlanList.checkedMissions().length === newPlanList.count
+                                    })
+                                }
+                            }
+                            Item { Layout.fillWidth: true }
+                            QGCLabel {
+                                text:           newPlanList.checkedMissions().length > 0
+                                                ? qsTr("已选 ") + newPlanList.checkedMissions().length + qsTr(" 条")
+                                                : ""
+                                font.pointSize: ScreenTools.smallFontPointSize
+                                color:          qgcPal.text
+                                opacity:        0.7
+                            }
+                        }
+
                         PlanListView {
                             id:               newPlanList
                             directory: "NewMission"
@@ -687,85 +739,145 @@ Item {
                         }
                     }
 
-                    /******************** 云端任务 ********************/
-                    ColumnLayout {
-                        Layout.fillHeight:     true
-                        Layout.fillWidth:      true
-                        Layout.leftMargin:     _margin
-                        Layout.rightMargin:    _margin
-                        Layout.alignment:      Qt.AlignHCenter
-                        spacing: 5
-                        QGCTextField {
-                            Layout.fillWidth:      true
-                            Layout.leftMargin:     _margin
-                            Layout.rightMargin:    _margin
-                            placeholderText: qsTr("Search plans...")
-                            onTextChanged:   completedPlanList.model.nameFilters = ["*" + text + "*.plan"]
-                        }
-                        PlanListView {
-                            id:        completedPlanList
-                            directory: "CompletedMission"
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
+                    /******************** 云端航线库 ********************/
+                    // 跟「本地任务」同宽同位置，就在这一格里画 —— 云端的条目
+                    // 和本地任务是一一对应的东西，分两种版式反而难找。
+                    WaylineLibraryView {
+                        id:                     waylineLibrary
+                        Layout.fillHeight:      true
+                        Layout.fillWidth:       true
+
+                        onWaylineDownloaded: (kmzPath, name, autoLoad) => {
+                            if (!autoLoad) {
+                                mainWindow.showMessageDialog(qsTr("航线库"),
+                                    qsTr("「") + name + qsTr("」已下载到：") + kmzPath)
+                                return
+                            }
+                            // 下载下来的 kmz 转成 .plan 再载入，否则用户在 QGC 里打不开这个文件
+                            const planPath = _appSettings.missionSavePath + "/NewMission/" + name + ".plan"
+                            if (!waylineLibrary.wayline.convertKmzToPlan(kmzPath, planPath)) {
+                                mainWindow.showMessageDialog(qsTr("航线库"),
+                                    qsTr("打开下载的航线失败：") + waylineLibrary.wayline.lastConvertError())
+                                return
+                            }
+                            _currentPlanFileName = name
+                            _planMasterController.loadFromFile(planPath)
+                            _planMasterController.fitViewportToItems()
+                            // 先切回本地任务页再进编辑模式：地图和左侧工具条都在那一页，
+                            // 留在航线库这页会看不到刚载进来的航线
+                            planTabBar.currentIndex = 0
+                            enterPlanEditMode(true)
                         }
                     }
                 }
 
-                Column {
-                    Layout.fillWidth:      true
-                    Layout.fillHeight:     false
-                    Layout.margins:        _margin * 2
-                    Layout.alignment:      Qt.AlignHCenter | Qt.AlignBottom
-                    spacing:               _margin
+                // 动作栏。图标按钮横排一条，两个页签共用这一套 ——
+                // 只有一端能用的动作（清除 / 上传任务）在云端那页是置灰的，
+                // 而不是藏起来：按钮位置固定，用户才不会每次都重新找
+                RowLayout {
+                    id:                planActionBar
+                    Layout.fillWidth:  true
+                    Layout.fillHeight: false
+                    Layout.margins:    _margin * 2
+                    Layout.alignment:  Qt.AlignHCenter | Qt.AlignBottom
+                    spacing:           _margin / 2
+
+                    /// 当前是不是「本地任务」那一页（0=本地，1=云端航线库）
+                    readonly property bool _localTab: planTabBar.currentIndex === 0
+                    /// 「上传到云端」传的始终是**本地**勾选的任务，两个页签同一条件
+                    readonly property bool _hasLocalSelection: newPlanList.selectedMissions().length > 0
+                    readonly property bool _cloudBusy: !!(djiBridgeServer && djiBridgeServer.djiWayline
+                                                          && djiBridgeServer.djiWayline.busy)
+
                     QGCButton {
-                        width:   parent.width
-                        text:    qsTr("新建任务")
-                        onClicked:          {
+                        Layout.fillWidth: true
+                        iconSource:       "/qmlimages/Plus.svg"
+                        enabled:          planActionBar._localTab
+                        opacity:          enabled ? 1 : 0.45
+                        ToolTip.text:     qsTr("新建任务")
+                        ToolTip.visible:  hovered && ToolTip.text !== ""
+                        ToolTip.delay:    600
+                        onClicked: {
                             if (_planMasterController.containsItems) {
                                 createPlanRemoveAllPromptDialog.createObject(mainWindow, { mapCenter: _mapCenter(),/* planCreator: object,*/ enableInput: true }).open()
                             }
                         }
-                        function _mapCenter() {
-                            var centerPoint = Qt.point(editorMap.centerViewport.left + (editorMap.centerViewport.width / 2), editorMap.centerViewport.top + (editorMap.centerViewport.height / 2))
-                            return editorMap.toCoordinate(centerPoint, false /* clipToViewPort */)
-                        }
                     }
                     QGCButton {
-                        width:   parent.width
-                        text:    qsTr("清除任务")
-                        enabled: !_planMasterController.offline && !_planMasterController.syncInProgress && _planMasterController.containsItems
+                        Layout.fillWidth: true
+                        iconSource:       "/res/TrashDelete.svg"
+                        enabled:          planActionBar._localTab
+                                          && !_planMasterController.offline
+                                          && !_planMasterController.syncInProgress
+                                          && _planMasterController.containsItems
+                        opacity:          enabled ? 1 : 0.45
+                        ToolTip.text:     qsTr("清除任务")
+                        ToolTip.visible:  hovered && ToolTip.text !== ""
+                        ToolTip.delay:    600
+                        onClicked:        clearButtonClicked()
+                    }
+                    QGCButton {
+                        Layout.fillWidth: true
+                        iconSource:       "/res/ArrowUpload.svg"
+                        visible:          !QGroundControl.corePlugin.options.disableVehicleConnection
+                        enabled:          planActionBar._localTab
+                                          && !_planMasterController.offline
+                                          && !_planMasterController.syncInProgress
+                                          && _planMasterController.containsItems
+                        opacity:          enabled ? 1 : 0.45
+                        ToolTip.text:     qsTr("上传任务到飞控")
+                        ToolTip.visible:  hovered && ToolTip.text !== ""
+                        ToolTip.delay:    600
+                        onClicked:        _planMasterController.upload()
+                    }
+                    QGCButton {
+                        Layout.fillWidth: true
+                        iconSource:       "/res/ArrowDownload.svg"
+                        // 云端那页的「下载」是下勾选的云端航线，跟飞控无关，
+                        // 所以不能被 disableVehicleConnection 一起藏掉
+                        visible:          planActionBar._localTab
+                                          ? !QGroundControl.corePlugin.options.disableVehicleConnection
+                                          : true
+                        enabled:          planActionBar._localTab
+                                          ? (!_planMasterController.offline
+                                             && !_planMasterController.syncInProgress
+                                             && _planMasterController.containsItems)
+                                          : (waylineLibrary.selectedRows.length > 0 && !planActionBar._cloudBusy)
+                        opacity:          enabled ? 1 : 0.45
+                        ToolTip.text:     planActionBar._localTab
+                                          ? qsTr("从飞控下载任务（会覆盖当前方案）")
+                                          : (qsTr("下载已勾选的 ") + waylineLibrary.selectedRows.length + qsTr(" 条云端航线"))
+                        ToolTip.visible:  hovered && ToolTip.text !== ""
+                        ToolTip.delay:    600
                         onClicked: {
-                            clearButtonClicked()
+                            if (planActionBar._localTab) {
+                                downloadClicked(qsTr("Plan overwrite"))
+                            } else {
+                                waylineLibrary.downloadSelected()
+                            }
                         }
                     }
                     QGCButton {
-                        width:   parent.width
-                        text:    qsTr("上传任务")
-                        enabled:         !_planMasterController.offline && !_planMasterController.syncInProgress && _planMasterController.containsItems
-                         visible:        !QGroundControl.corePlugin.options.disableVehicleConnection
-                         onClicked: {
-                            _planMasterController.upload()
-                         }
-                    }
-                    QGCButton {
-                        width:   parent.width
-                        text:    qsTr("下载任务")
-                        enabled:         !_planMasterController.offline && !_planMasterController.syncInProgress && _planMasterController.containsItems
-                        visible:        !QGroundControl.corePlugin.options.disableVehicleConnection
-                        onClicked: {
-                            downloadClicked(qsTr("Plan overwrite"))
+                        Layout.fillWidth: true
+                        iconSource:       "/InstrumentValueIcons/cloud.svg"
+                        visible:          !QGroundControl.corePlugin.options.disableVehicleConnection || !planActionBar._localTab
+                        // 传的就是本地列表里勾选的那几条（没勾选就是当前选中的那一条）。
+                        // 云端那页也看同一个条件 —— 弹窗里列的就是那几条本地任务，
+                        // 一条都没勾时打开它只会得到一个传不了任何东西的空窗
+                        enabled:          planActionBar._hasLocalSelection && !planActionBar._cloudBusy
+                        opacity:          enabled ? 1 : 0.45
+                        ToolTip.text:     {
+                            if (!planActionBar._hasLocalSelection) {
+                                return qsTr("上传到云端（先在「本地任务」页勾选要上传的任务）")
+                            }
+                            return newPlanList.checkedMissions().length > 0
+                                    ? qsTr("上传到云端（已勾选 ") + newPlanList.checkedMissions().length + qsTr(" 条）")
+                                    : qsTr("上传到云端")
                         }
+                        ToolTip.visible:  hovered && ToolTip.text !== ""
+                        ToolTip.delay:    600
+                        onClicked:        uploadSelectedToCloud()
                     }
-                    QGCButton {
-                        width:   parent.width
-                        text:    qsTr("上传到云端")
-                        enabled:         !_planMasterController.offline && !_planMasterController.syncInProgress && _planMasterController.containsItems
-                        visible:        !QGroundControl.corePlugin.options.disableVehicleConnection
-                        onClicked: {
-                            // downloadClicked(qsTr("Plan overwrite"))
-                        }
-                    }
-
                 }
             }
 
@@ -956,6 +1068,7 @@ Item {
         // showElementPanel 为 false —— 这边右侧面板本身就是元素编辑器（第 4 个图层 tab），
         // 再弹一个列表就是两份了
         CloudElementToolBar {
+            id:                  cloudElementToolBar
             anchors.right:       rightPanel.left
             anchors.rightMargin: ScreenTools.defaultFontPixelWidth
             anchors.top:         editorMap.top
@@ -964,6 +1077,152 @@ Item {
             map:                 editorMap
             showElementPanel:    false
             z:                   QGroundControl.zOrderWidgets
+        }
+
+        // 云端航线详情面板。选中航线库里的某条航线后贴在地图右侧 ——
+        // 列表接口只给得出名字/机型/负载/模板/上传者，航点数、起点、规划长度都得
+        // 解析那条航线的 kmz 才有，所以这块面板分两段：上段立刻能显示，下段等解析回来。
+        //
+        // 位置贴在 CloudElementToolBar 的**左边**，不能直接贴 parent.right：那个图标列
+        // 在云端页正好停在窗口最右缘（右侧面板是滑走而非隐藏），贴 parent.right 就是把它盖住。
+        Rectangle {
+            id:                  cloudDetailPanel
+
+            /// 比右侧编辑面板窄一截：这块面板只是「看」的，里面的键值对一行放不下
+            /// 就省略号截断，没必要占满 300px 宽
+            readonly property real _panelWidth: _rightPanelWidth * 0.8
+            /// 面板最多能长到哪。底边原来是锚在 terrainStatus.top 上的，面板就一路
+            /// 抻满整列，六行内容下面空着一大块，看着像盖在地图上一块黑板 ——
+            /// 改成「内容多高就多高」，这里算的是别越过地形状态条的底线
+            readonly property real _maxHeight: (terrainStatus.visible ? terrainStatus.y : parent.height)
+                                               - editorMap.y
+            /// 行距。键值行之间空一点点就够，用 _margin（9px）太空
+            readonly property real _rowGap: ScreenTools.defaultFontPixelHeight / 3
+
+            width:               cloudDetailPanel._panelWidth
+            height:              Math.min(contentColumn.implicitHeight + _margin * 2, _maxHeight)
+            color:               qgcPal.window
+            anchors.top:         editorMap.top
+            anchors.right:       cloudElementToolBar.left
+            anchors.rightMargin: _margin
+            // 左面板是「滑走」不是「隐藏」，不能靠滑动判断当前在哪页；
+            // 而站在云端页时编辑模式必然是关的，所以这块面板不会跟编辑器右侧面板打架
+            visible:             planTabBar.currentIndex === 1 && waylineLibrary.hasWaylineInfo
+            z:                   QGroundControl.zOrderWidgets + 1
+
+            /// 当前选中的那条航线（列表接口给的字段）
+            readonly property var _info:    waylineLibrary.currentWayline
+            /// 解析结果（还没回来或失败时是空对象）
+            readonly property var _preview: waylineLibrary.preview
+
+            /// 机型/负载/模板复用列表页那三张枚举表，不在这里抄一份 ——
+            /// 抄了就会有一天跟列表页对不上
+            readonly property var _metaRows: waylineLibrary.hasWaylineInfo ? [
+                { "label": qsTr("机型"),   "value": waylineLibrary._modelText(_info.drone) },
+                { "label": qsTr("负载"),   "value": waylineLibrary._payloadText(_info.payload) },
+                { "label": qsTr("模板"),   "value": waylineLibrary._templateText(_info.template) },
+                { "label": qsTr("上传者"), "value": _info.user ? _info.user : "--" },
+                { "label": qsTr("更新"),   "value": _info.time ? _info.time : "--" }
+            ] : []
+
+            /// 解析出来才有的三项。Number() 包一层：QVariantMap 里的数到 QML
+            /// 不一定就是 JS number，直接 .toFixed 会炸
+            readonly property var _parsedRows: (_preview && _preview.ok) ? [
+                { "label": qsTr("航点数"), "value": String(_preview.waypointCount) },
+                { "label": qsTr("起点"),   "value": (Number(_preview.startLatitude)).toFixed(6)
+                                                    + ", " + (Number(_preview.startLongitude)).toFixed(6) },
+                { "label": qsTr("规划长度"), "value": QGroundControl.unitsConversion
+                                                        .metersToAppSettingsHorizontalDistanceUnits(Number(_preview.lengthMeters)).toFixed(1)
+                                                        + " " + QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString }
+            ] : []
+
+            // 面板浮在地图上，不挡一下鼠标会漏到底下的地图 —— 那一点就落一个航点
+            DeadMouseArea { anchors.fill: parent }
+
+            ColumnLayout {
+                id:              contentColumn
+                anchors.fill:    parent
+                anchors.margins: _margin
+                // 面板高度就是这一列算出来的（见 _maxHeight），所以这一列不能再有
+                // 撑满剩余空间的子项，也不能用 anchors.bottom 去抻它
+                spacing:         cloudDetailPanel._rowGap
+
+                QGCLabel {
+                    Layout.fillWidth: true
+                    text:             cloudDetailPanel._info.name ? cloudDetailPanel._info.name : ""
+                    font.bold:        true
+                    elide:            Text.ElideRight
+                }
+
+                // 键值两列。两段内容（列表接口给的字段 / 解析出来的字段）共用这一个样式，
+                // 只是喂进去的数组不同。
+                //
+                // 字号用 defaultFontPointSize：这一版之前全是 smallFontPointSize，
+                // 1080p/100% 下只有 9pt，这是面板上唯一的实际内容，看不清等于没有
+                Repeater {
+                    model: cloudDetailPanel._metaRows
+                    delegate: RowLayout {
+                        Layout.fillWidth: true
+                        spacing:          4
+                        QGCLabel {
+                            text:           modelData.label + qsTr("：")
+                            opacity:        0.7
+                            font.pointSize: ScreenTools.defaultFontPointSize
+                        }
+                        QGCLabel {
+                            Layout.fillWidth: true
+                            text:             modelData.value
+                            elide:            Text.ElideRight
+                            font.pointSize:   ScreenTools.defaultFontPointSize
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth:       true
+                    Layout.preferredHeight: 1
+                    color:                  qgcPal.groupBorder
+                }
+
+                // ---- 下段：三种状态互斥，一次只显示一种 ----
+                QGCLabel {
+                    Layout.fillWidth: true
+                    visible:          waylineLibrary.previewBusy
+                    text:             qsTr("正在取航线文件…")
+                    opacity:          0.7
+                    font.pointSize:   ScreenTools.defaultFontPointSize
+                }
+
+                QGCLabel {
+                    Layout.fillWidth: true
+                    visible:          !waylineLibrary.previewBusy && waylineLibrary.previewFailed
+                    text:             (cloudDetailPanel._preview && cloudDetailPanel._preview.error)
+                                      ? cloudDetailPanel._preview.error
+                                      : qsTr("这条航线的航线文件取不到")
+                    color:            qgcPal.warningText
+                    wrapMode:         Text.WordWrap
+                    font.pointSize:   ScreenTools.defaultFontPointSize
+                }
+
+                Repeater {
+                    model: cloudDetailPanel._parsedRows
+                    delegate: RowLayout {
+                        Layout.fillWidth: true
+                        spacing:          4
+                        QGCLabel {
+                            text:           modelData.label + qsTr("：")
+                            opacity:        0.7
+                            font.pointSize: ScreenTools.defaultFontPointSize
+                        }
+                        QGCLabel {
+                            Layout.fillWidth: true
+                            text:             modelData.value
+                            elide:            Text.ElideRight
+                            font.pointSize:   ScreenTools.defaultFontPointSize
+                        }
+                    }
+                }
+            }
         }
         //-------------------------------------------------------
         // Right Panel Controls
@@ -1335,6 +1594,7 @@ Item {
             terrainButtonChecked:   terrainStatus.visible
             onTerrainButtonClicked: terrainStatus.toggleVisible()
         }
+
     }
 
     function showLoadFromFileOverwritePrompt(title) {
@@ -1342,6 +1602,162 @@ Item {
                                      qsTr("You have unsaved/unsent changes. Loading from a file will lose these changes. Are you sure you want to load from a file?"),
                                      Dialog.Yes | Dialog.Cancel,
                                      function() { _planMasterController.loadFromSelectedFile() } )
+    }
+
+    /// 上传队列跑完之后收尾：刷新云端列表、切到云端那页、清掉本地勾选。
+    /// 写成根对象上的函数而不是直接写在 Component 里 —— Component 里的箭头
+    /// 函数碰 planTabBar / newPlanList 这些后声明的 id 容易踩作用域的坑
+    function _afterCloudUpload(doneCount, failCount) {
+        if (doneCount === 0) {
+            return
+        }
+        // 传成功了就切到云端那页，让用户直接看到刚上去的航线
+        waylineLibrary.refreshAfterUpload()
+        if (planTabBar.currentIndex !== 1) {
+            planTabBar.currentIndex = 1
+        }
+        newPlanList.clearChecked()
+    }
+
+    /// 「新建任务」落点要用地图**可视区**（扣掉左右面板）的中心。
+    /// 与上面那个 mapCenter() 不是一回事：那个取的是 editorMap.center ——
+    /// 整块地图的几何中心，把被面板盖住的那部分也算进去了。
+    /// 原来这是写在按钮里的局部函数，按钮改成图标后参数要直接喂给弹窗，
+    /// 放到根对象上更稳
+    function _mapCenter() {
+        var centerPoint = Qt.point(editorMap.centerViewport.left + (editorMap.centerViewport.width / 2),
+                                   editorMap.centerViewport.top + (editorMap.centerViewport.height / 2))
+        return editorMap.toCoordinate(centerPoint, false /* clipToViewPort */)
+    }
+
+    /// 选中那条云航线的航迹，转成 QtPositioning 坐标给地图上的 MapPolyline。
+    /// 经纬度都是 0 的点要跳过：解析失败的航点就是 (0,0)，不跳过会把航线画到几内亚湾去
+    /// （MapFitFunctions.qml 对任务点也是这么处理的）。
+    ///
+    /// pts 是**拍平**的 [lat0, lon0, lat1, lon1, ...]，所以下标要按 2 步走 ——
+    /// 别写成 pts[i][0]。嵌套的 QVariantList 过 QML 边界时会被摊平，
+    /// 按嵌套读会得到一堆 undefined（C++ 那边有同样的注释）
+    ///
+    /// 写成 property 而不是函数：MapPolyline 的 path 和 visible 都要用它，
+    /// 每次读都重算一遍没必要
+    readonly property var _cloudRouteCoords: {
+        var preview = waylineLibrary.preview
+        if (!preview || !preview.ok || !preview.points) {
+            return []
+        }
+        var pts = preview.points
+        var out = []
+        for (var i = 0; i + 1 < pts.length; i += 2) {
+            var lat = Number(pts[i])
+            var lon = Number(pts[i + 1])
+            if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
+                continue
+            }
+            out.push(QtPositioning.coordinate(lat, lon))
+        }
+        return out
+    }
+
+    /// 把云端航迹取景到地图的**可视区**里。做法照 MapFitFunctions.fitMapViewportToAllCoordinates：
+    /// 先算航迹的包围盒，再按「可视区外那圈像素折合多少度」把盒子撑大 ——
+    /// 这样航线两端才不会被左右面板压住。
+    ///
+    /// 必须走 editorMap.setVisibleRegion：直接设 center + zoomLevel 是算不准的，
+    /// 同一个 zoomLevel 在不同纬度覆盖的经度宽不一样。
+    function _fitCloudRoute(points) {
+        if (!points || points.length === 0) {
+            return
+        }
+
+        var north = points[0].latitude
+        var south = north
+        var west  = points[0].longitude
+        var east  = west
+        for (var i = 1; i < points.length; ++i) {
+            north = Math.max(north, points[i].latitude)
+            south = Math.min(south, points[i].latitude)
+            east  = Math.max(east,  points[i].longitude)
+            west  = Math.min(west,  points[i].longitude)
+        }
+
+        // 单点，或者正南北/正东西的一条直线：矩形会退化成点或线，QGeoRectangle
+        // 就不是有效区域了，setVisibleRegion 会把地图一口气推到最大级别。
+        // 这种情况退回「中心 + 一个固定级别」
+        var pad = 0.0005
+        if (north - south < pad || east - west < pad) {
+            editorMap.center    = QtPositioning.coordinate((north + south) / 2, (east + west) / 2)
+            editorMap.zoomLevel = 17
+            return
+        }
+
+        // 可视区四条边各被盖住多少像素。**不要用 editorMap.centerViewport**：
+        // 那个 rect 是按「编辑模式」的叠加层算的 —— 左边算的是 55px 宽的工具条，
+        // 右边算的是编辑器的 rightPanel；而云端页盖在地图上的是 300px 的任务左栏
+        // 加右边这条「元素工具栏 + 详情面板」，两者完全对不上。
+        // 用它量出来的航迹，西端会落到左栏后面 240 来个像素处 —— 看上去就是
+        // 航线从面板边上凭空冒出来。
+        //
+        // 这些面板都是靠锚点滑动进出的（showWidget），滑出去时停到屏幕外，
+        // 所以直接按它们真实的 x 算，不必去猜谁可见
+        var leftInset  = Math.max(leftPanel.x + leftPanel.width, 0)
+        var topInset   = 0
+        var rightEdge  = Math.min(rightPanel.x,
+                                  cloudDetailPanel.visible ? cloudDetailPanel.x : cloudElementToolBar.x)
+        var rightInset = Math.max(editorMap.width - rightEdge, 0)
+        var botInset   = terrainStatus.visible ? Math.max(editorMap.height - terrainStatus.y, 0) : 0
+
+        var vpWidth  = Math.max(editorMap.width - leftInset - rightInset, 1)
+        var vpHeight = Math.max(editorMap.height - topInset - botInset, 1)
+
+        // 再留出这几像素的空。只按「面板盖住多少」撑的话，航迹的两个极值点正好落在
+        // 面板边缘上（而且墨卡托与线性的纬度差还会再挤出一点），看上去像航线钻到面板底下。
+        // 留一点空才是「没有被挡住」
+        var clearance = 12
+
+        // 注意是拿扣掉 clearance 后的尺寸去算每像素多少度：这样航迹占的正好是
+        // 「可视区再往里缩 clearance」那圈，而不是被撑到可视区边上
+        var latPerPixel = (north - south) / Math.max(vpHeight - 2 * clearance, 1)
+        var lonPerPixel = (east  - west)  / Math.max(vpWidth  - 2 * clearance, 1)
+        north = Math.min(north + ((topInset   + clearance) * latPerPixel),  90)
+        south = Math.max(south - ((botInset   + clearance) * latPerPixel), -90)
+        west  = Math.max(west  - ((leftInset  + clearance) * lonPerPixel), -180)
+        east  = Math.min(east  + ((rightInset + clearance) * lonPerPixel),  180)
+
+        // QtPositioning.rectangle 是先左上后右下：(北, 西) → (南, 东)
+        editorMap.setVisibleRegion(QtPositioning.rectangle(QtPositioning.coordinate(north, west),
+                                                          QtPositioning.coordinate(south, east)))
+    }
+
+    /// 云端航线的解析结果回来了就取景。挂在根上而不是列表页里 —— 地图是这边的
+    Connections {
+        target: waylineLibrary
+
+        function onPreviewChanged() {
+            if (waylineLibrary.preview && waylineLibrary.preview.ok) {
+                _root._fitCloudRoute(_root._cloudRouteCoords)
+            }
+        }
+    }
+
+    /// 上传本地勾选的任务到云端。底部动作栏的「上传到云端」两个页签共用这一个入口。
+    /// 刻意不再像原来那样先把页签切回本地任务页：弹窗里本来就列着要传的是哪几条，
+    /// 而传完 _afterCloudUpload 会刷新列表并落到云端那页
+    function uploadSelectedToCloud() {
+        uploadWaylineDialog.createObject(mainWindow, {
+            "wayline":    djiBridgeServer ? djiBridgeServer.djiWayline : null,
+            "missions":   newPlanList.selectedMissions(),
+            "cloudNames": waylineLibrary.loadedNames()
+        }).open()
+    }
+
+    /// 上传本地任务到云端。可以一次多条 —— 后台没有批量登记接口，
+    /// 客户端一条条排队传，每条结果单独记，见 WaylineUploadDialog
+    Component {
+        id: uploadWaylineDialog
+
+        WaylineUploadDialog {
+            onUploadCompleted: (doneCount, failCount) => _afterCloudUpload(doneCount, failCount)
+        }
     }
 
     Component {
