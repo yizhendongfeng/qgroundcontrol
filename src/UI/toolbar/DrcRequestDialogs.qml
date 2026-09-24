@@ -48,6 +48,7 @@ Item {
     property var _authDialog:          null
     property var _emergencyStopDialog: null
     property var _lostDialog:          null
+    property var _releasedDialog:      null
 
     QGCPalette { id: qgcPal }
 
@@ -101,6 +102,24 @@ Item {
             root._lostDialog.heldFlightAuthority = heldFlightAuthority
             root._lostDialog.closed.connect(function() { root._lostDialog = null })
             root._lostDialog.open()
+        }
+
+        /// 云端主动交还控制权（cloud_control_release）。这不是"断开"：DRC 会话还在、
+        /// 链路还在、云端随时能再请求接管 —— 所以不复用上面那个「控制已断开」窗，
+        /// 那个标题会把操作员吓一跳。但要弹，因为交还的那一刻飞机可能正被云端驱动着。
+        /// 只在云端确实拿过控制权时才发（见 DjiDrcClient::handleAuthRelease）。
+        function onRemoteControlReleased(hadFlightAuthority, hadPayloadAuthority) {
+            if (root._releasedDialog) {
+                // 同 onRemoteControlLost：更新而不是丢弃，永远只留一个窗、内容最新
+                root._releasedDialog.hadFlightAuthority   = hadFlightAuthority
+                root._releasedDialog.hadPayloadAuthority  = hadPayloadAuthority
+                return
+            }
+            root._releasedDialog = releasedDialogComponent.createObject(mainWindow)
+            root._releasedDialog.hadFlightAuthority  = hadFlightAuthority
+            root._releasedDialog.hadPayloadAuthority = hadPayloadAuthority
+            root._releasedDialog.closed.connect(function() { root._releasedDialog = null })
+            root._releasedDialog.open()
         }
 
         /// 请求在别处被作废了（本地「收回控制权」、授权释放、DRC 退出）。
@@ -251,6 +270,89 @@ Item {
             // 只通报、不提问：唯一按钮就是「Ok」，点了就关（_accept 自己会 close）。
             // QGCPopupDialog 对 Dialog.Ok 设的是 NoAutoClose —— 点外面关不掉，
             // 这正是"提醒"该有的样子：操作员必须过一下这个窗。
+        }
+    }
+
+    // ---------------- 云端已交还控制权 ----------------
+    // 由 DjiDrcClient::handleAuthRelease 在**真的交还了东西**之后发（cloud_control_release），
+    // 且只在那之前飞行/负载控制权至少有一个在云端手上时才发。
+    // 与上面的「控制已断开」刻意分开：这里会话没断、链路没断，标题不能说"断开"。
+    Component {
+        id: releasedDialogComponent
+
+        QGCPopupDialog {
+            id:      releasedDialog
+            title:   qsTr("云端已交还控制权")
+            buttons: Dialog.Ok
+
+            /// 由 onRemoteControlReleased 赋值（createObject 之后）
+            property bool hadFlightAuthority:  false
+            property bool hadPayloadAuthority: false
+
+            readonly property string _vehicleMode: {
+                var vehicle = QGroundControl.multiVehicleManager.activeVehicle
+                return vehicle ? vehicle.flightMode : ""
+            }
+
+            ColumnLayout {
+                spacing: ScreenTools.defaultFontPixelHeight / 2
+
+                QGCLabel {
+                    Layout.preferredWidth:  Math.max(mainWindow.width / 3, headerMinWidth)
+                    wrapMode:               Text.WordWrap
+                    text:                   qsTr("云端主动交还了控制权。")
+                }
+
+                // 飞行控制权在云端手上时交还，才是"飞机刚被云端驱动过"那一刻 ——
+                // 这一条要显眼。只交还了负载（相机/云台）的话操作员对飞机的操作
+                // 本来就没断过，用下面那句平铺直叙就够了。
+                QGCLabel {
+                    Layout.fillWidth:       true
+                    Layout.maximumWidth:    Math.max(mainWindow.width / 3, headerMinWidth)
+                    visible:                releasedDialog.hadFlightAuthority
+                    wrapMode:               Text.WordWrap
+                    color:                  qgcPal.colorOrange
+                    font.bold:              true
+                    text:                   qsTr("交还前飞行控制权在云端 —— 这架飞机刚才由云端驱动。现在它回到本机了。")
+                }
+
+                QGCLabel {
+                    Layout.fillWidth:       true
+                    Layout.maximumWidth:    Math.max(mainWindow.width / 3, headerMinWidth)
+                    wrapMode:               Text.WordWrap
+                    visible:                releasedDialog.hadFlightAuthority
+                    text:                   qsTr("本机摇杆已解锁，可以直接操作。")
+                }
+
+                // 同「控制已断开」窗：控制权回来 ≠ 杆量吃得下去，模式不对照样被飞控拒掉。
+                QGCLabel {
+                    Layout.fillWidth:       true
+                    Layout.maximumWidth:    Math.max(mainWindow.width / 3, headerMinWidth)
+                    visible:                releasedDialog.hadFlightAuthority && !root.drc.manualControlReady
+                    wrapMode:               Text.WordWrap
+                    color:                  qgcPal.colorRed
+                    text:                   qsTr("但当前飞行模式（%1）不接受手动输入，杆量指令会被飞控拒绝。请先切到 Position / Loiter，再操作。")
+                                                .arg(releasedDialog._vehicleMode.length > 0 ? releasedDialog._vehicleMode : qsTr("未知"))
+                }
+
+                QGCLabel {
+                    Layout.fillWidth:       true
+                    Layout.maximumWidth:    Math.max(mainWindow.width / 3, headerMinWidth)
+                    visible:                releasedDialog.hadPayloadAuthority
+                    wrapMode:               Text.WordWrap
+                    text:                   qsTr("相机 / 云台的负载控制权也已交还本机。")
+                }
+
+                // 交还 ≠ 散会：DRC 会话和链路都还开着。不写这句，操作员会以为
+                // 云端已经下线了，然后对"它怎么又动了"毫无准备。
+                QGCLabel {
+                    Layout.fillWidth:       true
+                    Layout.maximumWidth:    Math.max(mainWindow.width / 3, headerMinWidth)
+                    wrapMode:               Text.WordWrap
+                    color:                  qgcPal.colorGrey
+                    text:                   qsTr("指令飞行会话与链路仍在，云端随时可以再次请求接管。")
+                }
+            }
         }
     }
 }

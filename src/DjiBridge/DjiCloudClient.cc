@@ -80,9 +80,13 @@ void DjiCloudClient::setActiveVehicle(Vehicle* vehicle)
 {
     if (_activeVehicle != vehicle) {
         _activeVehicle = vehicle;
-        // 飞机变化后更新拓扑（设备管理）
+        // 飞机变化后更新拓扑（设备管理）。同时立刻补一次 state：飞机刚上线时，
+        // 它的在线键往往已经过期过一次，后台正好在这期间把 live_capacity 删了，
+        // 补这一下能让相机列表尽快回来，不用等 _stateTimer 那 10 秒。
         if (_connected) {
             updateTopo();
+            sendState();
+            sendFirmwareState();
         }
     }
 }
@@ -269,6 +273,7 @@ void DjiCloudClient::onMqttStateChanged(QMqttClient::ClientState state)
         // thing/product/{sn}/state 主题，立即发送会被 broker 丢弃；改由收到
         // status_reply 时补发（见 onMqttMessage），并靠 _stateTimer 周期兜底。
         sendState(); //实际情况是服务器一直在运行，已经订阅了相关主题
+        sendFirmwareState();
         _stateTimer->start();
         // osd 在这里就开始跑，不再等 status_reply。
         // 原先的链路是"收到 status_reply 才 _osdTimer->start()"，一旦那条应答丢了
@@ -435,6 +440,28 @@ void DjiCloudClient::sendState()
     qDebug() << "sendState:" << msg["data"];
 }
 
+/// 固件版本单独一条 state。不能并进 sendState() 的报文里 —— 并进去会让后台把
+/// 整包当成 FirmwareVersion，live_capacity 被丢掉（见 DjiCloudProperties::buildGcsState）。
+void DjiCloudClient::sendFirmwareState()
+{
+    if (!_connected) {
+        return;
+    }
+
+    const QString gcsSn = SettingsManager::instance()->cloudServerSettings()->gcsSn()->rawValueString();
+
+    QJsonObject msg;
+    msg["tid"]       = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    msg["bid"]       = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    msg["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+    msg["gateway"]   = gcsSn;
+    msg["data"]      = DjiCloudProperties::buildGcsFirmwareState();
+
+    _mqttClient->publish(QMqttTopicName(QStringLiteral("thing/product/") + gcsSn + QStringLiteral("/state")),
+                         QJsonDocument(msg).toJson(QJsonDocument::Compact), 1);
+    qDebug() << "sendFirmwareState:" << msg["data"];
+}
+
 void DjiCloudClient::sendServicesReply(const QString& tid, const QString& bid, const QString& method,
                                        int result, const QJsonValue& output)
 {
@@ -499,12 +526,22 @@ void DjiCloudClient::onMqttMessage(const QByteArray& message, const QMqttTopicNa
         // state/osd 主题。此时开始周期上报 osd，并立即补发一次 state（live_capacity），
         // 否则连接时立即发送的 state 因后台尚未订阅而被丢弃，导致服务器后台网页的
         // "选择相机"下拉框为空。
-        // state 无独立应答（协议里没有 state_reply），且只需成功上报一次，因此收到成功
-        // 应答后即关闭周期重发定时器，不再反复重发。
+        //
+        // 这里**不能**停掉 _stateTimer：state 虽然没有独立应答，但 live_capacity 会被
+        // 后台主动删除，只发一次的话下拉框迟早（或一开机就）变空：
+        //   - 飞机没连时本机上报的 sub_devices 是空数组，后台 StatusRouter 按
+        //     "sub_devices 为空 => 走 INBOUND_STATUS_OFFLINE" 处理，把它当成子设备下线，
+        //     顺手清掉子设备父子关系；
+        //   - 后台判在线靠 Redis online:<sn> 的 60 秒 TTL + 每 30 秒一次的
+        //     GlobalScheduleService 扫描，超时即 subDeviceOffline() ——
+        //     而 subDeviceOffline() 里会 deleteCapacityCameraByDeviceSn()，
+        //     把 live_capacity:<droneSn> 整个删掉；
+        //   - 后台重启、飞机重新连上（在线键已过期）都会走同一条删除路径。
+        // 删掉之后没有任何"变化"可触发重发，所以必须保持周期重播，让它自愈。
         if (msg.value("data").toObject().value("result").toInt() == 0) {
             _osdTimer->start();
-            _stateTimer->stop();
             sendState();
+            sendFirmwareState();
             // 后台收下并处理了这条 update_topo（Redis 里 online:<gcsSn> 因此续了期），
             // 对设备侧来说这就是"地面站在后台在线"的证据，点亮抽屉里那台本机地面站。
             emit topologyAcked();

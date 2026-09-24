@@ -353,6 +353,9 @@ void DjiWaylineManager::downloadWayline(int row)
     const QString id = _listModel->idAt(row);
     const QString name = _listModel->nameAt(row);
     if (id.isEmpty()) {
+        // 注意 _noteDownloadOutcome 要在 _fail 之前调：_fail 里可能已经把这批的
+        // 账结清了（最后一条失败就发 batchDownloadFinished），顺序反了会漏掉这一笔
+        _noteDownloadOutcome(false);
         _fail(QStringLiteral("下载失败：行 %1 没有对应的航线 id").arg(row));
         return;
     }
@@ -366,6 +369,7 @@ void DjiWaylineManager::downloadWayline(int row)
                          [this, name](const QString& url, const QString& addressError) {
         if (url.isEmpty()) {
             _setBusy(false);
+            _noteDownloadOutcome(false);
             _fail(QStringLiteral("获取下载地址失败：") + addressError);
             return;
         }
@@ -374,11 +378,13 @@ void DjiWaylineManager::downloadWayline(int row)
         _downloadToFile(QUrl(url), dest, [this](const QString& path, const QString& error) {
             _setBusy(false);
             if (path.isEmpty()) {
+                _noteDownloadOutcome(false);
                 _fail(error);
                 return;
             }
             emit transferProgress(QStringLiteral("download"), 100);
             qInfo() << "航线下载完成：" << path;
+            _noteDownloadOutcome(true);
             emit downloadFinished(path);
         });
     });
@@ -391,7 +397,8 @@ void DjiWaylineManager::downloadWaylines(const QVariantList& rows)
     }
 
     // 每条独立下载、并发进行，进度各自推各自的 100%。
-    // 批量的完成情况由调用方按 downloadFinished 的累计条数判断。
+    // 整批的完成情况由 _noteDownloadOutcome 在这里数（见头文件里 batchDownloadFinished
+    // 的说明：不能让 QML 侧按 errorOccurred 自己数，那个信号是全局的）
     QStringList ids;
     for (const QVariant& row : rows) {
         const QString id = _listModel->idAt(row.toInt());
@@ -405,8 +412,34 @@ void DjiWaylineManager::downloadWaylines(const QVariantList& rows)
     }
 
     qInfo() << "开始批量下载" << ids.size() << "条航线";
+
+    // 先把账本支起来再发请求：downloadWayline 对没有 id 的行是**同步** _fail 的，
+    // 账本后支的话那几笔就记不上了，整批永远收不了尾
+    _batchDownloadActive = true;
+    _batchDownloadTotal  = rows.size();
+    _batchDownloadLanded = 0;
+    _batchDownloadFailed = 0;
     for (const QVariant& row : rows) {
         downloadWayline(row.toInt());
+    }
+}
+
+void DjiWaylineManager::_noteDownloadOutcome(bool landed)
+{
+    if (!_batchDownloadActive) {
+        return;
+    }
+
+    if (landed) {
+        ++_batchDownloadLanded;
+    } else {
+        ++_batchDownloadFailed;
+    }
+
+    if (_batchDownloadLanded + _batchDownloadFailed >= _batchDownloadTotal) {
+        _batchDownloadActive = false;
+        qInfo() << "批量下载结束：成功" << _batchDownloadLanded << "条，失败" << _batchDownloadFailed << "条";
+        emit batchDownloadFinished(_batchDownloadLanded, _batchDownloadFailed);
     }
 }
 
@@ -490,6 +523,36 @@ QString DjiWaylineManager::_parseWaylinePreview(const QString& kmzPath, QVariant
     bool hasStart = false;
     bool hasHeight = false;
     int count = 0;
+
+    // 起飞参考点补成航迹的第 1 个点。
+    //
+    // DJI 的航线里**没有**「起飞」这一项：起飞点单独放在 template.kml 的
+    // takeOffRefPoint 里（"经度,纬度,椭球高"）。而本地 QGC 任务的第 1 项就是起飞点
+    // （NAV_TAKEOFF），只画航点的话这条预览就**比本地航线少一个点，本地的第 2 个点
+    // 变成了第 1 个** —— 用户报的就是它。上传时 takeOffRefPoint 取自 .plan 的
+    // plannedHomePosition，而 QGC 里它就是起飞点那一项，两者本来就是同一个坐标。
+    //
+    // 只动预览画面：不写回任何文件，上传的 kmz、飞机实际飞的航点都不受影响。
+    // 它也不进高度量程（min/maxExecuteHeight）—— 这里给的是椭球高（本机几条任务是
+    // 29m），混进执行高度（5m）的量程里会把量程整个带偏
+    {
+        const QStringList parts = plan.mission.takeOffRefPoint.split(QLatin1Char(','));
+        bool okLon = false;
+        bool okLat = false;
+        const double lon = parts.size() > 0 ? parts.at(0).trimmed().toDouble(&okLon) : 0.0;
+        const double lat = parts.size() > 1 ? parts.at(1).trimmed().toDouble(&okLat) : 0.0;
+        if (okLon && okLat && !(lat == 0.0 && lon == 0.0)) {
+            hasStart = true;
+            startLat = lat;
+            startLon = lon;
+            minLat   = maxLat = lat;
+            minLon   = maxLon = lon;
+            previous = QGeoCoordinate(lat, lon);
+            points.append(lat);
+            points.append(lon);
+            ++count;
+        }
+    }
 
     // 多条航线全并进来。DJI 的 kmz 绝大多数只有一条，真有第二条也不该只画一半
     for (const wpt::Wayline& wayline : plan.waylines) {
@@ -580,7 +643,16 @@ void DjiWaylineManager::_finishPreview(const QString& id, const QString& kmzPath
 
 void DjiWaylineManager::collectWaylines(const QStringList& ids, bool favorite)
 {
+    _collectWaylines(ids, favorite, nullptr);
+}
+
+void DjiWaylineManager::_collectWaylines(const QStringList& ids, bool favorite,
+                                         std::function<void()> onDone)
+{
     if (ids.isEmpty()) {
+        if (onDone) {
+            onDone();
+        }
         return;
     }
 
@@ -606,7 +678,7 @@ void DjiWaylineManager::collectWaylines(const QStringList& ids, bool favorite)
           kPathFavorites.arg(workspaceId()) + QStringLiteral("?") + query.toString(QUrl::FullyEncoded),
           QByteArray(),
           QString(),
-          [this, ids, favorite, action](QNetworkReply* reply) {
+          [this, ids, favorite, action, onDone](QNetworkReply* reply) {
               reply->deleteLater();
               _setBusy(false);
 
@@ -619,9 +691,15 @@ void DjiWaylineManager::collectWaylines(const QStringList& ids, bool favorite)
                       }
                   }
                   _fail(action + QStringLiteral("失败：") + root["message"].toString(reply->errorString()));
+                  if (onDone) {
+                      onDone();
+                  }
                   return;
               }
               qInfo() << action << "成功：" << ids.size() << "条";
+              if (onDone) {
+                  onDone();
+              }
           });
 }
 
@@ -923,6 +1001,71 @@ void DjiWaylineManager::deleteWayline(int row)
           });
 }
 
+void DjiWaylineManager::deleteWaylines(const QVariantList& rows)
+{
+    // 先把行号翻成 id：后面一条条删的时候不能再碰行号，理由见下面 _deleteByIds
+    QStringList ids;
+    for (const QVariant& row : rows) {
+        const QString id = _listModel->idAt(row.toInt());
+        if (!id.isEmpty() && !ids.contains(id)) {
+            ids.append(id);
+        }
+    }
+    if (ids.isEmpty()) {
+        _fail(QStringLiteral("批量删除失败：没有有效的航线 id"));
+        return;
+    }
+
+    qInfo() << "开始批量删除" << ids.size() << "条航线";
+    _setBusy(true);
+    _deleteByIds(ids, 0, QStringList());
+}
+
+void DjiWaylineManager::_deleteByIds(const QStringList& ids, int index, const QStringList& failed)
+{
+    // 一条一条删，全部走完再统一收尾。**中途不能刷新列表**：refreshList 会把行号
+    // 全打乱，正在往下走的这个序列就指到别的航线上去了 —— 所以这里从头发到尾
+    // 只认 id，一次列表都不拉
+    if (index >= ids.size()) {
+        _setBusy(false);
+
+        if (failed.isEmpty()) {
+            qInfo() << "批量删除完成：" << ids.size() << "条";
+            refreshList(_favoritedOnly);
+            return;
+        }
+
+        // 后台不支持 DELETE（和单条删除同一套降级）。先报一条汇总，再去取消收藏；
+        // 等收藏真的落地了才刷列表 —— 抢在它前面刷会把这几行又原样拉回来
+        _lastError = QStringLiteral("后台不支持删除，已将 %1 条取消收藏").arg(failed.size());
+        emit errorOccurred(_lastError);
+        _collectWaylines(failed, false, [this]() { refreshList(_favoritedOnly); });
+        return;
+    }
+
+    const QString id = ids.at(index);
+    const QString path = kPathWaylineById.arg(workspaceId(), id);
+
+    _send(QByteArrayLiteral("DELETE"), path, QByteArray(), QString(),
+          [this, ids, index, failed](QNetworkReply* reply) {
+              reply->deleteLater();
+
+              const QJsonObject root = QJsonDocument::fromJson(reply->readAll()).object();
+              const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+              const bool accepted = reply->error() == QNetworkReply::NoError
+                                    && httpStatus < 400 && root["code"].toInt() == 0;
+
+              QStringList nextFailed = failed;
+              if (!accepted) {
+                  qWarning() << "批量删除：这条删不掉，降级为取消收藏" << ids.at(index)
+                             << "（HTTP" << httpStatus << "，" << root["message"].toString() << "）";
+                  nextFailed.append(ids.at(index));
+              }
+
+              _deleteByIds(ids, index + 1, nextFailed);
+          });
+}
+
 void DjiWaylineManager::renameWayline(int row, const QString& newName)
 {
     const QString id = _listModel->idAt(row);
@@ -1121,6 +1264,29 @@ QString DjiWaylineManager::_normalizeName(const QString& name)
         out.chop(4);
     } else if (out.endsWith(QStringLiteral(".plan"), Qt::CaseInsensitive)) {
         out.chop(5);
+    }
+
+    out = out.trimmed();
+
+    // 云端对航线名有字符集限制，含下面任一字符一律 210002：
+    //     < > : " / | ? * . _ \
+    // （后台 DTO 上的 @Pattern "^[^<>:\"/|?*._\\]+$"，报错原文见下）
+    //
+    // 这个坑比看上去难缠，登记和查询两条接口不是一个态度：
+    //   - POST upload-callback（登记）**不校验**名字，带 `_` 照样入库、上传"成功"；
+    //   - GET waylines（列表）对**每一条返回记录**都过一遍校验（cloud-sdk 的
+    //     CloudSDKHandler 切面 checkResponse -> validData），只要库里躺着一条
+    //     非法名字，整个列表接口就恒回 210002，页面显示"获取航线列表失败"，
+    //     而且是**永久**的 —— 删都删不了，因为删除要先从列表拿到 wayline_id。
+    // 实测：上传 20241230_1Test2025副本.kmz 时登记成功，随后列表全挂。
+    //
+    // 所以必须在**发出之前**换掉，不能指望后台拒绝：统一换成 '-'（在允许集里，
+    // 且和 _ / . 视觉上最接近）。本地 .plan 名字里带日期、下划线是常态。
+    static const QString kForbidden = QStringLiteral("<>:\"/|?*._\\");
+    for (QChar& ch : out) {
+        if (kForbidden.contains(ch)) {
+            ch = QLatin1Char('-');
+        }
     }
 
     return out.trimmed();

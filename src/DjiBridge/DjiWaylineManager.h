@@ -101,6 +101,11 @@ public:
     Q_INVOKABLE void uploadWayline(const QString& name, const QString& finalName);
 
     Q_INVOKABLE void deleteWayline(int row);
+    /// 批量删除，rows 是模型行号列表（QVariantList 方便 QML 传数组）。
+    /// 后台没有批量删除接口，这里按 **id** 一条条删（不能按行号 —— 删完会重拉列表，
+    /// 行号在删除过程中就变了），全部走完再刷新一次列表。
+    /// 后台不支持 DELETE 时，和单条删除同一套降级：把删不掉的那几条取消收藏
+    Q_INVOKABLE void deleteWaylines(const QVariantList& rows);
     Q_INVOKABLE void renameWayline(int row, const QString& newName);
 
     /// 取第 row 条航线的 kmz 下来解析，结果通过 waylinePreviewReady 回传。
@@ -135,6 +140,13 @@ signals:
     void waylinePreviewReady(const QString& id, const QVariantMap& info);
     void duplicateNamesChecked(const QStringList& duplicates);
     void downloadFinished(const QString& kmzPath);
+    /// 一批下载全部跑完了。landed 是拿到的条数，failed 是失败的条数。
+    ///
+    /// **不要在 QML 侧按 downloadFinished 的累计条数 + errorOccurred 自己数**：
+    /// errorOccurred 是全局的（上传失败、预览解析失败、重命名失败都发它），
+    /// 批量下载期间任何一条别的错误都会把计数打乱 —— 要么提前汇总，要么永远
+    /// 汇总不出来。整批的账只有发请求的这一侧算得准，所以在这里数
+    void batchDownloadFinished(int landed, int failed);
     void uploadFinished(const QString& name);
     /// operation 是 "download" / "upload"，percent 为 0..100
     void transferProgress(const QString& operation, int percent);
@@ -206,8 +218,23 @@ private:
     /// 找不到返回空串
     QString _resolveLocalKmz(const QString& name) const;
 
-    /// 归一化上传名：去掉路径和 .kmz 后缀
+    /// 归一化上传名：去掉路径和 .kmz 后缀，并把云端不接受的字符换成 '-'
+    /// （云端名字只允许 ^[^<>:"/|?*._\\]+$，详见 .cc 里的注释）
     static QString _normalizeName(const QString& name);
+
+    /// 批量删除的递归步进：删第 index 个，全部走完后统一收尾（见 .cc 里的注释）。
+    /// failed 是到目前为止删不掉的 id（后台没实现 DELETE 时就是全部）
+    void _deleteByIds(const QStringList& ids, int index, const QStringList& failed);
+
+    /// 批量下载期间，每一条有了结果（成功或失败）都来记一笔；账齐了就发
+    /// batchDownloadFinished。不在批量里时什么都不做（单条下载也走 downloadWayline）
+    void _noteDownloadOutcome(bool landed);
+
+    /// collectWaylines 的实现体 + 一个"做完了"的回调。
+    /// collectWaylines 是 Q_INVOKABLE，参数里不能出现 std::function
+    /// （那样 QML 侧就找不到 2 参数的重载，行内那个「收藏/取消收藏」会直接失效），
+    /// 所以批量删除需要等收藏请求落地时走这个内部版本
+    void _collectWaylines(const QStringList& ids, bool favorite, std::function<void()> onDone);
 
     QNetworkAccessManager* _networkManager = nullptr;
     DjiWaylineListModel* _listModel = nullptr;
@@ -222,6 +249,12 @@ private:
     QHash<QString, QVariantMap> _previewCache;
     /// 正在取/解析的 id，防重复请求
     QSet<QString> _previewInFlight;
+
+    /// 批量下载的账。_batchDownloadActive 为 false 时这三个只是残留值，不用管
+    bool _batchDownloadActive = false;
+    int  _batchDownloadTotal  = 0;
+    int  _batchDownloadLanded = 0;
+    int  _batchDownloadFailed = 0;
 
     QString _lastError;
     QString _lastConvertError;

@@ -78,11 +78,14 @@ QGCPopupDialog {
     // 开工前的重名预判
     // ---------------------------------------------------------------------
 
-    /// 在 taken 之外给 name 找一个没被占用的名字：name、name_2、name_3 …
+    /// 在 taken 之外给 name 找一个没被占用的名字：name、name-2、name-3 …
+    /// 后缀用 '-' 而不是 '_'：云端航线名不许含 `_`（会 210002），下划线加出来的
+    /// 名字发出去就被 C++ 换成 '-' 了 —— 这里就跟它对齐，省得弹窗显示的名字和
+    /// 云端实际存的名字对不上
     function _freeName(name, taken) {
         if (taken.indexOf(name) < 0) return { "name": name, "renamed": false }
         for (var n = 2; n < 1000; ++n) {
-            var candidate = name + "_" + n
+            var candidate = name + "-" + n
             if (taken.indexOf(candidate) < 0) return { "name": candidate, "renamed": true }
         }
         return { "name": name, "renamed": false }
@@ -190,6 +193,9 @@ QGCPopupDialog {
 
         function onUploadFinished(name) {
             if (!root.uploading) return
+            // name 是 C++ 归一化之后真正登记到云端的名字（非法字符已换成 '-'），
+            // 回填到行上，省得弹窗显示一套、云端存另一套
+            root._setJob(root.currentJob, "name", name)
             root._setJob(root.currentJob, "status", "done")
             root.progressPercent = 100
             root._startJob(root.currentJob + 1)
@@ -223,6 +229,18 @@ QGCPopupDialog {
                   : (root.allDone
                      ? qsTr("上传结束：成功 ") + root.doneCount + qsTr(" 条，失败 ") + root.failCount + qsTr(" 条。")
                      : qsTr("将上传 ") + root.jobs.length + qsTr(" 条本地任务到云端（按 M3E / M3E 相机登记）。"))
+        }
+
+        // 字符集提示。本地 .plan 名字里带日期、下划线是常态，不说一句用户会以为
+        // 名字被传坏了（云端只收 ^[^<>:"/|?*._\\]+$，见 DjiWaylineManager::_normalizeName）
+        QGCLabel {
+            Layout.fillWidth: true
+            wrapMode:         Text.WordWrap
+            visible:          !root.uploading && root.jobs.length > 0
+            font.pointSize:   ScreenTools.defaultFontPointSize
+            color:            qgcPal.text
+            opacity:          0.6
+            text:             qsTr("云端航线名不接受 _ . * ? 等字符，上传时会自动换成 -。")
         }
 
         // 重名提示。只在这种情况才占版面

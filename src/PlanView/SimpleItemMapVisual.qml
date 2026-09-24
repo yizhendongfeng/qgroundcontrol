@@ -67,8 +67,18 @@ Item {
         }
     }
 
+    /// 要不要给这个航点摆一个拖拽区。
+    ///
+    /// 原版只在**当前项**上摆一个 —— 得先点一下把它选中，再按下去拖，两步。用户按着
+    /// 一个没选中的航点直接拖，屏幕上什么也不会发生（那个点上没有接鼠标的东西，地图
+    /// 也不会跟着平移），看上去就是「航点拖不动」。这里改成每个带坐标的航点都摆一个，
+    /// 按下去就能拖。
+    ///
+    /// 「点一下选中」这一步没有丢：拖拽区的 MouseArea 会把点击转回本组件（见下面
+    /// dragAreaComponent 的 onClicked），选中/拖动是同一个点上的两种手势，不再要求
+    /// 先选中才能拖
     function updateDragArea() {
-        if (_missionItem.isCurrentItem && map.planView && _missionItem.specifiesCoordinate) {
+        if (map.planView && _missionItem.specifiesCoordinate) {
             showDragArea()
         } else {
             hideDragArea()
@@ -114,7 +124,16 @@ Item {
             itemIndicator:           _itemVisual
             itemCoordinate:          _missionItem.coordinate
             visible:                 _root.interactive
+            // 拖拽区至少要有「正常大小标记」那么大（~1.4 倍默认字号，就是选中时那个
+            // 圆——见 MissionItemIndexLabel 的 mouseAreaFill 也是按这个尺寸外扩的）。
+            // 不然未选中的航点拖拽区只有小标记那么大，按偏一点就落到标记的点击区上，
+            // 只会选中、拖不动 —— 详见 MissionItemIndicatorDrag 里 minTouchSize 的注释
+            minTouchSize:            ScreenTools.defaultFontPixelHeight * 1.4
             onItemCoordinateChanged: _missionItem.coordinate = itemCoordinate
+            // 这个矩形盖在航点标记上面，点击先落在它这儿 —— 得自己转出去，
+            // 否则航点就点不中、也选不上了（原版只给当前项摆拖拽区，当前项本来
+            // 就是选中的，所以这条一直是空的）
+            onClicked:               _root.clicked(_missionItem.sequenceNumber)
         }
     }
 

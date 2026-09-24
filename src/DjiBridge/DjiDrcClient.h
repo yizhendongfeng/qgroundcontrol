@@ -160,6 +160,14 @@ signals:
     /// @param reason 断开原因，直接给操作员看
     /// @param heldFlightAuthority 断开的那一刻飞行控制权是不是还在云端手上
     void remoteControlLost(const QString& reason, bool heldFlightAuthority);
+    /// 云端主动交还控制权（cloud_control_release）。与 remoteControlLost 是两回事：
+    /// 那是**失去**控制源，这是**优雅交还** —— DRC 会话没断，链路还在，云端随时能再来。
+    /// 之所以仍然要弹窗：交还的那一刻飞机可能正被云端驱动着，而操作员不会一直盯着
+    /// 工具栏那颗图标。"控制权回到本机了"得有人当场告诉他，否则他会以为还是云端在飞。
+    /// 本地操作员自己点「收回控制权」不发这个信号 —— 那是他自己的动作，弹窗只是噪音。
+    /// @param hadFlightAuthority 交还的那一刻飞行控制权在不在云端手上
+    /// @param hadPayloadAuthority 交还的那一刻负载控制权（相机/云台）在不在云端手上
+    void remoteControlReleased(bool hadFlightAuthority, bool hadPayloadAuthority);
 
     void drcStatusChanged();
     void drcTelemetryChanged();

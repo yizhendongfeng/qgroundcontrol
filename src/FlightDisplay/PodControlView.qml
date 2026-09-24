@@ -600,6 +600,7 @@ Item {    // 吊舱的设置界面
                         Layout.fillWidth:   true
                         text:               qsTr("OSD")
                         visible:            true
+                        checked:            true
                         onCheckedChanged: {
                             _inyyoA102Pro.osd(checked)
                             console.log("osd chedked:", checked)

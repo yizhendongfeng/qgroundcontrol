@@ -50,7 +50,13 @@ Item {
     property bool   _lightWidgetBorders:                editorMap.isSatelliteMap
     property bool   _addROIOnClick:                     false
     property bool   _singleComplexItem:                 _missionController.complexMissionItemNames.length === 1
-     property int    _editingLayer:                      layerTabBar.currentIndex ? _layers[layerTabBar.currentIndex] : _layerMission // _layerMission//
+    // 编辑图层。**浏览态（_modePlanEdit 为 false）恒为「任务」** —— 那一排图层页签
+    // （任务/围栏/集结/元素）长在右侧面板里，浏览时面板是滑出屏幕的，用户看不见也够不着，
+    // 可它的 currentIndex 还留着上次停在「元素」那一页的选择。于是会出现：地图上明明画着
+    // 任务的航点，点不动也拖不动 —— 航点的 interactive 就绑在这个图层上（见下面地图里
+    // MissionItemMapVisual 的 interactive），切到「元素」页时它们全都变成只读的灰点。
+    // 浏览态既然编辑不了别的图层，就一律按「任务」算，把那次选择留在编辑态里
+    property int    _editingLayer:                      _modePlanEdit && layerTabBar.currentIndex ? _layers[layerTabBar.currentIndex] : _layerMission // _layerMission//
     property int    _toolStripBottom:                   toolStrip.height + toolStrip.y
     property var    _appSettings:                       QGroundControl.settingsManager.appSettings
     property var    _planViewSettings:                  QGroundControl.settingsManager.planViewSettings
@@ -349,6 +355,15 @@ Item {
     function enterPlanEditMode(enter) {
         _modePlanEdit = enter
         if (enter) {
+            // 每次进编辑态都从「任务」那一页开始。上一次可能停在「元素/围栏/集结」，
+            // 带着那页进来，这次要改的航点就成了拖不动的灰点（interactive 绑在图层上）。
+            // 浏览态靠 _editingLayer 里的 _modePlanEdit 兜住，这里管的是编辑态
+            layerTabBar.currentIndex = 0
+            // 进编辑模式就把云端那条蓝线连同航点清掉。用户按的是「编辑这条任务」，
+            // 名字/航点数都来自本地 .plan，屏幕上再挂着服务器那条完全不同的蓝线，
+            // 看着就像任务被改过。清掉预览是唯一的清除口 —— 覆盖层的 model 直接
+            // 由预览算出来，清了预览就必定没得画，不会留下残线
+            waylineLibrary.clearPreview()
             toolStrip.showWidget(true)
             leftPanel.showWidget(false)
             rightPanel.showWidget(true)
@@ -412,6 +427,14 @@ Item {
             property real _rightToolWidth:      rightPanel.width + rightPanel.anchors.rightMargin
             property real _nonInteractiveOpacity:  0.5
 
+            /// 本地任务那条航迹（航点、连线、方向箭头、拆分标记）画不画。
+            /// 停在「云端任务」那一页时不画：那页看的是云端库里点开的那一条，
+            /// 编辑器里当前任务的橙色航迹一起画上去，屏幕上就是两条航线叠着 ——
+            /// 用户报的「点击一个航线时要清除上一个航线留下来的航线」就是它。
+            /// 注意浏览态下 _editingLayer 恒为 _layerMission（见它的注释），所以
+            /// 在云端页那条航迹不是半透明、是**不透明**的，光靠 opacity 压不住
+            readonly property bool _localRouteVisible: planTabBar.currentIndex !== 1
+
             // Initial map position duplicates Fly view position
             Component.onCompleted: editorMap.center = QGroundControl.flightMapPosition
 
@@ -469,7 +492,7 @@ Item {
 
             // Add the mission item visuals to the map
             Repeater {
-                model: _missionController.visualItems
+                model: editorMap._localRouteVisible ? _missionController.visualItems : []
                 delegate: MissionItemMapVisual {
                     map:         editorMap
                     opacity:     _editingLayer == _layerMission /*|| _editingLayer == _layerUTMSP*/ ? 1 : editorMap._nonInteractiveOpacity
@@ -482,13 +505,13 @@ Item {
             // Add lines between waypoints
             MissionLineView {
                 showSpecialVisual:  _missionController.isROIBeginCurrentItem
-                model:              _missionController.simpleFlightPathSegments
+                model:              editorMap._localRouteVisible ? _missionController.simpleFlightPathSegments : []
                 opacity:            _editingLayer == _layerMission /*||  _editingLayer == _layerUTMSP*/  ? 1 : editorMap._nonInteractiveOpacity
             }
 
             // Direction arrows in waypoint lines
             MapItemView {
-                model: _editingLayer == _layerMission/* ||_editingLayer == _layerUTMSP*/ ? _missionController.directionArrows : undefined
+                model: _editingLayer == _layerMission && editorMap._localRouteVisible/* ||_editingLayer == _layerUTMSP*/ ? _missionController.directionArrows : undefined
 
                 delegate: MapLineArrow {
                     fromCoord:      object ? object.coordinate1 : undefined
@@ -500,7 +523,7 @@ Item {
 
             // Incomplete segment lines
             MapItemView {
-                model: _missionController.incompleteComplexItemLines
+                model: editorMap._localRouteVisible ? _missionController.incompleteComplexItemLines : []
 
                 delegate: MapPolyline {
                     path:       [ object.coordinate1, object.coordinate2 ]
@@ -511,14 +534,38 @@ Item {
                 }
             }
 
-            // 云端航线的航迹。只在云端那页显示 —— 这页看的是库里那条航线，
-            // 和编辑器里当前的任务不是一回事，混着画会让人以为任务被改了
-            MapPolyline {
-                path:       _root._cloudRouteCoords
-                line.width: 3
-                line.color: "#2f7fd1"
-                visible:    planTabBar.currentIndex === 1 && _root._cloudRouteCoords.length > 1
-                z:          QGroundControl.zOrderWaypointLines
+            // 云端航线的航迹 + 航点。只在云端那页显示 —— 这页看的是库里那条航线，
+            // 和编辑器里当前的任务不是一回事，混着画会让人以为任务被改了。
+            //
+            // **一段一条线**，不用一条 MapPolyline 装全部点：换一条航线时整批委托
+            // 重造，屏幕上不可能留下上一条航线的线（实测过：一条 polyline 反复改
+            // path，旧的那条会挂在图上不消失）。航点用 MissionItemIndexLabel ——
+            // 就是航线编辑页那些带序号的圆点，两处看起来必须是同一种点
+            MapItemView {
+                model: _root._cloudRouteVisible ? _root._cloudRouteSegments : []
+
+                delegate: MapPolyline {
+                    path:       modelData ? [modelData.from, modelData.to] : []
+                    line.width: 3
+                    line.color: "#2f7fd1"
+                    z:          QGroundControl.zOrderWaypointLines
+                }
+            }
+
+            MapItemView {
+                model: _root._cloudRouteVisible ? _root._cloudRouteWaypoints : []
+
+                delegate: MapQuickItem {
+                    coordinate:   modelData ? modelData.coordinate : QtPositioning.coordinate()
+                    anchorPoint.x: sourceItem.anchorPointX
+                    anchorPoint.y: sourceItem.anchorPointY
+                    z:            QGroundControl.zOrderWaypointLines + 1
+
+                    sourceItem: MissionItemIndexLabel {
+                        label: ""                    // 空串：label 为空的点只画圆圈和序号
+                        index: modelData ? modelData.index : 0
+                    }
+                }
             }
 
             // UI for splitting the current segment
@@ -527,7 +574,7 @@ Item {
                 anchorPoint.x:  sourceItem.width / 2
                 anchorPoint.y:  sourceItem.height / 2
                 z:              QGroundControl.zOrderWaypointLines + 1
-                visible:        _editingLayer == _layerMission //||  _editingLayer == _layerUTMSP
+                visible:        _editingLayer == _layerMission && editorMap._localRouteVisible //||  _editingLayer == _layerUTMSP
 
                 sourceItem: SplitIndicator {
                     onClicked:  _missionController.insertSimpleMissionItem(splitSegmentItem.coordinate,
@@ -659,6 +706,11 @@ Item {
                     onCurrentIndexChanged: {
                         if (currentIndex === 1) {
                             waylineLibrary.refresh(1)
+                        } else {
+                            // 离开云端那页就把预览清掉，地图上的蓝线和航点跟着一起消失 ——
+                            // 留着的话，回到本地任务页看到的还是云端那条航迹，而这一页
+                            // 显示的任务根本不是它
+                            waylineLibrary.clearPreview()
                         }
                     }
                     QGCTabButton {
@@ -698,10 +750,15 @@ Item {
 
                         // 多选条。勾了才能一次传多条到云端（云端没有批量接口，
                         // 是客户端排队一条条传，见 WaylineUploadDialog）
+                        //
+                        // 左右边距用 5 —— 就是 MissionListRow 里 topRow 的边距，为的是让
+                        // 这个「全选」和多选框列在**同一个竖列**里。原来左边距是 _margin * 2
+                        // （1080p 下 22px），比下面每行的勾选框往右缩了一截，一列勾选框里
+                        // 最上面那个是歪的
                         RowLayout {
                             Layout.fillWidth:   true
-                            Layout.leftMargin:  _margin * 2
-                            Layout.rightMargin: _margin * 2
+                            Layout.leftMargin:  5
+                            Layout.rightMargin: 5
                             spacing:            _margin
                             visible:            newPlanList.count > 0
 
@@ -747,26 +804,49 @@ Item {
                         Layout.fillHeight:      true
                         Layout.fillWidth:       true
 
+                        // 单条下载（详情面板那个按钮）走这里，autoLoad 为 true。
+                        // **批量下载也走这里**，每条各来一次，autoLoad 为 false。
+                        //
+                        // 不管哪种，kmz 都一律先转成本地 .plan 落在 Missions/NewMission：
+                        // 本地任务页只列那个目录下的 *.plan，不转的话「下载成功」这个提示
+                        // 后面什么都没有，用户回本地那页会发现还是老样子
                         onWaylineDownloaded: (kmzPath, name, autoLoad) => {
-                            if (!autoLoad) {
-                                mainWindow.showMessageDialog(qsTr("航线库"),
-                                    qsTr("「") + name + qsTr("」已下载到：") + kmzPath)
-                                return
-                            }
-                            // 下载下来的 kmz 转成 .plan 再载入，否则用户在 QGC 里打不开这个文件
-                            const planPath = _appSettings.missionSavePath + "/NewMission/" + name + ".plan"
+                            const baseName = _freePlanBaseName(name)
+                            const planPath = _appSettings.missionSavePath + "/NewMission/" + baseName + ".plan"
                             if (!waylineLibrary.wayline.convertKmzToPlan(kmzPath, planPath)) {
                                 mainWindow.showMessageDialog(qsTr("航线库"),
-                                    qsTr("打开下载的航线失败：") + waylineLibrary.wayline.lastConvertError())
+                                    qsTr("「") + name + qsTr("」转换成本地任务失败：")
+                                    + waylineLibrary.wayline.lastConvertError())
                                 return
                             }
-                            _currentPlanFileName = name
+                            // 批量这一条到此为止：一次下 5 条就是 5 个模态框，
+                            // 所以逐条不弹，等整批落地由 onBatchDownloadFinished 汇总说一句。
+                            // 也不切页签 —— 5 条各自把界面拽去编辑模式，用户会看到界面乱跳
+                            if (!autoLoad) {
+                                return
+                            }
+                            _currentPlanFileName = baseName
                             _planMasterController.loadFromFile(planPath)
                             _planMasterController.fitViewportToItems()
                             // 先切回本地任务页再进编辑模式：地图和左侧工具条都在那一页，
                             // 留在航线库这页会看不到刚载进来的航线
                             planTabBar.currentIndex = 0
                             enterPlanEditMode(true)
+                        }
+
+                        /// 一批下载全跑完了才切页签、汇总说一句（landed 拿到几条，
+                        /// failed 失败几条）。切页签这里顺带把云端预览清掉了
+                        /// （见 planTabBar.onCurrentIndexChanged），地图上那条蓝线
+                        /// 不会再跟着回本地任务页
+                        onDownloadBatchFinished: (landed, failed) => {
+                            planTabBar.currentIndex = 0
+                            var text = landed > 0
+                                    ? (qsTr("已下载 ") + landed + qsTr(" 条航线，可在「本地任务」页打开"))
+                                    : qsTr("没有航线下载成功")
+                            if (failed > 0) {
+                                text += "\n" + qsTr("有 ") + failed + qsTr(" 条下载失败（详见列表下方的状态提示）")
+                            }
+                            mainWindow.showMessageDialog(qsTr("航线库"), text)
                         }
                     }
                 }
@@ -798,23 +878,38 @@ Item {
                         ToolTip.visible:  hovered && ToolTip.text !== ""
                         ToolTip.delay:    600
                         onClicked: {
-                            if (_planMasterController.containsItems) {
-                                createPlanRemoveAllPromptDialog.createObject(mainWindow, { mapCenter: _mapCenter(),/* planCreator: object,*/ enableInput: true }).open()
-                            }
+                            // 这里原来套了个 containsItems 判断，空方案时点它什么都不发生 ——
+                            // 而「当前方案是空的」恰恰是最想新建一个的时候，用起来就是
+                            // 「点了没反应」。判断去掉：有没有东西要清，弹窗自己会说
+                            createPlanRemoveAllPromptDialog.createObject(mainWindow, { mapCenter: _mapCenter(), enableInput: true }).open()
                         }
                     }
+                    // 垃圾桶两个页签两种活干：
+                    //   本地任务页 —— 清掉当前正在编辑的这个方案（和以前一样）
+                    //   云端航线库页 —— 删掉勾选的那几条云端航线，和这一页的「下载」
+                    //                   对称（下载=下勾选的，删除=删勾选的）
+                    // 本地那页原来还要求 !offline，结果没连飞控时它永远是灰的 ——
+                    // 清除本地方案跟飞控没有任何关系，那个条件去掉了
                     QGCButton {
                         Layout.fillWidth: true
                         iconSource:       "/res/TrashDelete.svg"
                         enabled:          planActionBar._localTab
-                                          && !_planMasterController.offline
-                                          && !_planMasterController.syncInProgress
-                                          && _planMasterController.containsItems
+                                          ? (!_planMasterController.syncInProgress
+                                             && _planMasterController.containsItems)
+                                          : (waylineLibrary.selectedRows.length > 0 && !planActionBar._cloudBusy)
                         opacity:          enabled ? 1 : 0.45
-                        ToolTip.text:     qsTr("清除任务")
+                        ToolTip.text:     planActionBar._localTab
+                                          ? qsTr("清除当前任务")
+                                          : (qsTr("删除已勾选的 ") + waylineLibrary.selectedRows.length + qsTr(" 条云端航线"))
                         ToolTip.visible:  hovered && ToolTip.text !== ""
                         ToolTip.delay:    600
-                        onClicked:        clearButtonClicked()
+                        onClicked: {
+                            if (planActionBar._localTab) {
+                                clearButtonClicked()
+                            } else {
+                                waylineLibrary.deleteSelected()
+                            }
+                        }
                     }
                     QGCButton {
                         Layout.fillWidth: true
@@ -859,7 +954,9 @@ Item {
                     }
                     QGCButton {
                         Layout.fillWidth: true
-                        iconSource:       "/InstrumentValueIcons/cloud.svg"
+                        // cloud-upload 比 cloud 多一个上箭头，一眼能看出是「往上送」
+                        // 而不是「云端」这个状态
+                        iconSource:       "/InstrumentValueIcons/cloud-upload.svg"
                         visible:          !QGroundControl.corePlugin.options.disableVehicleConnection || !planActionBar._localTab
                         // 传的就是本地列表里勾选的那几条（没勾选就是当前选中的那一条）。
                         // 云端那页也看同一个条件 —— 弹窗里列的就是那几条本地任务，
@@ -1619,6 +1716,36 @@ Item {
         newPlanList.clearChecked()
     }
 
+    /// 只用来看文件在不在。QGCFileDialogController::fileExists 是 Q_INVOKABLE
+    /// 静态函数，但它注册的是普通类型不是单例，得先有个实例才调得到
+    QGCFileDialogController { id: fileController }
+
+    /// 给 Missions/NewMission 里的新任务起个没人占用的**文件名**（不含扩展名）。
+    /// 已存在同名 .plan 时依次试 <名字>-2、<名字>-3…… **绝不覆盖**：
+    /// PlanMasterController::saveToFile 遇到同名文件是直接盖掉的，
+    /// 一声不响就把用户原来那条任务顶没了。下载转 plan 和「新建任务」共用这一套
+    function _freePlanBaseName(baseName) {
+        // 先把名字归一化。「新建任务」那个输入框里的名字是用户敲的：可能带上了
+        // .plan 后缀（再拼一次就存出 "foo.plan.plan"），也可能被清空（存出来是
+        // 个叫 ".plan" 的隐藏文件）。原来这两条都没管
+        var name = String(baseName).trim()
+        if (name.toLowerCase().endsWith(".plan")) {
+            name = name.substring(0, name.length - 5)
+        }
+        if (name === "") {
+            name = qsTr("新建航线任务")
+        }
+
+        var folder = _appSettings.missionSavePath + "/NewMission"
+        var candidate = name
+        var n = 2
+        while (fileController.fileExists(folder + "/" + candidate + ".plan") && n <= 99) {
+            candidate = name + "-" + n
+            n += 1
+        }
+        return candidate
+    }
+
     /// 「新建任务」落点要用地图**可视区**（扣掉左右面板）的中心。
     /// 与上面那个 mapCenter() 不是一回事：那个取的是 editorMap.center ——
     /// 整块地图的几何中心，把被面板盖住的那部分也算进去了。
@@ -1654,6 +1781,35 @@ Item {
                 continue
             }
             out.push(QtPositioning.coordinate(lat, lon))
+        }
+        return out
+    }
+
+    /// 云端航迹什么时候画在地图上：只有停在「云端航线库」那一页、并且真的解析出了
+    /// 一条有两个点以上的航迹时。切回本地任务页就把 model 清空 —— 这页看的是库里
+    /// 那条航线，和编辑器里当前的任务不是一回事，混着画会让人以为任务被改了
+    readonly property bool _cloudRouteVisible: planTabBar.currentIndex === 1 && _cloudRouteCoords.length > 1
+
+    /// 航迹拆成**一段一条线**：[{ "from": 坐标, "to": 坐标 }, ...]。
+    /// 不用一条 MapPolyline 装全部点：换一条航线时整批委托重造，屏幕上不可能留下
+    /// 上一条航线的线（实测过：一条 polyline 反复改 path，旧的那条会挂在图上不消失）。
+    /// 顺带这样每条线还能单独配色/加箭头
+    readonly property var _cloudRouteSegments: {
+        var pts = _cloudRouteCoords
+        var out = []
+        for (var i = 0; i + 1 < pts.length; ++i) {
+            out.push({ "from": pts[i], "to": pts[i + 1] })
+        }
+        return out
+    }
+
+    /// 航点标记：[{ "index": 序号, "coordinate": 坐标 }, ...]。
+    /// 序号从 1 开始 —— 和航线编辑页一样，第一个点是 1 不是 0
+    readonly property var _cloudRouteWaypoints: {
+        var pts = _cloudRouteCoords
+        var out = []
+        for (var i = 0; i < pts.length; ++i) {
+            out.push({ "index": i + 1, "coordinate": pts[i] })
         }
         return out
     }
@@ -1733,7 +1889,9 @@ Item {
         target: waylineLibrary
 
         function onPreviewChanged() {
-            if (waylineLibrary.preview && waylineLibrary.preview.ok) {
+            // 只在云端那页取景：本地任务页看的是编辑器里的任务，把地图挪到一条
+            // 屏幕上根本不画的航迹上去，用户会以为任务自己跳了
+            if (_root._cloudRouteVisible) {
                 _root._fitCloudRoute(_root._cloudRouteCoords)
             }
         }
@@ -1765,40 +1923,62 @@ Item {
 
         QGCSimpleMessageDialog {
             title:      qsTr("Create Plan")
-            text:       qsTr("Are you sure you want to remove current plan and create a new plan? ")
+            // 空方案时「要移除当前方案」这句是假话，照着说会让人以为要删掉什么东西。
+            // 有没有东西可清，只有这里知道
+            text:       _planMasterController.containsItems
+                            ? qsTr("Are you sure you want to remove current plan and create a new plan? ")
+                            : qsTr("Create a new plan? ")
             buttons:    Dialog.Yes | Dialog.No
 
             property var mapCenter
             property var planCreator
 
-            onAccepted: { //planCreator.createPlan(mapCenter)
-                if (enableInput) {
-                    _currentPlanFileName = inputText
-                    _missionController.removeAllVisualItems()
-                    _planMasterController.removeAllFromVehicle();
-                    _planMasterController.saveToFile(_appSettings.missionSavePath + "/NewMission/" + inputText)
+            onAccepted: {
+                if (!enableInput) {
+                    return
                 }
+                var baseName = _freePlanBaseName(inputText)
+                // removeAll 自己就会去清 _missionController（航点、围栏、返航点都清），
+                // 不用再单独调一次 removeAllVisualItems。倒是**必须**调它：离线时
+                // removeAllFromVehicle 是个空操作（自己会打一行 warning），原来只调后者，
+                // 没连飞控时「新建」等于什么都没发生，地图上旧航点照样在
+                _planMasterController.removeAll()
+                if (!_planMasterController.offline) {
+                    // 在线时再让飞控也把任务清掉（离线时上面那句已经完成了本地的部分）
+                    _planMasterController.removeAllFromVehicle()
+                }
+                _currentPlanFileName = baseName
+                _planMasterController.saveToFile(_appSettings.missionSavePath + "/NewMission/" + baseName)
+                // 落回本地任务页并进编辑模式：地图和左侧工具条都在那一页，
+                // 停在云端那页会看不到刚建的任务（顺带清掉云端那条蓝线）
+                planTabBar.currentIndex = 0
+                enterPlanEditMode(true)
             }
         }
     }
 
+    /// 底部动作栏那个垃圾桶在「本地任务」页的行为。
+    /// 原来这里只有一个 removeAllFromVehicle：没连飞控时就什么都不做。
+    /// 另外里面还挂着一整段 UTMSP 的状态复位，条件是 if(_utmspEnabled) —— 而
+    /// _utmspEnabled 这个属性在本文件里已经被注释掉了（utmsp 那套整个停用），
+    /// 也就是说那段代码一执行就抛 ReferenceError。整段删掉，UTMSP 要恢复时
+    /// 照着 1493 行附近那几处一起处理
     function clearButtonClicked() {
         mainWindow.showMessageDialog(qsTr("Clear"),
                                      qsTr("Are you sure you want to remove all mission items and clear the mission from the vehicle?"),
                                      Dialog.Yes | Dialog.Cancel,
-                                     function() { _planMasterController.removeAllFromVehicle();
-                                                  _missionController.setCurrentPlanViewSeqNum(0, true);
-                                                  if(_utmspEnabled)
-                                                    {_resetRegisterFlightPlan = true;
-                                                      QGroundControl.utmspManager.utmspVehicle.triggerActivationStatusBar(false);
-                                                      UTMSPStateStorage.startTimeStamp = "";
-                                                      UTMSPStateStorage.showActivationTab = false;
-                                                      UTMSPStateStorage.flightID = "";
-                                                      UTMSPStateStorage.enableMissionUploadButton = false;
-                                                      UTMSPStateStorage.indicatorPendingStatus = true;
-                                                      UTMSPStateStorage.indicatorApprovedStatus = false;
-                                                      UTMSPStateStorage.indicatorActivatedStatus = false;
-                                                      UTMSPStateStorage.currentStateIndex = 0}})
+                                     function() {
+                                         if (_planMasterController.offline) {
+                                             // 离线时 removeAllFromVehicle 是个空操作（自己会打一行
+                                             // warning），点了「确定」界面纹丝不动 —— 这是一条本地
+                                             // 操作，没连飞控也该生效。清本地方案的是 removeAll
+                                             _planMasterController.removeAll()
+                                             _currentPlanFileName = ""
+                                         } else {
+                                             _planMasterController.removeAllFromVehicle()
+                                         }
+                                         _missionController.setCurrentPlanViewSeqNum(0, true)
+                                     })
     }
 
     //- ToolStrip ToolStripDropPanel Components

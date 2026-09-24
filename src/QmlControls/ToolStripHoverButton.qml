@@ -36,7 +36,11 @@ Button {
     property real imageScale:        forceImageScale11 && (text == "") ? 0.8 : 0.6
     property real contentMargins:    innerText.height * 0.1
 
-    property color _currentContentColor:  /*(checked || pressed) ? qgcPal.buttonHighlightText :*/ qgcPal.buttonText
+    // 选中（或按下去）时底色是 qgcPal.buttonHighlight（蓝），图标和文字得跟着换成
+    // buttonHighlightText —— 深色主题下就是黑色。这一行原来被注释掉了，于是选中时
+    // 蓝底上是白图标白字，跟全应用其它「选中」的样子（QGCTabButton / QGCButton）
+    // 不一致
+    property color _currentContentColor:  (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.buttonText
     property color _currentContentColorSecondary:  (checked || pressed) ? qgcPal.buttonText : qgcPal.buttonHighlight
 
     signal dropped(int index)

@@ -309,10 +309,37 @@ ApplicationWindow {
             Layout.fillHeight:      true
         }
 
-        ParameterEditor {
-            id:                     parameterEditor
+        // 参数页：没连飞机的时候只放一句提示，什么都不显示。
+        // 为什么不能用「隐藏起来」而要整个不创建：ParameterEditorController 是在
+        // **构造函数里**抓一次参数管理器的，而 FactPanelController 拿不到活动飞机时
+        // 会退到 QGC 那台「离线编辑」用假飞机（MultiVehicleManager::offlineEditingVehicle）。
+        // 于是启动时没飞机的话，这一页会绑死在假飞机上：满屏都是元数据默认值（全是 0），
+        // 之后真飞机连上来也不会重绑 —— 看着像参数，其实哪台飞机都不是。
+        // 用 Loader 按 activeVehicleAvailable 创建/销毁，既满足「没飞机不显示参数」，
+        // 又顺手把这个绑死的问题也治了（换飞机时 available 会先 false 再 true，
+        // 这一页跟着重建，自然抓到新飞机）。
+        Item {
+            id:                     parameterPage
             Layout.fillWidth:       true
             Layout.fillHeight:      true
+
+            readonly property bool _vehicleAvailable: QGroundControl.multiVehicleManager.activeVehicleAvailable
+
+            Loader {
+                anchors.fill:   parent
+                active:         parameterPage._vehicleAvailable
+                source:         "qrc:/qml/QGroundControl/Controls/ParameterEditor.qml"
+            }
+
+            QGCLabel {
+                anchors.centerIn:       parent
+                width:                  parent.width * 0.7
+                horizontalAlignment:    Text.AlignHCenter
+                wrapMode:               Text.WordWrap
+                font.pointSize:         ScreenTools.largeFontPointSize
+                visible:                !parameterPage._vehicleAvailable
+                text:                   qsTr("飞机未连接，没有参数。\n请先连接飞机，连接成功后本页会自动显示参数。")
+            }
         }
 
         MediaExplorer {

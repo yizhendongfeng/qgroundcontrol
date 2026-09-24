@@ -240,6 +240,11 @@ void DjiDrcClient::handleAuthRelease(const QString& tid, const QString& bid, con
 
     emit serviceReply(tid, bid, QStringLiteral("cloud_control_release"), DjiDrcError::kSuccess, QJsonObject());
 
+    // 弹窗要如实说"交还前控制权在谁手上"，而下面两行会把它清掉 —— 必须先读出来。
+    // （同 teardownDrc 里 heldFlightAuthority 的写法。）
+    const bool hadFlightAuthority  = _cloudFlightAuthority;
+    const bool hadPayloadAuthority = _cloudPayloadAuthority;
+
     // 云端既然主动交还，之前那个还挂着的接管请求就已经失去意义了。
     // 不收掉的话：弹窗继续挂在屏幕上，操作员再点一次"是"，就会在云端已经放手之后
     // 又把控制权锁回给它 —— 顺带静默关掉本地摇杆。
@@ -258,6 +263,18 @@ void DjiDrcClient::handleAuthRelease(const QString& tid, const QString& bid, con
     clearCloudStick();
     publishJoystickInvalid(kReasonRcAuthority);
     emit drcStatusChanged();
+
+    // 放在最后：弹窗读的是收尾**之后**的状态（本地已解锁、控制权已回到本机），
+    // 早发的话操作员看到的是还没落定的中间态。
+    //
+    // 两样控制权都没在云端手上时**不弹**：什么都没交还，弹出来纯属噪音。
+    // 典型就是操作员刚点了「否」、或者那个接管请求超时作废之后云端才发的释放 ——
+    // 那两种情况操作员已经通过关掉的弹窗知道结果了。
+    if (hadFlightAuthority || hadPayloadAuthority) {
+        qInfo() << "[DjiDrc] cloud handed control back, flight:" << hadFlightAuthority
+                << "payload:" << hadPayloadAuthority;
+        emit remoteControlReleased(hadFlightAuthority, hadPayloadAuthority);
+    }
 }
 
 void DjiDrcClient::handleDrcModeEnter(const QString& tid, const QString& bid, const QJsonObject& data)

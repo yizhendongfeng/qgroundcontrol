@@ -56,6 +56,13 @@ class DjiBridgeServer : public QObject
 
     Q_PROPERTY(QWebEngineProfile* profile READ profile CONSTANT)
 
+    /// 本次会话是否登录了云平台（网页登录成功回调 apiSetToken 后为 true，
+    /// 退出登录 —— apiSetToken 收到空 token —— 时回到 false）。
+    ///
+    /// 云端航线库那页靠它决定「拉不拉列表、摆哪种状态」：没登录就没有 token，
+    /// REST 拉不到东西，页面上不能挂着上一次登录（甚至上一次会话）留下的航线。
+    Q_PROPERTY(bool cloudLoggedIn READ cloudLoggedIn NOTIFY cloudLoggedInChanged)
+
     // ---------- 上云 WebSocket（ws 组件）暴露给 QML ----------
     Q_PROPERTY(QmlObjectListModel* cloudDevices  READ cloudDevices  CONSTANT)
     Q_PROPERTY(QmlObjectListModel* cloudHms      READ cloudHms      CONSTANT)
@@ -112,6 +119,10 @@ public:
     /// 原生直连入口（QML 可调用，绕开 web SDK）
     Q_INVOKABLE void nativeConnectCloud();
     Q_INVOKABLE bool cloudConnected() const;
+
+    /// 本次会话是否登录过平台，见 cloudLoggedIn 属性。QML 绑它来决定云航线库
+    /// 那页显不显示列表、状态行写「未连接服务器」还是「航线接口正常」
+    bool cloudLoggedIn() const { return _cloudLoggedIn; }
 
     /// 供外部/测试访问底层客户端
     DjiCloudClient*    cloudClient() const { return _cloudClient; }
@@ -178,6 +189,7 @@ signals:
     /// C++ → JS 回调通道：QML 端接收后调用 webEngine.runJavaScript(script)
     void jsCallbackRequested(const QString& script);
 
+    void cloudLoggedInChanged();
     void cloudWsStateChanged();
     void cloudWsCountsChanged();
     void cloudMapStateChanged();
@@ -214,6 +226,22 @@ private:
     QString _token;
     QString _host;
     QString _workspaceId;
+
+    /// 本次会话是否登录了平台：网页登录成功回调 apiSetToken 时置位，apiSetToken
+    /// 收到空 token（退出登录）时清掉。打日志用它，QML 也用它（cloudLoggedIn
+    /// 属性），见那里。
+    ///
+    /// QSettings 里的 serverToken 是**上一次会话**留下的，启动时拿它去授权同样能通过，
+    /// 所以不能拿"token 非空"当已登录。之前就是因为在 init() 里直接 nativeConnect，
+    /// 未登录启动也会连云：右上角云状态显示地面站已连接，地图元素也拉下来画出来了。
+    /// 连云时机因此从"启动"挪到"登录"。
+    ///
+    /// 要不要**重连**看的是客户端自己的连接状态（见 apiSetToken）：退出再登录必须能
+    /// 连回去，所以这个标志只说明"这次登录了没有"，不参与连接决策。
+    bool _cloudLoggedIn = false;
+
+    /// 置登录态并发信号（值没变就不发）
+    void _setCloudLoggedIn(bool loggedIn);
 
     // ---------- Media / Liveshare / WebSocket 状态 ----------
     bool _autoUploadPhoto = true;

@@ -89,6 +89,8 @@ private:
     void updateTopo();
     void sendOsd();
     void sendState();
+    /// firmware_version 单独一条 state（必须与 sendState 的 live_capacity 分开，见 .cc）
+    void sendFirmwareState();
     void sendServicesReply(const QString& tid, const QString& bid, const QString& method, int result, const QJsonValue& output);
     void sendEvents(const QString& method, int needReply, const QJsonObject& data);
 

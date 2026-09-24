@@ -95,21 +95,34 @@ Rectangle {
                     // dropPanel:          _dropPanel
                     // showText:           showActionText
                     onDropped:          _root.dropped(index)
+                    // 互斥是手写的（autoExclusive 在这个控件上会出各种怪事），规则两条：
+                    //   1. 选中某一项 → 把别的都取消
+                    //   2. 点已经选中的那一项 → Qt 会先把 checked 翻成 false，互斥逻辑
+                    //      只管取消别人、管不了自己，于是连点两次就变成「一项都没选中」，
+                    //      页面还在，工具条上却没有任何高亮。工具条是导航，永远要有一项
+                    //      选中，所以谁也没选中时把自己补回来
                     onCheckedChanged: {
-                        // We deal with exclusive check state manually since usinug autoExclusive caused all sorts of crazt problems
                         if (checked) {
                             for (var i=0; i<repeater.count; i++) {
-                                console.log("repeater.count: ", repeater.count, "i:", i, "index:", index)
-                                console.log("repeater.itemAt(i) text:" << repeater.itemAt(i).text)//  << repeater.itemAt(i).checked)
                                 if (i !== index) {
                                     var button = repeater.itemAt(i)
-                                    if (button.checked) {
+                                    if (button && button.checked) {
                                         button.checked = false
                                     }
                                 }
                             }
-                            // if (buttonSettings)
-                            //     buttonSettings.checked = false
+                        } else {
+                            var anyChecked = false
+                            for (var j=0; j<repeater.count; j++) {
+                                var other = repeater.itemAt(j)
+                                if (other && other.checked) {
+                                    anyChecked = true
+                                    break
+                                }
+                            }
+                            if (!anyChecked) {
+                                checked = true
+                            }
                         }
                     }
                 }

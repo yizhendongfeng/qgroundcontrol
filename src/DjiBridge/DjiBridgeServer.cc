@@ -118,10 +118,12 @@ void DjiBridgeServer::init()
             << "websocketUrl:" << cloudSettings->websocketUrl()->rawValueString()
             << "token set:" << !cloudSettings->serverToken()->rawValueString().isEmpty();
 
-    // 原生直连：若开关打开则启动即连云（"两者兼容"；否则等 web SDK 触发）
+    // 启动**不**连云 —— 即使 nativeCloudConnect 开着。
+    // 设置里的 serverToken 是上一次会话留下的，直接拿它 nativeConnect 也能授权通过，
+    // 于是用户本次没登录，右上角云状态就显示"地面站已连接"、地图元素也拉下来画出来了。
+    // 连云时机挪到登录成功（apiSetToken）之后，见那里的说明。
     if (cloudSettings->nativeCloudConnect()->rawValue().toBool()) {
-        _cloudClient->nativeConnect();
-        _wsClient->connectNative();  // token 为空时内部会拒绝连接并告警
+        qInfo() << "[DjiBridge] 原生直连已开启，但本次会话尚未登录，等登录成功后再连云";
     }
 
     // 1. 启动本地 HTTP 服务
@@ -186,6 +188,16 @@ void DjiBridgeServer::nativeConnectCloud()
 bool DjiBridgeServer::cloudConnected() const
 {
     return _cloudClient ? _cloudClient->connected() : false;
+}
+
+void DjiBridgeServer::_setCloudLoggedIn(bool loggedIn)
+{
+    if (_cloudLoggedIn == loggedIn) {
+        return;
+    }
+    _cloudLoggedIn = loggedIn;
+    qInfo() << "[DjiBridge] 登录态：" << (loggedIn ? "已登录" : "未登录（云端航线库会隐藏列表）");
+    emit cloudLoggedInChanged();
 }
 
 // ---------------------------------------------------------------------------
@@ -841,10 +853,31 @@ QJsonObject DjiBridgeServer::apiSetToken(const QJsonArray& args)
     SettingsManager::instance()->cloudServerSettings()->serverToken()->setRawValue(_token);
     qInfo() << "[DjiBridge]   -> token set, len:" << _token.length();
 
-    // 原生直连模式下，token 是登录之后才有的：若此前因缺 token 没能连上 ws，这里补一次
-    if (_wsClient && !_wsClient->connected() && !_token.isEmpty() &&
-        SettingsManager::instance()->cloudServerSettings()->nativeCloudConnect()->rawValue().toBool()) {
-        _wsClient->connectNative();
+    // 登录态：有 token 就是登录了，空 token（网页端退出登录）就是没登录。
+    // 云端航线库那页绑它来隐藏列表，所以退出登录也必须回退，不能只置位。
+    const bool wasLoggedIn = _cloudLoggedIn;
+    _setCloudLoggedIn(!_token.isEmpty());
+
+    // 网页登录成功（拿回了 token）= 本次会话已登录，这才是连云的时机。
+    // init() 里已经不连了：启动时那个 token 是上一次会话留下的，用户并没有登录过。
+    if (!_token.isEmpty()) {
+        if (!wasLoggedIn) {
+            qInfo() << "[DjiBridge] 本次会话登录成功，开始连云";
+        }
+
+        // 原生直连模式下这里补一次连接 —— 启动时那次已经挪走了。
+        // MQTT 主连接和 ws 都要接上：只连 ws 的话，平台侧看不到本机地面站上线
+        // （device_online / 拓扑上报走 MQTT），直播、航线库、DRC 也都在 MQTT 那条链上。
+        // 判据用"当前是否连着"而不是"是不是首次登录"：退出登录后再登录，这里得能连回去。
+        // web SDK 那条路（loadComponent）此时也会各连一次，客户端内部都有"已连则不重连"的判断。
+        if (SettingsManager::instance()->cloudServerSettings()->nativeCloudConnect()->rawValue().toBool()) {
+            if (_cloudClient && !_cloudClient->connected()) {
+                _cloudClient->nativeConnect();
+            }
+            if (_wsClient && !_wsClient->connected()) {
+                _wsClient->connectNative();
+            }
+        }
     }
 
     return makeResponse(0, "success", _token);

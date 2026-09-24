@@ -32,8 +32,14 @@ public:
     /// 地面站（RC）osd 属性：capacity_percent / height / latitude / longitude / live_status[]
     static QJsonObject buildGcsOsd(Vehicle* vehicle, VideoSettings* videoSettings);
 
-    /// 地面站（RC）state 属性：live_capacity（结构化能力）+ firmware_version
+    /// 地面站（RC）state 属性：live_capacity（结构化能力）
+    /// 只能单独成包：混进 firmware_version 会被后台按 FirmwareVersion 归类，
+    /// live_capacity 被丢弃（详见 .cc 中的说明）
     static QJsonObject buildGcsState();
+
+    /// 地面站（RC）state 属性：firmware_version
+    /// 必须与 buildGcsState() 分成两条 state 上报，不能合并
+    static QJsonObject buildGcsFirmwareState();
 
     /// 无人机（aircraft）osd 属性：mode_code / position_state / battery / attitude / 位置速度等
     static QJsonObject buildDroneOsd(Vehicle* vehicle);

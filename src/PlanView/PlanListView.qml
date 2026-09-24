@@ -93,6 +93,16 @@ QGCListView {
         return current ? [current] : []
     }
 
+    /// 只勾选这一条（其余取消）。点行的语义就是这个 —— 云端航线库点一下也是
+    /// 「勾上它、别的行全取消」（那边是 selectedRows = [row]），两页是同一张列表，
+    /// 行为也得一样。勾选是「要拿这条做什么」的入口（底部那排图标、上传对话框都
+    /// 按勾选来），只点一下不勾上，用户会以为点了没反应
+    function setOnlyChecked(index) {
+        if (index >= 0 && index < folderModel.count) {
+            checkedFiles = [_pathAt(index)]
+        }
+    }
+
     function setAllChecked(all) {
         if (!all) {
             clearChecked()
@@ -154,6 +164,8 @@ QGCListView {
             onActivated: {
                 listView.expandedIndex = -1
                 _loadThisRow()
+                // 点行顺带勾上它 —— 见 setOnlyChecked 的注释
+                listView.setOnlyChecked(index)
             }
             onCheckToggled: {
                 listView.expandedIndex = -1

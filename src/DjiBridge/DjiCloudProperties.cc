@@ -59,10 +59,32 @@ QJsonObject DjiCloudProperties::buildGcsOsd(Vehicle* vehicle, VideoSettings* vid
 
 QJsonObject DjiCloudProperties::buildGcsState()
 {
+    // 一条 state 报文的 data 里只能放"一类"属性，不能把 live_capacity 和
+    // firmware_version 拼在一起 —— 这是后台 SDK 的分发规则决定的：
+    //   StateRouter.getTypeReference() 拿 data 的 key 集合去
+    //   RcStateDataKeyEnum.find() 里找 **声明顺序上第一个** 键有交集的枚举项，
+    //   用它决定整包 data 反序列化成哪个类。枚举里
+    //   FIRMWARE_VERSION(Set.of("firmware_version")) 声明在
+    //   LIVE_CAPACITY(Set.of("live_capacity")) 之前，所以只要报文里带了
+    //   firmware_version，整包 data 就被当成 FirmwareVersion，走
+    //   INBOUND_STATE_RC_AND_DRONE_FIRMWARE_VERSION 通道（只更新设备固件版本，
+    //   live_capacity 作为未知字段被丢弃），LIVE_CAPACITY 通道里的
+    //   rcLivestreamAbilityUpdate()（唯一会往 Redis 写 live_capacity 的地方）
+    //   永远不被调用 —— 网页"选择相机"下拉框因此恒为 No Data。
+    // 已实测：同一份报文去掉 firmware_version 后，Redis 的 live_capacity
+    // 立刻出现 <droneSn> -> CapacityCameraDTO 条目。
+    // 固件版本改由 buildGcsFirmwareState() 单独一条 state 上报。
     QJsonObject data;
-    data["live_capacity"]    = buildLiveCapacity();
+    data["live_capacity"] = buildLiveCapacity();
 
-    // 地面站固件版本用 QGC 版本占位；真实 GCS 固件版本无来源
+    return data;
+}
+
+QJsonObject DjiCloudProperties::buildGcsFirmwareState()
+{
+    QJsonObject data;
+    // 地面站固件版本用 QGC 版本占位；真实 GCS 固件版本无来源。
+    // 必须单独成包，不能并进 buildGcsState()，原因见上。
     data["firmware_version"] = QStringLiteral("QGC-DGCS");
 
     return data;
