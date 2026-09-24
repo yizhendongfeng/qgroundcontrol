@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QString>
 
@@ -132,13 +133,28 @@ private slots:
     void _onPortReadyRead();
     void _onPortBytesWritten(qint64 bytes) const;
     void _onPortErrorOccurred(QSerialPort::SerialPortError portError);
-    void _checkPortAvailability();
+    void _checkPortHealth();
 
 private:
+    bool _openPort();
+    void _tryOpenOrGiveUp();
+    void _closePort();
+    void _applyPortSettings();
+    bool _portExists() const;
+    void _reopenPort();
+    void _giveUpOpen();
+
     const SerialConfiguration *_serialConfig = nullptr;
     QSerialPort *_port = nullptr;
     QTimer *_timer = nullptr;
+    QElapsedTimer _lastDataTimer;       ///< 上次收到数据的时刻，用于发现"连着但收不到数据"
     bool _errorEmitted = false;
+    bool _portTransitioning = false;    ///< open()/close() 期间 QSerialPort 会同步发 errorOccurred，先压住
+    bool _suppressDisconnect = false;   ///< 内部重开引起的 close 不要上报 disconnected
+    bool _noDataReported = false;       ///< "没数据"已报过，避免每秒刷一条
+    int _openRetriesLeft = 0;           ///< open 失败后的剩余重试次数
+    int _reopenAttemptsLeft = 0;        ///< 无数据重开的剩余次数
+    qint64 _bytesSinceOpen = 0;         ///< 本次打开后收到的字节数
 };
 
 /*===========================================================================*/
